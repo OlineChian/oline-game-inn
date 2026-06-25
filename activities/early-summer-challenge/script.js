@@ -39,6 +39,7 @@ let userData = {
     challengePoints: 0,
     predictionPoints: 0,
     totalPoints: 0,
+    predictionSettled: null, // { correctCount, totalCount, pointsAwarded } 或 null
     challenges: {},
     predictions: {},
     predictionLocked: false,
@@ -73,6 +74,8 @@ async function init() {
     await loadUserData();
     initUI();
     startCountdowns();
+    // 检查是否有进行中的挑战 Session
+    await checkActiveChallengeSession();
 }
 
 // ==================== 数据加载 ====================
@@ -193,6 +196,23 @@ async function loadUserData() {
     } catch (error) {
         console.error('加载用户数据失败:', error);
     }
+
+    // 加载预测结算状态（如果有）
+    try {
+        const predRes = await fetch(`/api/activity/early-summer-challenge/prediction/${encodeURIComponent(userNickname)}`);
+        if (predRes.ok) {
+            const predData = await predRes.json();
+            if (predData.prediction && predData.prediction.settled) {
+                userData.predictionSettled = {
+                    correctCount: predData.prediction.correctCount || 0,
+                    totalCount: predData.prediction.totalCount || 0,
+                    pointsAwarded: predData.prediction.pointsAwarded || 0
+                };
+            }
+        }
+    } catch (e) {
+        // 预测结算状态加载失败不影响主流程
+    }
     
     // 从本地存储加载挑战记录
     const savedChallenges = localStorage.getItem(`early-summer-challenges-${userNickname}`);
@@ -280,44 +300,93 @@ function updatePointsDisplay() {
  * 渲染游戏挑战列表
  * 根据 activityConfig.challenge.games 和 userData.challenges 动态生成卡片
  */
+let challengeGameStates = {}; // 每个游戏的挑战状态缓存
+let activeSessionMap = {};     // gameId -> session
+
+async function loadAllChallengeProgress() {
+    if (!activityConfig || !activityConfig.challenge) return;
+    const games = activityConfig.challenge.games;
+    const nickname = userNickname;
+    if (!nickname) return;
+
+    try {
+        const res = await fetch(`/api/challenge/user/${encodeURIComponent(nickname)}/best?activityId=early-summer-challenge`);
+        if (res.ok) {
+            const data = await res.json();
+            for (const game of games) {
+                const bestData = data.best[game.id];
+                if (bestData) {
+                    challengeGameStates[game.id] = {
+                        bestScore: bestData.bestScore,
+                        completed: bestData.completed,
+                        error: null
+                    };
+                } else {
+                    challengeGameStates[game.id] = {
+                        bestScore: null,
+                        completed: false,
+                        error: null
+                    };
+                }
+            }
+        }
+    } catch (e) {
+        console.error('加载挑战进度失败:', e);
+    }
+    renderChallengeGames();
+}
+
 function renderChallengeGames() {
     const container = document.getElementById('challengeGames');
     if (!activityConfig || !activityConfig.challenge) return;
     
     const games = activityConfig.challenge.games;
-    const rounds = activityConfig.challenge.rounds;
+    const maxRounds = activityConfig.challenge.rounds;
     
     container.innerHTML = games.map(game => {
-        const challengeData = userData.challenges[game.id] || {
-            rounds: [],
-            bestScore: null,
-            completed: false,
-            resetsUsed: 0
-        };
-        
-        const progress = challengeData.rounds.length;
-        const isCompleted = challengeData.completed;
-        const canReset = challengeData.resetsUsed < activityConfig.challenge.resetChance && progress > 0;
-        
-        const bestScoreText = challengeData.bestScore !== null 
-            ? `最佳成绩：${challengeData.bestScore}${getScoreUnit(game.id)}` 
-            : '暂无成绩';
+        const state = challengeGameStates[game.id] || {};
+        const bestScore = state.bestScore;
+        const isCompleted = state.completed || false;
+
+        // 如果有进行中的 Session，用 Session 的进度
+        const activeSession = activeSessionMap[game.id];
+        let currentProgress = 0;
+        let inProgress = false;
+
+        if (activeSession && activeSession.status === 'active') {
+            currentProgress = activeSession.scores ? activeSession.scores.length : 0;
+            inProgress = true;
+        }
+
+        const canReset = false; // Session 模式下暂不支持重置
+
+        const bestScoreText = inProgress
+            ? `挑战进行中...（${currentProgress}/${maxRounds}局）`
+            : (bestScore !== null && bestScore !== undefined
+                ? `最佳成绩：${bestScore}分`
+                : '暂无成绩');
+
+        const progressText = inProgress
+            ? `进行中：${currentProgress}/${maxRounds} 局`
+            : (isCompleted ? `已完成（${maxRounds}/${maxRounds}）` : `进度：0/${maxRounds} 局`);
+
+        const btnText = inProgress ? '继续挑战' : '再次挑战';
         
         return `
-            <div class="challenge-game-card ${isCompleted ? 'completed' : ''}" data-game-id="${game.id}">
+            <div class="challenge-game-card ${isCompleted && !inProgress ? 'completed' : ''}" data-game-id="${game.id}">
                 <div class="game-icon-large">${game.icon || '🎮'}</div>
                 <div class="game-info">
                     <div class="game-name">${game.name}</div>
                     <span class="game-difficulty">${game.difficulty}</span>
-                    <div class="game-progress">进度：${progress}/${rounds} 局</div>
+                    <div class="game-progress">${progressText}</div>
                     <div class="game-best-score">${bestScoreText}</div>
                 </div>
                 <div class="game-actions-challenge">
-                    <button class="challenge-btn start" onclick="startChallenge('${game.id}')" ${isCompleted ? 'disabled' : ''}>
-                        ${isCompleted ? '已完成' : (progress > 0 ? '继续挑战' : '开始挑战')}
+                    <button class="challenge-btn start" onclick="startChallenge('${game.id}')">
+                        ${btnText}
                     </button>
                     <button class="challenge-btn reset" onclick="resetChallenge('${game.id}')" ${!canReset ? 'disabled' : ''}>
-                        重置挑战 (${activityConfig.challenge.resetChance - challengeData.resetsUsed}次)
+                        重置挑战 (${canReset ? '1' : '0'}次)
                     </button>
                 </div>
             </div>
@@ -333,8 +402,8 @@ function renderChallengeGames() {
 function getScoreUnit(gameId) {
     const units = {
         'belle-challenge': '秒',
-        '8bit-arcade-oline': '分',
-        'rosa-ember-online': '胜',
+        '8bit-arcade': '分',
+        'rosa-ember': '胜',
         'buster-montage': '分',
         'tara-cards': '秒'
     };
@@ -343,37 +412,204 @@ function getScoreUnit(gameId) {
 
 // ==================== 游戏挑战模块 ====================
 
+/** 当前活跃的挑战 Session ID */
+let activeChallengeSession = null;
+
+/** 当前游戏 ID（用于轮询） */
+let pollingGameId = null;
+let pollingInterval = null;
+
 /**
  * 开始/继续挑战
- * 初始化挑战记录 → 提示用户 → 跳转到对应游戏页面
+ * 创建挑战 Session → 跳转到游戏页面
  * @param {string} gameId - 游戏ID
  */
-function startChallenge(gameId) {
-    // 从配置中查找游戏页面URL
+async function startChallenge(gameId) {
     const game = activityConfig && activityConfig.challenge
         ? activityConfig.challenge.games.find(g => g.id === gameId)
         : null;
     const pageUrl = game ? game.pageUrl : '/#games';
-    
-    // 标记挑战开始
-    if (!userData.challenges[gameId]) {
-        userData.challenges[gameId] = {
-            rounds: [],
-            bestScore: null,
-            completed: false,
-            resetsUsed: 0,
-            inProgress: true
-        };
-        saveChallengeData();
+
+    try {
+        // 创建挑战 Session
+        const response = await fetch('/api/challenge/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nickname: userNickname,
+                activityId: 'early-summer-challenge',
+                gameId: gameId
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            activeChallengeSession = data.session.id;
+            pollingGameId = gameId;
+            activeSessionMap[gameId] = data.session;
+            // 将 sessionId 和 gameId 存入 localStorage，用于游戏页获取
+            localStorage.setItem('challengeSessionId', activeChallengeSession);
+            localStorage.setItem('challengeGameId', gameId);
+            localStorage.setItem('challengeActivityId', 'early-summer-challenge');
+            // 刷新 UI 显示进度
+            renderChallengeGames();
+            // 启动轮询
+            startPollingSession();
+        } else {
+            // 回退：不带 session 跳转
+            localStorage.removeItem('challengeSessionId');
+            localStorage.removeItem('challengeGameId');
+            localStorage.removeItem('challengeActivityId');
+        }
+    } catch (error) {
+        console.error('创建挑战Session失败:', error);
+        localStorage.removeItem('challengeSessionId');
     }
-    
-    showToast('开始挑战！完成后返回此页面提交成绩');
-    
+
     // 跳转到游戏页面
+    const targetUrl = pageUrl.includes('?')
+        ? `${pageUrl}&session=${activeChallengeSession || ''}`
+        : `${pageUrl}?session=${activeChallengeSession || ''}`;
+    showToast('开始挑战！完成后返回此页面提交成绩');
     setTimeout(() => {
-        window.location.href = pageUrl;
+        window.location.href = targetUrl;
     }, 1000);
 }
+
+/**
+ * 检查并加载进行中的挑战 Session
+ * 页面加载时调用，检测是否有未完成的挑战
+ */
+async function checkActiveChallengeSession() {
+    const sessionId = localStorage.getItem('challengeSessionId');
+    const gameId = localStorage.getItem('challengeGameId');
+    if (!sessionId || !gameId) {
+        // 没有进行中的 Session，加载历史成绩
+        await loadAllChallengeProgress();
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/challenge/session/${sessionId}`);
+        if (response.ok) {
+            const data = await response.json();
+            const session = data.session;
+            if (session && session.status === 'active') {
+                activeChallengeSession = sessionId;
+                pollingGameId = gameId;
+                activeSessionMap[gameId] = session;
+                // 先加载历史成绩
+                await loadAllChallengeProgress();
+                // 启动轮询，检测是否完成
+                startPollingSession();
+                showToast('检测到进行中的挑战，继续完成！');
+            } else if (session && session.status === 'completed') {
+                // 已完成，刷新UI
+                clearChallengeState();
+                await loadAllChallengeProgress();
+                updatePointsDisplay();
+                updateWeightedPoints();
+                showToast(`挑战完成！最佳成绩：${session.bestScore}`);
+            } else {
+                clearChallengeState();
+                await loadAllChallengeProgress();
+            }
+        } else {
+            clearChallengeState();
+            await loadAllChallengeProgress();
+        }
+    } catch (error) {
+        console.error('检查ChallengeSession失败:', error);
+        clearChallengeState();
+        await loadAllChallengeProgress();
+    }
+}
+
+/**
+ * 轮询 Session 状态
+ */
+function startPollingSession() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(async () => {
+        if (!activeChallengeSession) {
+            clearInterval(pollingInterval);
+            return;
+        }
+        try {
+            const response = await fetch(`/api/challenge/session/${activeChallengeSession}`);
+            if (response.ok) {
+                const data = await response.json();
+                const session = data.session;
+
+                // 更新 activeSessionMap 并刷新进度显示
+                if (pollingGameId) {
+                    activeSessionMap[pollingGameId] = session;
+                    renderChallengeGames();
+                }
+
+                if (session.status === 'completed') {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                    clearChallengeState();
+                    await loadAllChallengeProgress();
+                    updatePointsDisplay();
+                    updateWeightedPoints();
+                    showToast(`🎉 挑战完成！最佳成绩：${session.bestScore}`);
+                } else if (session.status === 'expired') {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                    clearChallengeState();
+                    await loadAllChallengeProgress();
+                    showToast('挑战已过期，请重新开始');
+                }
+            }
+        } catch (error) {
+            console.error('轮询Session失败:', error);
+        }
+    }, 2000);
+}
+
+/** 清除挑战状态 */
+function clearChallengeState() {
+    activeChallengeSession = null;
+    if (pollingGameId) {
+        delete activeSessionMap[pollingGameId];
+    }
+    pollingGameId = null;
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+    localStorage.removeItem('challengeSessionId');
+    localStorage.removeItem('challengeGameId');
+    localStorage.removeItem('challengeActivityId');
+}
+
+/**
+ * 报告游戏成绩到挑战 Session
+ * 游戏结束时自动调用（通过 window.reportChallengeScore）
+ * @param {number} score - 本局成绩
+ */
+async function reportScore(score) {
+    const sessionId = localStorage.getItem('challengeSessionId');
+    if (!sessionId) return { success: false, error: 'No active session' };
+
+    try {
+        const response = await fetch(`/api/challenge/session/${sessionId}/score`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score })
+        });
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('报告成绩失败:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// 将 reportScore 暴露到全局
+window.reportChallengeScore = reportScore;
 
 /**
  * 重置挑战进度
@@ -501,6 +737,27 @@ function renderPredictionSchedule() {
     // 锁定状态：已提交且未进入编辑模式时不可点击
     const isLocked = userData.predictionLocked && !isEnded;
 
+    // 预测结算状态提示（活动结束后显示）
+    let settlementBanner = '';
+    if (isEnded) {
+        if (userData.predictionSettled && userData.predictionSettled.pointsAwarded !== undefined) {
+            const s = userData.predictionSettled;
+            settlementBanner = `
+                <div class="prediction-settlement-banner" style="background: linear-gradient(135deg, #27ae60, #2ecc71); color: #fff; padding: 16px 20px; border-radius: 12px; margin-bottom: 16px; text-align: center;">
+                    <div style="font-size: 18px; font-weight: bold;">🎉 预测已结算</div>
+                    <div style="margin-top: 6px;">${s.correctCount}/${s.totalCount} 场预测正确，获得 <strong>${s.pointsAwarded}</strong> 预测积分！</div>
+                </div>
+            `;
+        } else {
+            settlementBanner = `
+                <div class="prediction-settlement-banner" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 16px 20px; border-radius: 12px; margin-bottom: 16px; text-align: center; color: rgba(255,255,255,0.7);">
+                    <div>⏳ 预测已截止</div>
+                    <div style="margin-top: 4px; font-size: 13px;">管理员结算后，可在此查看预测结果</div>
+                </div>
+            `;
+        }
+    }
+
     /** 生成单场对阵HTML */
     function renderMatch(match) {
         const t1 = teamsMap[match.team1];
@@ -565,6 +822,7 @@ function renderPredictionSchedule() {
     }
 
     container.innerHTML = `
+        ${settlementBanner}
         <div class="schedule-block">
             <h3 class="schedule-title">
                 <span class="schedule-live-badge">📺 直播</span>

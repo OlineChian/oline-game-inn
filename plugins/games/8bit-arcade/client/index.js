@@ -51,6 +51,12 @@ let currentDifficulty = 'normal';
 function init() {
   setupEventListeners();
   showScreen('menu');
+
+  // 检测 URL 参数，自动进入对应模式
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'solo') {
+    setTimeout(() => startSoloMode(), 500);
+  }
 }
 
 function setupEventListeners() {
@@ -68,7 +74,20 @@ function setupEventListeners() {
       currentDifficulty = e.target.value;
     });
   }
-  
+
+  // 单人模式按钮
+  const soloModeBtn = document.getElementById('soloModeBtn');
+  if (soloModeBtn) soloModeBtn.addEventListener('click', startSoloMode);
+
+  const soloQuitBtn = document.getElementById('soloQuitBtn');
+  if (soloQuitBtn) soloQuitBtn.addEventListener('click', quitSoloMode);
+
+  const soloNextRoundBtn = document.getElementById('soloNextRoundBtn');
+  if (soloNextRoundBtn) soloNextRoundBtn.addEventListener('click', startSoloRound);
+
+  const soloFinishBtn = document.getElementById('soloFinishBtn');
+  if (soloFinishBtn) soloFinishBtn.addEventListener('click', finishSoloChallenge);
+
   // 键盘控制
   document.addEventListener('keydown', handleKeyDown);
   document.addEventListener('keyup', handleKeyUp);
@@ -223,6 +242,7 @@ function backToMenu() {
 // UI更新
 function showScreen(screen) {
   if (menuScreen) menuScreen.style.display = screen === 'menu' ? 'block' : 'none';
+  if (document.getElementById('waitingScreen')) document.getElementById('waitingScreen').style.display = screen === 'waiting' ? 'block' : 'none';
   if (gameScreen) gameScreen.style.display = screen === 'game' ? 'block' : 'none';
   if (resultScreen) resultScreen.style.display = screen === 'result' ? 'block' : 'none';
 }
@@ -421,6 +441,9 @@ function showResult() {
   const resultTitle = document.getElementById('resultTitle');
   const resultDetails = document.getElementById('resultDetails');
   
+  const myScore = currentPlayer === 'player1' ? gameState?.players?.player1?.score : gameState?.players?.player2?.score;
+  const oppScore = currentPlayer === 'player1' ? gameState?.players?.player2?.score : gameState?.players?.player1?.score;
+  
   if (resultTitle) {
     if (winner === currentPlayer) {
       resultTitle.textContent = '🎉 获胜！';
@@ -432,12 +455,31 @@ function showResult() {
   }
   
   if (resultDetails) {
-    const myScore = currentPlayer === 'player1' ? gameState?.players?.player1?.score : gameState?.players?.player2?.score;
-    const oppScore = currentPlayer === 'player1' ? gameState?.players?.player2?.score : gameState?.players?.player1?.score;
     resultDetails.innerHTML = `
       <p>你的得分：${myScore}</p>
       <p>对手得分：${oppScore}</p>
     `;
+  }
+
+  // 提交到排行榜
+  submitToLeaderboard(myScore);
+}
+
+async function submitToLeaderboard(score) {
+  const nickname = localStorage.getItem('gameNickname');
+  if (!nickname || !nickname.trim()) return;
+  try {
+    await fetch('/api/leaderboard/8bit-arcade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nickname,
+        score,
+        extra: { difficulty: currentDifficulty, mode: 'online' }
+      })
+    });
+  } catch (e) {
+    console.warn('排行榜提交失败:', e);
   }
 }
 
@@ -532,4 +574,326 @@ document.addEventListener('DOMContentLoaded', init);
 // 如果直接加载脚本
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   init();
+}
+
+// ==================== 单人模式逻辑 ====================
+
+let soloActive = false;
+let soloRound = 1;
+let soloScores = [];
+let soloScore = 0;
+let soloLoop = null;
+let soloAnimId = null;
+let soloPlayerY = 0;
+let soloJumpVel = 0;
+let soloIsJumping = false;
+let soloObstacles = [];
+let soloCoins = [];
+let soloIsOver = false;
+let soloCanvas, soloCtx;
+
+function startSoloMode() {
+  soloActive = true;
+  soloRound = 1;
+  soloScores = [];
+  soloCanvas = document.getElementById('soloCanvas');
+  soloCtx = soloCanvas ? soloCanvas.getContext('2d') : null;
+
+  showSoloScreen('solo');
+  startSoloRound();
+
+  // 移动端触摸
+  if (soloCanvas) {
+    soloCanvas.addEventListener('touchstart', handleSoloTouch);
+    soloCanvas.addEventListener('click', handleSoloClick);
+  }
+}
+
+function quitSoloMode() {
+  soloActive = false;
+  stopSoloGame();
+  showScreen('menu');
+}
+
+function startSoloRound() {
+  soloScore = 0;
+  soloPlayerY = 0;
+  soloJumpVel = 0;
+  soloIsJumping = false;
+  soloObstacles = [];
+  soloCoins = [];
+  soloIsOver = false;
+
+  const roundInfo = document.getElementById('soloRoundInfo');
+  if (roundInfo) roundInfo.textContent = `第 ${soloRound}/3 局`;
+
+  const config = difficultyConfig[currentDifficulty] || difficultyConfig.normal;
+  gameSpeed = config.speed;
+
+  stopSoloGame();
+  soloLoop = setInterval(soloUpdate, 1000 / 60);
+  soloAnimId = requestAnimationFrame(soloRender);
+}
+
+function stopSoloGame() {
+  if (soloLoop) { clearInterval(soloLoop); soloLoop = null; }
+  if (soloAnimId) { cancelAnimationFrame(soloAnimId); soloAnimId = null; }
+}
+
+function soloUpdate() {
+  if (soloIsOver || !soloActive) return;
+
+  soloScore++;
+  const config = difficultyConfig[currentDifficulty] || difficultyConfig.normal;
+
+  // 生成障碍物
+  if (Math.random() < config.obstacleFreq) {
+    soloObstacles.push({
+      x: (soloCanvas?.width || 500),
+      y: (soloCanvas?.height || 400) - 40,
+      width: 30,
+      height: 40
+    });
+  }
+
+  // 生成金币
+  if (Math.random() < config.coinFreq) {
+    soloCoins.push({
+      x: (soloCanvas?.width || 500),
+      y: (soloCanvas?.height || 400) - 100 - Math.random() * 100,
+      radius: 15,
+      collected: false
+    });
+  }
+
+  // 更新障碍物
+  soloObstacles = soloObstacles.filter(obs => {
+    obs.x -= gameSpeed;
+    return obs.x > -obs.width;
+  });
+
+  // 更新金币
+  soloCoins = soloCoins.filter(coin => {
+    coin.x -= gameSpeed;
+    if (!coin.collected && soloCheckCoinCollision(coin)) {
+      coin.collected = true;
+      soloScore += 50;
+    }
+    return coin.x > -coin.radius;
+  });
+
+  // 跳跃物理
+  if (soloIsJumping) {
+    soloJumpVel += 0.8;
+    soloPlayerY += soloJumpVel;
+    if (soloPlayerY >= 0) {
+      soloPlayerY = 0;
+      soloIsJumping = false;
+      soloJumpVel = 0;
+    }
+  }
+
+  // 碰撞检测
+  for (const obs of soloObstacles) {
+    if (soloCheckCollision(obs)) {
+      soloGameOver();
+      return;
+    }
+  }
+}
+
+function soloGameOver() {
+  soloIsOver = true;
+  stopSoloGame();
+
+  soloScores.push(soloScore);
+  const bestScore = Math.max(...soloScores);
+
+  // 报告成绩
+  window.reportChallengeScore && window.reportChallengeScore(soloScore);
+
+  // 提交到排行榜
+  submitToLeaderboardSolo(soloScore);
+
+  // 若3局未满，自动进入下一局
+  if (soloRound < 3) {
+    soloRound++;
+    showSoloScreen('soloResult');
+
+    const resultDetails = document.getElementById('soloResultDetails');
+    const resultTitle = document.getElementById('soloResultTitle');
+    const bestScoreEl = document.getElementById('soloBestScore');
+
+    if (resultTitle) resultTitle.textContent = `📊 第${soloRound - 1}局得分：${soloScore}`;
+    if (resultDetails) resultDetails.innerHTML = `<p>本局得分：${soloScore}</p><p style="margin-top:10px;">${soloRound - 1 < 3 ? '即将进入第' + soloRound + '局...' : ''}</p>`;
+    if (bestScoreEl) bestScoreEl.textContent = `当前最高分：${bestScore}（共${soloScores.length}局）`;
+
+    setTimeout(() => {
+      showSoloScreen('solo');
+      startSoloRound();
+    }, 2000);
+  } else {
+    showSoloScreen('soloResult');
+
+    const resultDetails = document.getElementById('soloResultDetails');
+    const resultTitle = document.getElementById('soloResultTitle');
+    const bestScoreEl = document.getElementById('soloBestScore');
+
+    if (resultTitle) resultTitle.textContent = `🏁 挑战完成！`;
+    if (resultDetails) resultDetails.innerHTML = `<p>3局得分：${soloScores.join(' / ')}</p><p style="margin-top:10px;">最佳成绩：${bestScore}</p>`;
+    if (bestScoreEl) bestScoreEl.textContent = `最终最高分：${bestScore}`;
+  }
+}
+
+function finishSoloChallenge() {
+  soloActive = false;
+  const best = Math.max(...soloScores);
+  const sessionId = localStorage.getItem('challengeSessionId');
+  if (sessionId) {
+    localStorage.removeItem('challengeSessionId');
+    localStorage.removeItem('challengeGameId');
+    localStorage.removeItem('challengeActivityId');
+  }
+  window.location.href = '/activity.html';
+}
+
+async function submitToLeaderboardSolo(score) {
+  const nickname = localStorage.getItem('gameNickname');
+  if (!nickname || !nickname.trim()) return;
+  try {
+    await fetch('/api/leaderboard/8bit-arcade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nickname,
+        score,
+        extra: { difficulty: currentDifficulty, mode: 'solo' }
+      })
+    });
+  } catch (e) {
+    console.warn('排行榜提交失败:', e);
+  }
+}
+
+function soloRender() {
+  if (!soloCtx || !soloCanvas || !soloActive) return;
+
+  const canvas = soloCanvas;
+  const ctx = soloCtx;
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 背景星星
+  const time = Date.now() / 100;
+  ctx.fillStyle = '#16213e';
+  for (let i = 0; i < 20; i++) {
+    const x = ((i * 50 + time * 2) % (canvas.width + 50)) - 25;
+    const y = (i * 37) % (canvas.height - 60);
+    ctx.fillRect(x, y, 3, 3);
+  }
+
+  // 地面
+  ctx.fillStyle = '#4a4a6a';
+  ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+  // 玩家
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(50, canvas.height - 40 + soloPlayerY, 40, 40);
+
+  // 障碍物
+  ctx.fillStyle = '#e74c3c';
+  soloObstacles.forEach(obs => {
+    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+  });
+
+  // 金币
+  ctx.fillStyle = '#f1c40f';
+  soloCoins.forEach(coin => {
+    if (!coin.collected) {
+      ctx.beginPath();
+      ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // 当前分数
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px Arial';
+  ctx.fillText(`得分: ${soloScore}`, 10, 30);
+
+  if (!soloIsOver && soloActive) {
+    soloAnimId = requestAnimationFrame(soloRender);
+  }
+}
+
+function soloCheckCollision(obs) {
+  if (!soloCanvas) return false;
+  const playerX = 50;
+  const playerY = soloCanvas.height - 40 + soloPlayerY;
+  return playerX < obs.x + obs.width &&
+         playerX + 40 > obs.x &&
+         playerY < obs.y + obs.height &&
+         playerY + 40 > obs.y;
+}
+
+function soloCheckCoinCollision(coin) {
+  if (!soloCanvas) return false;
+  const playerX = 50;
+  const playerY = soloCanvas.height - 40 + soloPlayerY;
+  const dx = playerX + 20 - coin.x;
+  const dy = playerY + 20 - coin.y;
+  return Math.sqrt(dx * dx + dy * dy) < coin.radius + 20;
+}
+
+function soloJump() {
+  if (!soloIsJumping && soloActive && !soloIsOver) {
+    soloIsJumping = true;
+    soloJumpVel = -15;
+  }
+}
+
+function handleSoloTouch(e) {
+  e.preventDefault();
+  soloJump();
+}
+
+function handleSoloClick(e) {
+  soloJump();
+}
+
+// 全局键盘支持跳跃
+const origHandleKeyDown = handleKeyDown;
+document.removeEventListener('keydown', handleKeyDown);
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+    if (soloActive && !soloIsOver) {
+      e.preventDefault();
+      soloJump();
+    } else {
+      origHandleKeyDown(e);
+    }
+  }
+});
+
+function showSoloScreen(screen) {
+  const soloScreen = document.getElementById('soloScreen');
+  const soloResultScreen = document.getElementById('soloResultScreen');
+  const menuScreenEl = document.getElementById('menuScreen');
+
+  if (menuScreenEl) menuScreenEl.style.display = 'none';
+  if (soloScreen) soloScreen.style.display = screen === 'solo' ? 'block' : 'none';
+  if (soloResultScreen) soloResultScreen.style.display = screen === 'soloResult' ? 'block' : 'none';
+
+  // 下一局按钮文字
+  const nextBtn = document.getElementById('soloNextRoundBtn');
+  if (nextBtn) {
+    if (soloRound >= 3) {
+      nextBtn.textContent = '已是最后一局';
+      nextBtn.style.display = 'none';
+    } else {
+      nextBtn.textContent = `🔄 第${soloRound + 1}局`;
+      nextBtn.style.display = 'inline-block';
+    }
+  }
 }

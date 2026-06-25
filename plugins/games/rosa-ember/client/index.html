@@ -222,6 +222,40 @@
                 <input type="text" id="roomCodeInput" placeholder="6位房间码" maxlength="6">
             </div>
             <button class="btn btn-secondary" id="joinRoomBtn">🚪 加入房间</button>
+
+            <div style="margin: 15px 0; color: rgba(255,255,255,0.4);">或者</div>
+
+            <button class="btn btn-rosa" id="soloModeBtn">
+                🎯 单人模式（VS 电脑）
+            </button>
+        </div>
+
+        <!-- 单人模式：选择先后手 -->
+        <div id="soloMenuScreen" style="display: none; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 30px; text-align: center;">
+            <h3 style="margin-bottom: 15px;">🎯 选择执棋</h3>
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px;">你执 <span style="color:#2ecc71;font-weight:bold;">罗莎(绿)</span>，电脑执 <span style="color:#e74c3c;font-weight:bold;">琥珀(红)</span></p>
+            <button class="btn btn-rosa" id="soloStartRosaBtn">🌿 执绿棋（先手）</button>
+            <button class="btn btn-amber" id="soloStartAmberBtn" style="margin-top: 10px;">🔴 执红棋（后手）</button>
+            <div style="margin-top: 20px;">
+                <button class="btn btn-secondary" id="soloBackBtn">← 返回</button>
+            </div>
+        </div>
+
+        <!-- 单人模式：游戏 -->
+        <div id="soloGameScreen" style="display: none; text-align: center;">
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 10px;">单人模式 · 第 <span id="soloRoundNum">1</span>/3 局</p>
+            <div class="turn-indicator" id="soloTurnIndicator">等待开始...</div>
+            <div class="global-board" id="soloGlobalBoard"></div>
+            <button class="btn btn-secondary" id="soloQuitBtn" style="margin-top: 15px;">← 退出单人模式</button>
+        </div>
+
+        <!-- 单人模式：结果 -->
+        <div id="soloResultScreen" style="display: none; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 40px 30px; text-align: center;">
+            <div class="result-title" id="soloResultTitle">🎉</div>
+            <div class="result-details" id="soloResultDetails"></div>
+            <div id="soloBestDisplay" style="color: #f1c40f; margin: 15px 0;"></div>
+            <button class="btn btn-rosa" id="soloNextBtn">🔄 下一局</button>
+            <button class="btn btn-secondary" id="soloFinishBtn" style="margin-top: 10px;">🏁 结束挑战</button>
         </div>
         
         <!-- 等待 -->

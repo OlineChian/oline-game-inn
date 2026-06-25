@@ -107,6 +107,14 @@ module.exports = function(app, context) {
       res.json({ success: true, leaderboards: result });
     });
 
+    // 获取指定用户在指定游戏的最佳成绩
+    app.get('/api/leaderboard/:game/user/:nickname', (req, res) => {
+      const { game, nickname } = req.params;
+      const data = service.getUserBest(game, decodeURIComponent(nickname), siteConfig);
+      if (data.error) return res.status(404).json({ success: false, error: data.error });
+      res.json({ success: true, ...data });
+    });
+
     app.post('/api/leaderboard/:game', (req, res) => {
       const gameId = req.params.game;
       const { nickname, score, extra } = req.body;

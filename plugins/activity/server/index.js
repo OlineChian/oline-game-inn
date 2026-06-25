@@ -74,12 +74,71 @@ module.exports = function(app, context) {
       res.json({ success: true, prediction: prediction || null });
     });
 
+    // 结算单个用户的预测积分
+    app.post('/api/activity/:id/prediction/:nickname/settle', async (req, res) => {
+      const { id, nickname } = req.params;
+      const { matchResults } = req.body;
+      if (!matchResults) return res.status(400).json({ success: false, error: '缺少 matchResults' });
+      const result = await service.settlePrediction(id, nickname, { matchResults });
+      if (result.error) return res.status(404).json(result);
+      res.json(result);
+    });
+
+    // 批量结算所有用户预测（管理员用）
+    app.post('/api/activity/:id/predictions/settle-all', async (req, res) => {
+      const { id } = req.params;
+      const { matchResults } = req.body;
+      if (!matchResults) return res.status(400).json({ success: false, error: '缺少 matchResults' });
+      const result = await service.settleAllPredictions(id, { matchResults });
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    });
+
     app.post('/api/lottery/draw', (req, res) => {
       const { nickname, activityId } = req.body;
       if (!nickname) return res.status(400).json({ success: false, error: '昵称不能为空' });
       const result = service.lotteryDraw(nickname, activityId);
       if (result.error) return res.status(400).json(result);
       res.json(result);
+    });
+
+    // ===== 挑战 Session API =====
+    // 创建挑战 Session（活动页点击"开始挑战"时调用）
+    app.post('/api/challenge/session', (req, res) => {
+      const { nickname, activityId, gameId } = req.body;
+      if (!nickname || !activityId || !gameId) {
+        return res.status(400).json({ success: false, error: '参数不完整' });
+      }
+      const session = service.createChallengeSession(nickname, activityId, gameId);
+      res.json({ success: true, session });
+    });
+
+    // 提交单局成绩（游戏每局结束后调用）
+    app.post('/api/challenge/session/:sessionId/score', async (req, res) => {
+      const { sessionId } = req.params;
+      const { score } = req.body;
+      if (score === undefined) {
+        return res.status(400).json({ success: false, error: '分数不能为空' });
+      }
+      const result = await service.submitChallengeScore(sessionId, score);
+      if (result.error) return res.status(400).json(result);
+      res.json(result);
+    });
+
+    // 获取 Session 状态（活动页轮询）
+    app.get('/api/challenge/session/:sessionId', (req, res) => {
+      const { sessionId } = req.params;
+      const session = service.getChallengeSession(sessionId);
+      if (!session) return res.status(404).json({ success: false, error: 'Session不存在' });
+      res.json({ success: true, session });
+    });
+
+    // 获取用户各游戏的挑战最佳成绩
+    app.get('/api/challenge/user/:nickname/best', (req, res) => {
+      const { nickname } = req.params;
+      const activityId = req.query.activityId;
+      const result = service.getUserChallengeBest(decodeURIComponent(nickname), activityId);
+      res.json({ success: true, best: result });
     });
   }
   
@@ -104,6 +163,26 @@ module.exports = function(app, context) {
     
     lotteryDraw(nickname, activityId) {
       return service.lotteryDraw(nickname, activityId);
+    },
+
+    createChallengeSession(nickname, activityId, gameId) {
+      return service.createChallengeSession(nickname, activityId, gameId);
+    },
+
+    getChallengeSession(sessionId) {
+      return service.getChallengeSession(sessionId);
+    },
+
+    submitChallengeScore(sessionId, score) {
+      return service.submitChallengeScore(sessionId, score);
+    },
+
+    settlePrediction(activityId, nickname, results) {
+      return service.settlePrediction(activityId, nickname, results);
+    },
+
+    settleAllPredictions(activityId, results) {
+      return service.settleAllPredictions(activityId, results);
     }
   };
   

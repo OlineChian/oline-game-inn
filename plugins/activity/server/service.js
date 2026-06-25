@@ -96,8 +96,9 @@ class ActivityService {
 
   /**
    * 更新用户积分（增量模式）
+   * 同时同步到 user plugin 的积分系统
    */
-  updateUserPoints(nickname, type, amount, reason) {
+  async updateUserPoints(nickname, type, amount, reason) {
     const points = this.getUserPoints(nickname);
     
     if (type === 'challenge') points.challenge += amount;
@@ -110,8 +111,21 @@ class ActivityService {
     
     this.storage.set(`user:${nickname}:points`, points);
     
-    // 发布积分变更事件
-    this.eventBus.emit('points:updated', { nickname, points });
+    // 同步到 user plugin（通过 HTTP API，避免直接耦合）
+    try {
+      const baseUrl = process.env.ACTIVITY_USER_API || 'http://localhost:3000';
+      await fetch(`${baseUrl}/api/user/${encodeURIComponent(nickname)}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challenge: points.challenge,
+          prediction: points.prediction,
+          total: points.total
+        })
+      });
+    } catch (e) {
+      this.logger.warn(`同步积分到user plugin失败: ${e.message}`);
+    }
     
     return points;
   }
@@ -158,13 +172,8 @@ class ActivityService {
         submittedAt: Date.now()
       });
       
-      // 首次提交奖励积分
-      if (!isUpdate) {
-        this.updateUserPoints(nickname, 'prediction', 10, '参与赛事预测');
-        this.logger.info(`${nickname} 提交预测，获得10积分`);
-      }
-      
-      return { success: true, message: isUpdate ? '预测已更新' : '预测提交成功，获得10预测积分！' };
+      // 不再立即发放积分，等活动结束后结算
+      return { success: true, message: isUpdate ? '预测已更新' : '预测提交成功！活动结束后将根据预测结果发放积分。' };
     }
     
     // 单个冠军预测格式
@@ -184,9 +193,84 @@ class ActivityService {
       submittedAt: Date.now()
     });
     
-    this.updateUserPoints(nickname, 'prediction', 10, '参与赛事预测');
+    // 不再立即发放积分
+    return { success: true, message: '预测提交成功！活动结束后将根据预测结果发放积分。' };
+  }
+
+  /**
+   * 结算预测积分（活动结束后调用）
+   * 根据预测正确数量发放积分
+   */
+  async settlePrediction(activityId, nickname, results) {
+    const key = `prediction:${activityId}:${nickname}`;
+    const prediction = this.storage.get(key);
+    if (!prediction) return { error: '无预测记录', code: 404 };
+
+    const basePath = path.join(__dirname, '..', '..', '..');
+    const config = this.loadActivitiesConfig(basePath);
+    const activity = config.activities.find(a => a.id === activityId);
+    if (!activity || !activity.prediction) return { error: '活动配置不存在', code: 400 };
+
+    const rewardPerCorrect = activity.prediction.reward || 25; // 每场正确奖励
+    let correctCount = 0;
+    let totalCount = 0;
+
+    // 计算对阵预测正确数量
+    if (prediction.matchPredictions && results.matchResults) {
+      for (const [matchId, correctWinner] of Object.entries(results.matchResults)) {
+        totalCount++;
+        if (prediction.matchPredictions[matchId] === correctWinner) {
+          correctCount++;
+        }
+      }
+    }
+
+    const points = correctCount * rewardPerCorrect;
     
-    return { success: true, message: '预测提交成功，获得10预测积分！' };
+    // 如果已有结算记录，不重复发放
+    if (prediction.settled) {
+      return { success: true, message: '预测已结算过', correctCount, totalCount, points: 0 };
+    }
+
+    if (points > 0) {
+      await this.updateUserPoints(nickname, 'prediction', points, `预测结算（${correctCount}/${totalCount}场正确）`);
+    }
+
+    // 标记为已结算
+    prediction.settled = true;
+    prediction.settledAt = Date.now();
+    prediction.correctCount = correctCount;
+    prediction.totalCount = totalCount;
+    prediction.pointsAwarded = points;
+    this.storage.set(key, prediction);
+
+    return { success: true, correctCount, totalCount, points, message: `结算完成：${correctCount}/${totalCount}场正确，获得${points}积分` };
+  }
+
+  /**
+   * 批量结算所有用户的预测（管理员用）
+   */
+  settleAllPredictions(activityId, results) {
+    const basePath = path.join(__dirname, '..', '..', '..');
+    const config = this.loadActivitiesConfig(basePath);
+    const activity = config.activities.find(a => a.id === activityId);
+    if (!activity) return { error: '活动不存在', code: 400 };
+
+    const allKeys = Array.from(this.storage.store.keys()).filter(k => k.startsWith(`prediction:${activityId}:`));
+    const settled = [];
+    const failed = [];
+
+    for (const key of allKeys) {
+      const nickname = key.split(':')[2];
+      const result = this.settlePrediction(activityId, nickname, results);
+      if (result.success) {
+        settled.push({ nickname, ...result });
+      } else {
+        failed.push({ nickname, error: result.error });
+      }
+    }
+
+    return { success: true, settled: settled.length, failed: failed.length, details: { settled, failed } };
   }
 
   /**
@@ -200,6 +284,139 @@ class ActivityService {
   /**
    * 抽奖
    */
+  /**
+   * 创建挑战 Session
+   */
+  createChallengeSession(nickname, activityId, gameId) {
+    const id = `${nickname}_${activityId}_${gameId}_${Date.now()}`;
+    const session = {
+      id,
+      nickname,
+      activityId,
+      gameId,
+      scores: [],       // 所有局成绩
+      status: 'active', // active | completed | expired
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 30 * 60 * 1000 // 30分钟后过期
+    };
+    this.storage.set(`challenge:session:${id}`, session);
+    return session;
+  }
+
+  /**
+   * 提交单局成绩
+   */
+  async submitChallengeScore(sessionId, score) {
+    const session = this.storage.get(`challenge:session:${sessionId}`);
+    if (!session) return { error: 'Session不存在', code: 404 };
+    if (session.status !== 'active') return { error: 'Session已结束', code: 400 };
+    if (Date.now() > session.expiresAt) {
+      session.status = 'expired';
+      this.storage.set(`challenge:session:${sessionId}`, session);
+      return { error: 'Session已过期', code: 400 };
+    }
+
+    session.scores.push(score);
+    this.storage.set(`challenge:session:${sessionId}`, session);
+
+    // 3局后自动结束
+    if (session.scores.length >= 3) {
+      session.status = 'completed';
+      const bestScore = Math.max(...session.scores);
+      session.bestScore = bestScore;
+      this.storage.set(`challenge:session:${sessionId}`, session);
+
+      // 自动结算积分
+      await this._settleChallengeScore(session, bestScore);
+    }
+
+    return {
+      success: true,
+      scores: session.scores,
+      totalRounds: session.scores.length,
+      status: session.status,
+      bestScore: session.bestScore || null
+    };
+  }
+
+  /**
+   * 获取 Session
+   */
+  getChallengeSession(sessionId) {
+    const session = this.storage.get(`challenge:session:${sessionId}`);
+    if (!session) return null;
+    // 过期检查
+    if (Date.now() > session.expiresAt && session.status === 'active') {
+      session.status = 'expired';
+      this.storage.set(`challenge:session:${sessionId}`, session);
+    }
+    return session;
+  }
+
+  /**
+   * 结算挑战积分
+   */
+  async _settleChallengeScore(session, bestScore) {
+    const basePath = path.join(__dirname, '..', '..', '..');
+    const config = this.loadActivitiesConfig(basePath);
+    const activity = config.activities.find(a => a.id === session.activityId);
+    if (!activity || !activity.challenge) return;
+
+    const game = activity.challenge.games.find(g => g.id === session.gameId);
+    if (!game) return;
+
+    let points = 0;
+    if (game.sort === 'asc') {
+      points = bestScore > 0 ? Math.round((game.maxScore / bestScore) * 50) : 0;
+    } else {
+      let capped = game.scoreCap ? Math.min(bestScore, game.scoreCap) : bestScore;
+      points = Math.round((capped / game.maxScore) * 100);
+    }
+    points = Math.round(points * (activity.challenge.rewardMultiplier || 1));
+    points = Math.min(points, game.maxScore);
+
+    // 累加到用户积分（取最高分，不覆盖）
+    const existingKey = `challenge:${session.nickname}:${session.gameId}:best`;
+    const existingBest = this.storage.get(existingKey) || 0;
+    if (points > existingBest) {
+      this.storage.set(existingKey, points);
+      const delta = points - existingBest;
+      if (delta > 0) {
+        await this.updateUserPoints(session.nickname, 'challenge', delta, `${game.name}挑战结算`);
+      }
+    }
+  }
+
+  /**
+   * 获取用户各游戏的挑战最佳成绩
+   */
+  getUserChallengeBest(nickname, activityId) {
+    const basePath = path.join(__dirname, '..', '..', '..');
+    const config = this.loadActivitiesConfig(basePath);
+    const activity = config.activities.find(a => a.id === (activityId || config.activities[0]?.id));
+    if (!activity || !activity.challenge) return {};
+
+    const result = {};
+    for (const game of activity.challenge.games) {
+      const key = `challenge:${nickname}:${game.id}:best`;
+      const best = this.storage.get(key);
+      if (best !== undefined && best !== null) {
+        result[game.id] = {
+          gameId: game.id,
+          bestScore: best,
+          completed: true
+        };
+      } else {
+        result[game.id] = {
+          gameId: game.id,
+          bestScore: null,
+          completed: false
+        };
+      }
+    }
+    return result;
+  }
+
   lotteryDraw(nickname, activityId) {
     const points = this.getUserPoints(nickname);
     const cost = 50;

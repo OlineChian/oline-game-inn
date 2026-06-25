@@ -4,7 +4,7 @@
   "description": "Oline荒野游戏客栈 - 荒野乱斗主题游戏合集网站，联机对战 + 排行榜竞技 + 活动系统",
   "main": "server.js",
   "scripts": {
-    "start": "node core/server/bootstrap.js",
+    "start": "node server.js",
     "dev": "node server.js"
   },
   "keywords": [

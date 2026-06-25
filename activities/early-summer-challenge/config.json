@@ -6,8 +6,8 @@
   "name": "初夏挑战季",
   "description": "玩游戏赢积分，抽宝石大奖！",
   "icon": "🌸",
-  "startTime": "2026-06-20T00:00:00",
-  "endTime": "2026-07-10T23:59:59",
+  "startTime": "2026-06-26T00:00:00",
+  "endTime": "2026-06-29T23:59:59",
   "enabled": true,
   "modules": ["challenge", "prediction", "lottery"],
   
@@ -115,28 +115,28 @@
         "difficulty": "简单",
         "maxScore": 100,
         "sort": "asc",
-        "pageUrl": "../../belle-challenge.html"
+        "pageUrl": "/game/belle-challenge"
       },
       {
         "_说明": "8比特街机 - 跑酷游戏，得分越高积分越高，有分数上限500",
-        "id": "8bit-arcade-oline",
+        "id": "8bit-arcade",
         "name": "8比特街机",
         "icon": "🕹️",
         "difficulty": "简单",
         "maxScore": 500,
         "sort": "desc",
         "scoreCap": 500,
-        "pageUrl": "../../8bit-arcade-oline.html"
+        "pageUrl": "/game/8bit-arcade"
       },
       {
         "_说明": "罗莎琥珀好姐妹 - 终极井字棋，胜场越多积分越高",
-        "id": "rosa-ember-online",
+        "id": "rosa-ember",
         "name": "罗莎琥珀好姐妹",
         "icon": "🌿",
         "difficulty": "简单AI",
         "maxScore": 100,
         "sort": "desc",
-        "pageUrl": "../../rosa-ember-online.html"
+        "pageUrl": "/game/rosa-ember"
       },
       {
         "_说明": "巴斯特的蒙太奇 - 弹弹珠游戏，得分越高积分越高",
@@ -146,7 +146,7 @@
         "difficulty": "简单",
         "maxScore": 200,
         "sort": "desc",
-        "pageUrl": "../../buster-montage.html"
+        "pageUrl": "/game/buster-montage"
       },
       {
         "_说明": "卡牌大师塔拉 - 卡牌接龙，用时越短积分越高",
@@ -156,7 +156,7 @@
         "difficulty": "简单",
         "maxScore": 100,
         "sort": "asc",
-        "pageUrl": "../../tara-cards.html"
+        "pageUrl": "/game/tara-cards"
       }
     ],
     "rounds": 3,

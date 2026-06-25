@@ -285,6 +285,32 @@
             </div>
             
             <button class="btn btn-secondary" id="joinRoomBtn">🚪 加入房间</button>
+
+            <div style="margin: 20px 0; color: rgba(255,255,255,0.4);">或者</div>
+
+            <button class="btn btn-secondary" id="soloModeBtn" style="background: linear-gradient(135deg, #9b59b6, #8e44ad); border: none;">
+                🎯 单人练习模式
+            </button>
+        </div>
+
+        <!-- 单人模式屏幕 -->
+        <div id="soloScreen" style="display: none;">
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px;">单人模式 · 完成3局取最高分 · 可用于活动挑战</p>
+            <div id="soloRoundInfo" style="color: #f1c40f; margin-bottom: 10px;">第 1/3 局</div>
+            <canvas id="soloCanvas" width="500" height="400" style="border-radius: 15px; border: 3px solid rgba(155,89,182,0.3);"></canvas>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-secondary" id="soloQuitBtn">← 退出单人模式</button>
+            </div>
+            <div class="hint">按 空格键 / 点击屏幕 跳跃</div>
+        </div>
+
+        <!-- 单人模式结果屏幕 -->
+        <div id="soloResultScreen" style="display: none;">
+            <div class="result-title" id="soloResultTitle">🎉 本局得分</div>
+            <div class="result-details" id="soloResultDetails"></div>
+            <div id="soloBestScore" style="color: #f1c40f; font-size: 18px; margin-bottom: 15px;"></div>
+            <button class="btn btn-primary" id="soloNextRoundBtn">🔄 下一局</button>
+            <button class="btn btn-secondary" id="soloFinishBtn">🏁 结束挑战</button>
         </div>
         
         <!-- 等待屏幕 -->

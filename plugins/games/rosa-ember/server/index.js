@@ -9,13 +9,13 @@ const winPatterns = [
   [0, 4, 8], [2, 4, 6]
 ];
 
-const CODEChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const CodeLength = 6;
-const Timeout = 30 * 60 * 1000;
+const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ROOM_CODE_LENGTH = 6;
+const ROOM_TIMEOUT = 30 * 60 * 1000;
 
 function generateCode() {
   let c = '';
-  for (let i = 0; i < CodeLength; i++) c += CodeChars[Math.floor(Math.random() * CodeChars.length)];
+  for (let i = 0; i < ROOM_CODE_LENGTH; i++) c += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
   return c;
 }
 
@@ -103,7 +103,7 @@ module.exports = function(app, context) {
   function cleanup() {
     const now = Date.now();
     for (const [c, r] of rooms) {
-      if (now - r.lastActivity > Timeout) {
+      if (now - r.lastActivity > ROOM_TIMEOUT) {
         gameIO.to(c).emit('roomTimeout', '房间超时关闭');
         rooms.delete(c);
         logger.info(`房间 ${c} 超时清理`);

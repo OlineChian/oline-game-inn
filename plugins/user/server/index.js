@@ -48,6 +48,19 @@ module.exports = function(app, context) {
       });
     });
 
+    // 接收 activity plugin 同步积分（设置绝对值）
+    app.post('/api/user/:nickname/sync', (req, res) => {
+      const { nickname } = req.params;
+      const { challenge, prediction, total } = req.body;
+      
+      if (!nickname) {
+        return res.status(400).json({ success: false, error: '昵称不能为空' });
+      }
+      
+      const points = service.syncPoints(nickname, challenge, prediction);
+      res.json({ success: true, points });
+    });
+
     context.eventBus.on('challenge:completed', (data) => {
       const { nickname, challenge } = data;
       if (challenge && challenge.reward) {

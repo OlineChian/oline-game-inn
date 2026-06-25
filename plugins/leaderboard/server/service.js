@@ -78,6 +78,36 @@ class LeaderboardService {
   }
 
   /**
+   * 获取用户在指定游戏的最佳成绩
+   */
+  getUserBest(gameId, nickname, siteConfig) {
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    const config = gameConfigs[gameId];
+    if (!config) return { error: '游戏不存在' };
+
+    const board = this.getBoard(gameId);
+    const userRecords = board.filter(r => r.nickname === nickname);
+    if (userRecords.length === 0) return { error: '暂无记录', bestScore: null, rank: null, total: board.length };
+
+    const sorted = this.sortBoard(board, config.sort);
+    const best = config.sort === 'asc'
+      ? userRecords.reduce((a, b) => a.score < b.score ? a : b)
+      : userRecords.reduce((a, b) => a.score > b.score ? a : b);
+    const rank = sorted.findIndex(r => r.nickname === nickname && r.score === best.score) + 1;
+
+    return {
+      gameId,
+      nickname,
+      bestScore: best.score,
+      rank: rank || null,
+      total: board.length,
+      config,
+      extra: best.extra || {},
+      playedCount: userRecords.length
+    };
+  }
+
+  /**
    * 获取排行榜详情
    */
   getLeaderboard(gameId, options, siteConfig) {
