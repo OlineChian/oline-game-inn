@@ -1,0 +1,184 @@
+{
+  "_文件说明": "Oline荒野游戏客栈 - 初夏挑战季活动配置",
+  "_配置说明": "此文件定义初夏挑战季的全部配置，包括活动基本信息、游戏挑战列表、预测队伍、抽奖奖品池。后端通过扫描 activities/ 目录自动发现此活动。",
+  
+  "id": "early-summer-challenge",
+  "name": "初夏挑战季",
+  "description": "玩游戏赢积分，抽宝石大奖！",
+  "icon": "🌸",
+  "startTime": "2026-06-20T00:00:00",
+  "endTime": "2026-07-10T23:59:59",
+  "enabled": true,
+  "modules": ["challenge", "prediction", "lottery"],
+  
+  "prediction": {
+    "_说明": "赛事预测模块配置 - 8支队伍A/B两组双循环赛制，预测可在27日15:00前随时修改",
+    "deadline": "2026-06-27T15:00:00",
+    "teams": [
+      {
+        "id": "ace-xero",
+        "name": "ACE XERO",
+        "abbr": "AXR",
+        "color": "#00BCD4",
+        "group": "A",
+        "players": ["冷饮", "意境", "GALAXY"]
+      },
+      {
+        "id": "toxic-lotus",
+        "name": "TOXIC LOTUS",
+        "abbr": "TL",
+        "color": "#2E7D32",
+        "group": "B",
+        "players": ["小鸥", "若白", "司机"]
+      },
+      {
+        "id": "last-hope-fire",
+        "name": "LAST HOPE FIRE",
+        "abbr": "LHF",
+        "color": "#E53935",
+        "group": "B",
+        "players": ["辰星", "唯爱大王", "STORY"]
+      },
+      {
+        "id": "toc",
+        "name": "TOC",
+        "abbr": "TOC",
+        "color": "#795548",
+        "group": "A",
+        "players": ["自信丢枪", "狐狸", "橡皮人的友谊"]
+      },
+      {
+        "id": "tig-revival",
+        "name": "TIG REVIVAL",
+        "abbr": "TIG",
+        "color": "#2196F3",
+        "group": "A",
+        "players": ["灵林", "火光", "丸子头"]
+      },
+      {
+        "id": "smdy",
+        "name": "SMDY",
+        "abbr": "SMDY",
+        "color": "#FF9800",
+        "group": "B",
+        "players": ["SODAA", "FENGOU", "CLEAR"]
+      },
+      {
+        "id": "irisout",
+        "name": "IRIS OUT",
+        "abbr": "IRIS",
+        "color": "#9C27B0",
+        "group": "B",
+        "players": ["情人", "下山", "EXPRESSION"]
+      },
+      {
+        "id": "dark-spirit",
+        "name": "DARK SPIRIT",
+        "abbr": "DS",
+        "color": "#212121",
+        "group": "A",
+        "players": ["灰原哀", "北北", "汐风"]
+      }
+    ],
+    "schedule": {
+      "_说明": "赛程安排 - mainStage为主舞台(直播)，subStage为副舞台(不直播)",
+      "mainStage": [
+        { "group": "A", "time": "15:00", "team1": "ace-xero", "team2": "dark-spirit" },
+        { "group": "A", "time": "15:50", "team1": "toc", "team2": "tig-revival" },
+        { "group": "A", "time": "16:40", "team1": "dark-spirit", "team2": "tig-revival" },
+        { "group": "B", "time": "17:30", "team1": "toxic-lotus", "team2": "last-hope-fire" },
+        { "group": "B", "time": "18:20", "team1": "last-hope-fire", "team2": "irisout" },
+        { "group": "B", "time": "19:10", "team1": "smdy", "team2": "toxic-lotus" }
+      ],
+      "subStage": [
+        { "group": "B", "time": "15:00", "team1": "toxic-lotus", "team2": "irisout" },
+        { "group": "B", "time": "15:50", "team1": "last-hope-fire", "team2": "smdy" },
+        { "group": "B", "time": "16:40", "team1": "irisout", "team2": "smdy" },
+        { "group": "A", "time": "17:30", "team1": "ace-xero", "team2": "toc" },
+        { "group": "A", "time": "18:20", "team1": "toc", "team2": "dark-spirit" },
+        { "group": "A", "time": "19:10", "team1": "tig-revival", "team2": "ace-xero" }
+      ]
+    },
+    "allowChange": true,
+    "reward": 25,
+    "participateReward": 5
+  },
+  
+  "challenge": {
+    "_说明": "游戏挑战模块配置 - 5款游戏，每款3局，取最优成绩结算积分",
+    "games": [
+      {
+        "_说明": "贝尔的挑战 - 扫雷游戏，用时越短积分越高",
+        "id": "belle-challenge",
+        "name": "贝尔的挑战",
+        "icon": "💣",
+        "difficulty": "简单",
+        "maxScore": 100,
+        "sort": "asc",
+        "pageUrl": "../../belle-challenge.html"
+      },
+      {
+        "_说明": "8比特街机 - 跑酷游戏，得分越高积分越高，有分数上限500",
+        "id": "8bit-arcade-oline",
+        "name": "8比特街机",
+        "icon": "🕹️",
+        "difficulty": "简单",
+        "maxScore": 500,
+        "sort": "desc",
+        "scoreCap": 500,
+        "pageUrl": "../../8bit-arcade-oline.html"
+      },
+      {
+        "_说明": "罗莎琥珀好姐妹 - 终极井字棋，胜场越多积分越高",
+        "id": "rosa-ember-online",
+        "name": "罗莎琥珀好姐妹",
+        "icon": "🌿",
+        "difficulty": "简单AI",
+        "maxScore": 100,
+        "sort": "desc",
+        "pageUrl": "../../rosa-ember-online.html"
+      },
+      {
+        "_说明": "巴斯特的蒙太奇 - 弹弹珠游戏，得分越高积分越高",
+        "id": "buster-montage",
+        "name": "巴斯特的蒙太奇",
+        "icon": "🎬",
+        "difficulty": "简单",
+        "maxScore": 200,
+        "sort": "desc",
+        "pageUrl": "../../buster-montage.html"
+      },
+      {
+        "_说明": "卡牌大师塔拉 - 卡牌接龙，用时越短积分越高",
+        "id": "tara-cards",
+        "name": "卡牌大师塔拉",
+        "icon": "🃏",
+        "difficulty": "简单",
+        "maxScore": 100,
+        "sort": "asc",
+        "pageUrl": "../../tara-cards.html"
+      }
+    ],
+    "rounds": 3,
+    "resetChance": 1,
+    "rewardMultiplier": 1
+  },
+  
+  "lottery": {
+    "_说明": "宝石抽奖模块配置 - 加权积分 = 挑战积分×0.75 + 预测积分×0.25，分享加成×1.2",
+    "cost": 50,
+    "shareBonus": 1.2,
+    "challengeWeight": 0.75,
+    "predictionWeight": 0.25,
+    "prizes": [
+      { "name": "30宝石", "probability": 0.30 },
+      { "name": "50宝石", "probability": 0.20 },
+      { "name": "100宝石", "probability": 0.15 },
+      { "name": "200宝石", "probability": 0.10 },
+      { "name": "皮肤宝箱", "probability": 0.10 },
+      { "name": "限定头像框", "probability": 0.08 },
+      { "name": "限定皮肤", "probability": 0.05 },
+      { "name": "再来一次", "probability": 0.02 }
+    ]
+  }
+}

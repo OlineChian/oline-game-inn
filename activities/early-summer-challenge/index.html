@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--
+  初夏挑战季活动页面
+  ====================
+  功能模块：
+    - 游戏挑战：玩指定游戏3局取最优成绩，按规则结算积分
+    - 赛事预测：选择冠军队伍，预测正确获得积分
+    - 宝石抽奖：消耗加权积分参与抽奖，赢取宝石/皮肤等奖励
+    - 排行榜：查看各游戏全服排行
+  积分体系：
+    - 挑战积分：完成游戏挑战获得
+    - 预测积分：提交赛事预测获得
+    - 总积分 = 挑战积分 + 预测积分
+    - 加权积分 = 挑战积分×0.75 + 预测积分×0.25（分享×1.2）
+  数据存储：昵称从 localStorage(gameNickname) 读取，挑战/预测/分享状态按用户本地存储
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初夏挑战季 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ==================== 顶部操作栏 ==================== -->
+    <div class="game-actions">
+        <a href="../../activity.html" class="game-action-btn">
+            ← 返回活动中心
+        </a>
+        <button class="game-action-btn" onclick="showLeaderboard()">
+            🏆 排行榜
+        </button>
+    </div>
+
+    <!-- ==================== 活动主体容器 ==================== -->
+    <div class="activity-container">
+        <!-- 活动头部：图标 + 标题 + 倒计时 -->
+        <div class="activity-header">
+            <div class="activity-icon">🌸</div>
+            <h1 class="activity-title">初夏挑战季</h1>
+            <p class="activity-subtitle">玩游戏赢积分，抽宝石大奖！</p>
+            <div class="activity-countdown" id="activityCountdown">
+                加载中...
+            </div>
+        </div>
+
+        <!-- 积分展示区：挑战积分 / 预测积分 / 总积分 -->
+        <div class="points-display">
+            <div class="points-item">
+                <div class="points-icon">🎯</div>
+                <div class="points-info">
+                    <div class="points-label">挑战积分</div>
+                    <div class="points-value" id="challengePoints">0</div>
+                </div>
+            </div>
+            <div class="points-item">
+                <div class="points-icon">🔮</div>
+                <div class="points-info">
+                    <div class="points-label">预测积分</div>
+                    <div class="points-value" id="predictionPoints">0</div>
+                </div>
+            </div>
+            <div class="points-item">
+                <div class="points-icon">💎</div>
+                <div class="points-info">
+                    <div class="points-label">总积分</div>
+                    <div class="points-value" id="totalPoints">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab导航：挑战 / 预测 / 抽奖 -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="challenge" onclick="switchTab('challenge')">
+                🎮 游戏挑战
+            </button>
+            <button class="tab-btn" data-tab="prediction" onclick="switchTab('prediction')">
+                🔮 赛事预测
+            </button>
+            <button class="tab-btn" data-tab="lottery" onclick="switchTab('lottery')">
+                💎 宝石抽奖
+            </button>
+        </div>
+
+        <!-- ==================== Tab内容区 ==================== -->
+        <div class="tab-content">
+
+            <!-- 游戏挑战模块 -->
+            <div class="tab-pane active" id="tab-challenge">
+                <div class="module-header">
+                    <h2>🎮 游戏挑战</h2>
+                    <p class="module-desc">每款游戏挑战3局，取最优成绩结算积分</p>
+                </div>
+
+                <div class="challenge-tip">
+                    💡 建议先在大厅练习熟悉游戏，再开始挑战哦！
+                </div>
+
+                <div class="challenge-games" id="challengeGames">
+                    <!-- 动态生成游戏列表 -->
+                </div>
+            </div>
+
+            <!-- 赛事预测模块 -->
+            <div class="tab-pane" id="tab-prediction">
+                <div class="module-header">
+                    <h2>🔮 赛事预测</h2>
+                    <p class="module-desc">预测每场对阵的胜者，结束前可随时更改</p>
+                </div>
+
+                <div class="prediction-countdown" id="predictionCountdown">
+                    预测截止倒计时：加载中...
+                </div>
+
+                <!-- 预测进度 -->
+                <div class="prediction-progress" id="predictionProgress">
+                    已预测 <span id="predictedCount">0</span>/12 场
+                </div>
+
+                <!-- 赛程安排（含预测交互） -->
+                <div class="schedule-section" id="scheduleSection">
+                    <!-- 动态渲染赛程 -->
+                </div>
+
+                <!-- 提交/更改预测按钮 -->
+                <div class="prediction-submit-wrap" id="predictionSubmitWrap">
+                    <button class="prediction-submit-btn" id="predictionSubmitBtn" onclick="handlePredictionAction()">
+                        📤 提交全部预测
+                    </button>
+                    <p class="prediction-submit-hint">参与预测得 5 积分，预测成功再得 25 积分</p>
+                </div>
+            </div>
+
+            <!-- 宝石抽奖模块 -->
+            <div class="tab-pane" id="tab-lottery">
+                <div class="module-header">
+                    <h2>💎 宝石抽奖</h2>
+                    <p class="module-desc">消耗积分参与抽奖，赢取丰厚奖励！</p>
+                </div>
+
+                <!-- 抽奖未开放状态 -->
+                <div class="lottery-locked" id="lotteryLocked">
+                    <div class="locked-icon">🔒</div>
+                    <div class="locked-text">
+                        <h3>抽奖暂未开放</h3>
+                        <p>赛事结果公布后即可参与抽奖</p>
+                    </div>
+                </div>
+
+                <!-- 抽奖已开放状态 -->
+                <div class="lottery-content" id="lotteryContent" style="display: none;">
+                    <!-- 加权积分明细 -->
+                    <div class="lottery-points-info">
+                        <div class="points-breakdown">
+                            <div class="breakdown-item">
+                                <span>挑战积分 × 0.75</span>
+                                <span id="weightedChallenge">0</span>
+                            </div>
+                            <div class="breakdown-item">
+                                <span>预测积分 × 0.25</span>
+                                <span id="weightedPrediction">0</span>
+                            </div>
+                            <div class="breakdown-item share-bonus" id="shareBonusItem" style="display: none;">
+                                <span>分享加成 × 1.2</span>
+                                <span>已激活</span>
+                            </div>
+                            <div class="breakdown-total">
+                                <span>加权积分</span>
+                                <span id="weightedTotal">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 辅助功能按钮：分享 / 作者主页 -->
+                    <div class="lottery-actions">
+                        <button class="action-btn share-btn" onclick="handleShare()" id="shareBtn">
+                            📤 分享得额外抽奖机会
+                        </button>
+                        <button class="action-btn author-btn" onclick="goToAuthorPage()">
+                            👤 前往作者主页
+                        </button>
+                    </div>
+
+                    <!-- 抽奖主按钮 -->
+                    <div class="lottery-main-btn">
+                        <button class="lottery-btn" onclick="handleLottery()" id="lotteryBtn">
+                            <span class="lottery-btn-icon">🎰</span>
+                            <span class="lottery-btn-text">参与宝石抽奖</span>
+                            <span class="lottery-btn-cost">消耗 50 积分</span>
+                        </button>
+                    </div>
+
+                    <!-- 挑战码（首次抽奖后生成） -->
+                    <div class="challenge-code-section" id="challengeCodeSection" style="display: none;">
+                        <h3>🎫 你的挑战码</h3>
+                        <div class="challenge-code" id="challengeCode">
+                            <!-- 动态生成 -->
+                        </div>
+                        <button class="copy-code-btn" onclick="copyChallengeCode()">
+                            📋 复制挑战码
+                        </button>
+                        <p class="code-tip">复制挑战码，前往腾讯文档/WPS填写信息领取奖励</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 排行榜弹窗 ==================== -->
+    <div class="modal-overlay hidden" id="leaderboardModal">
+        <div class="modal leaderboard-modal">
+            <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            <div class="modal-icon">🏆</div>
+            <h2>游戏排行榜</h2>
+            <p>看看谁是最强玩家！</p>
+            <div class="leaderboard-tabs" id="leaderboardTabs">
+                <!-- 动态生成 -->
+            </div>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div style="text-align:center;padding:20px;color:#999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 抽奖结果弹窗 ==================== -->
+    <div class="modal-overlay hidden" id="lotteryResultModal">
+        <div class="modal lottery-result-modal">
+            <button class="close-modal" onclick="closeLotteryResult()">×</button>
+            <div class="lottery-result-icon" id="lotteryResultIcon">🎉</div>
+            <h2 id="lotteryResultTitle">恭喜获得</h2>
+            <div class="lottery-prize" id="lotteryPrize">
+                <!-- 动态渲染奖品名称 -->
+            </div>
+            <p class="lottery-remaining">剩余积分：<span id="remainingPoints">0</span></p>
+            <button class="modal-btn" onclick="closeLotteryResult()">确定</button>
+        </div>
+    </div>
+
+    <!-- ==================== Toast提示 ==================== -->
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

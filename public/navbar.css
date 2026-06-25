@@ -1,0 +1,91 @@
+/* ===========================
+   Navbar Component Styles
+   ===========================
+   CSS Variables for Theme System override:
+   --navbar-bg
+   --navbar-text
+   --navbar-accent
+   --navbar-height
+=========================== */
+
+#site-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--navbar-height, 50px);
+  background: var(--navbar-bg, rgba(0, 0, 0, 0.92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(237, 117, 38, 0.15);
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--navbar-text, #fff);
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.navbar-brand:hover {
+  color: var(--navbar-accent, #ED7526);
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navbar-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--navbar-text, rgba(255,255,255,0.75));
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.navbar-link:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--navbar-text, #fff);
+}
+
+.navbar-link.active {
+  background: rgba(237, 117, 38, 0.15);
+  color: var(--navbar-accent, #ED7526);
+  border-color: rgba(237, 117, 38, 0.3);
+}
+
+.navbar-link i {
+  font-size: 13px;
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+  #site-navbar {
+    padding: 0 12px;
+  }
+  .navbar-brand span {
+    display: none;
+  }
+  .navbar-link span {
+    display: none;
+  }
+  .navbar-link {
+    padding: 6px 10px;
+  }
+}

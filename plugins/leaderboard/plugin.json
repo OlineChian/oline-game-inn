@@ -1,0 +1,18 @@
+{
+  "id": "leaderboard",
+  "name": "排行榜系统",
+  "version": "1.0.0",
+  "description": "游戏排行榜查询、提交、排名展示",
+  "type": "core",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js",
+    "client": "client/index.js"
+  },
+  "dependencies": [],
+  "provides": ["leaderboard-api"],
+  "config": {
+    "maxEntriesPerGame": 100,
+    "enableChallengePoints": true
+  }
+}

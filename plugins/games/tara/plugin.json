@@ -1,0 +1,21 @@
+{
+  "id": "tara-cards",
+  "name": "卡牌大师塔拉",
+  "version": "1.0.0",
+  "description": "经典接龙玩法卡牌游戏",
+  "type": "game",
+  "icon": "🃏",
+  "author": "Oline Team",
+  "entry": {
+    "client": "client/index.html"
+  },
+  "dependencies": ["leaderboard"],
+  "provides": ["tara-cards-game"],
+  "config": {
+    "leaderboard": {
+      "sort": "desc",
+      "unit": "分",
+      "label": "得分"
+    }
+  }
+}

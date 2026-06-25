@@ -1,0 +1,25 @@
+{
+  "name": "oline-game-inn",
+  "version": "2.1.0",
+  "description": "Oline荒野游戏客栈 - 荒野乱斗主题游戏合集网站，联机对战 + 排行榜竞技 + 活动系统",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "game-collection",
+    "multiplayer",
+    "socket.io",
+    "leaderboard",
+    "brawl-stars",
+    "mini-games",
+    "oline"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}

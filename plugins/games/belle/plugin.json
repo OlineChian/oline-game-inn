@@ -1,0 +1,26 @@
+{
+  "id": "belle-challenge",
+  "name": "贝尔的挑战",
+  "version": "1.0.0",
+  "description": "经典扫雷改编版，找出所有安全区域",
+  "type": "game",
+  "icon": "💣",
+  "author": "Oline Team",
+  "entry": {
+    "client": "client/index.html"
+  },
+  "dependencies": ["leaderboard"],
+  "provides": ["belle-challenge-game"],
+  "config": {
+    "difficulties": {
+      "easy": { "rows": 9, "cols": 9, "mines": 10 },
+      "medium": { "rows": 12, "cols": 12, "mines": 25 },
+      "hard": { "rows": 15, "cols": 15, "mines": 45 }
+    },
+    "leaderboard": {
+      "sort": "asc",
+      "unit": "秒",
+      "label": "用时"
+    }
+  }
+}

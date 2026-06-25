@@ -1,0 +1,21 @@
+{
+  "id": "8bit-arcade",
+  "name": "8比特街机",
+  "version": "1.0.0",
+  "description": "像素风联机对战街机游戏合集",
+  "type": "game",
+  "icon": "🎮",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js",
+    "client": "client/index.html"
+  },
+  "dependencies": ["leaderboard"],
+  "provides": ["8bit-arcade-game"],
+  "socketNamespace": "/8bit-arcade",
+  "config": {
+    "maxPlayers": 2,
+    "roomCodeLength": 6,
+    "timeoutMinutes": 30
+  }
+}

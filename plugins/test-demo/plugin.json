@@ -1,0 +1,15 @@
+{
+  "id": "test-demo",
+  "hidden": true,
+  "name": "测试插件",
+  "version": "1.0.0",
+  "description": "用于验证插件路由自动注册的测试插件",
+  "type": "game",
+  "icon": "🧪",
+  "author": "Oline Team",
+  "entry": {
+    "client": "client/index.html"
+  },
+  "dependencies": [],
+  "provides": ["test-demo"]
+}

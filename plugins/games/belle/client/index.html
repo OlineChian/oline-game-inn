@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贝尔的挑战 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>💥 贝尔的挑战</h1>
+        <p>小心贝尔的陷阱！找出所有安全区域</p>
+    </div>
+    <div class="game-actions">
+        <a href="/#games" class="nav-btn">
+            ← 返回大厅
+        </a>
+        <button class="nav-btn" onclick="showLeaderboard()">
+            🏆 排行榜
+        </button>
+    </div>
+    <div class="top-controls">
+        <button class="icon-btn" onclick="toggleFullscreen()">🔄 旋转/全屏</button>
+    </div>
+    <div class="game-container">
+        <div class="difficulty-select">
+            <button class="diff-btn active" data-diff="easy">😊 简单</button>
+            <button class="diff-btn" data-diff="medium">😐 中等</button>
+            <button class="diff-btn" data-diff="hard">😈 困难</button>
+        </div>
+        <div class="mode-hint" id="modeHint">📱 手机模式：单击揭开，长按标记</div>
+        <div class="mark-controls">
+            <button class="mark-btn active" id="normalModeBtn">👆 正常模式</button>
+            <button class="mark-btn" id="singleMarkBtn">📍 单次标记</button>
+            <button class="mark-btn" id="multiMarkBtn">🖍️ 多次标记</button>
+            <button class="mark-btn clear-btn" id="clearFlagsBtn">❌ 清除标记</button>
+        </div>
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">剩余陷阱</div>
+                <div class="info-value traps-count" id="trapsCount">10</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">⏱️ 时间</div>
+                <div class="info-value timer" id="timer">000</div>
+            </div>
+        </div>
+        <div class="board-wrapper">
+            <div class="board" id="board"></div>
+        </div>
+        <div class="game-status" id="gameStatus"></div>
+        <div class="controls">
+            <button class="btn btn-primary" id="restartBtn">🔄 重新开始</button>
+        </div>
+        <div class="instructions">
+            <h3>📖 游戏说明</h3>
+            <p>👆 <strong>正常模式：</strong>点击揭开格子</p>
+            <p>📍 <strong>单次标记：</strong>点击标记一个陷阱，标记后自动切回正常模式</p>
+            <p>🖍️ <strong>多次标记：</strong>连续点击多个格子批量标记陷阱</p>
+            <p>❌ <strong>清除标记：</strong>一键清除所有已标记的陷阱</p>
+            <p>💡 数字表示周围8格内的陷阱数量</p>
+            <p>🎯 目标：揭开所有非陷阱格子即可获胜</p>
+        </div>
+    </div>
+        <a href="https://qm.qq.com/q/w5F7DvE0Pm" target="_blank" class="bottom-btn bottom-btn-blue">
+            💬 提交反馈
+        </a>
+    </div>
+    <a href="/#games" class="back-link">← 返回游戏大厅</a>
+
+    <div class="modal-overlay hidden" id="leaderboardModal">
+        <div class="modal leaderboard-modal">
+            <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            <div class="modal-icon">🏆</div>
+            <h2>贝尔的挑战排行榜</h2>
+            <p>用时越短，排名越高！</p>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div style="text-align:center;padding:20px;color:#999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

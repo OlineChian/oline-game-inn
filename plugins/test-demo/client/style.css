@@ -1,0 +1,89 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.test-container {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #F8C93F;
+}
+
+.status {
+  font-size: 18px;
+  margin-bottom: 30px;
+  color: #4ade80;
+}
+
+.info {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+  text-align: left;
+}
+
+.info p {
+  margin: 10px 0;
+  font-size: 14px;
+  color: #a0a0a0;
+}
+
+.info strong {
+  color: #fff;
+  margin-right: 10px;
+}
+
+.ok {
+  color: #4ade80;
+}
+
+.test-btn {
+  background: linear-gradient(135deg, #ED7526, #F8C93F);
+  color: #000;
+  border: none;
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.test-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(237, 117, 38, 0.4);
+}
+
+.test-btn:active {
+  transform: translateY(0);
+}
+
+.test-result {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #F8C93F;
+  min-height: 20px;
+}

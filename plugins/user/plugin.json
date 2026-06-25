@@ -1,0 +1,18 @@
+{
+  "id": "user",
+  "name": "用户系统",
+  "version": "1.0.0",
+  "description": "用户昵称管理、积分系统、挑战记录",
+  "type": "core",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js",
+    "client": "client/index.js"
+  },
+  "dependencies": [],
+  "provides": ["user-api", "points-api", "challenge-record-api"],
+  "config": {
+    "maxHistoryLength": 100,
+    "nicknameMaxLength": 20
+  }
+}

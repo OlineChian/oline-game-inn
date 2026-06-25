@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巴斯特蒙太奇 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="top-controls">
+        <button class="icon-btn" onclick="toggleFullscreen()">🔄 旋转/全屏</button>
+    </div>
+
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🎾 巴斯特的蒙太奇</h1>
+            <p>弹弹珠大作战！消灭所有砖块！</p>
+        </div>
+        <div class="nav-bar">
+            <a href="/#games" class="nav-btn">
+                ← 返回大厅
+            </a>
+            <button class="nav-btn" onclick="showLeaderboard()">
+                🏆 排行榜
+            </button>
+        </div>
+
+        <div class="game-info">
+            <div class="info-item">
+                <div class="info-label">🎯 得分</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">❤️ 生命</div>
+                <div class="info-value" id="lives">3</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">⭐ 最佳</div>
+                <div class="info-value" id="bestScore">0</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">🧱 剩余</div>
+                <div class="info-value" id="bricksLeft">0</div>
+            </div>
+        </div>
+
+        <div class="difficulty-selector">
+            <button class="diff-btn active" data-diff="easy">😊 简单</button>
+            <button class="diff-btn" data-diff="normal">😐 普通</button>
+            <button class="diff-btn" data-diff="hard">😈 困难</button>
+        </div>
+
+        <div class="start-hint" id="startHint">按 空格键 或 点击屏幕 开始游戏</div>
+        <div class="game-status" id="gameStatus"></div>
+
+        <div class="canvas-wrapper">
+            <canvas class="game-canvas" id="gameCanvas" width="500" height="400"></canvas>
+        </div>
+
+        <div class="mobile-controls" id="mobileControls">
+            <button class="control-btn" id="leftBtn">⬅️</button>
+            <button class="control-btn launch" id="launchBtn">🚀</button>
+            <button class="control-btn" id="rightBtn">➡️</button>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="resetGame()">🔄 重新开始</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📖 游戏说明</h3>
+            <ul>
+                <li><strong>🎯 目标：</strong>用巴斯特接住弹珠，消灭所有砖块</li>
+                <li><strong>⬅️➡️ 操作：</strong>使用键盘左右方向键或A/D键移动巴斯特</li>
+                <li><strong>📱 手机端：</strong>使用屏幕下方的左右按钮控制</li>
+                <li><strong>🚀 发射：</strong>按空格键或点击发射按钮发射弹珠</li>
+                <li><strong>❤️ 生命：</strong>弹珠掉到底部失去一条生命，3条生命用完游戏结束</li>
+                <li><strong>🧱 砖块：</strong>不同颜色砖块分值不同，金色砖块需要打两次</li>
+                <li><strong>⭐ 道具：</strong>消灭砖块有几率掉落道具，接住获得特殊效果</li>
+            </ul>
+        </div>
+
+                    <a href="https://qm.qq.com/q/w5F7DvE0Pm" target="_blank" class="bottom-btn bottom-btn-blue">
+                💬 提交反馈
+            </a>
+        </div>
+    </div>
+
+    <a href="/#games" class="back-link">← 返回游戏大厅</a>
+
+    <div class="modal-overlay hidden" id="leaderboardModal">
+        <div class="modal leaderboard-modal">
+            <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            <div class="modal-icon">🏆</div>
+            <h2>巴斯特的蒙太奇排行榜</h2>
+            <p>得分越高，排名越高！</p>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div style="text-align:center;padding:20px;color:#999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

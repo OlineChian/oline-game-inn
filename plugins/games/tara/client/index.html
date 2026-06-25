@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡牌大师塔拉 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="top-controls">
+        <button class="icon-btn" onclick="toggleFullscreen()">🔄 旋转/全屏</button>
+    </div>
+    
+    <div class="game-header">
+        <h1>🃏 卡牌大师塔拉</h1>
+        <p>经典接龙玩法，成为真正的卡牌大师！</p>
+    </div>
+    
+    <div class="game-actions">
+        <a href="/#games" class="game-action-btn">← 返回大厅</a>
+        <button class="game-action-btn" onclick="showLeaderboard()">🏆 排行榜</button>
+    </div>
+    
+    <div class="game-info">
+        <div class="info-item">
+            <div class="info-label">🎯 得分</div>
+            <div class="info-value" id="score">0</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">🔄 移动</div>
+            <div class="info-value" id="moves">0</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">⭐ 最佳</div>
+            <div class="info-value" id="bestScore">0</div>
+        </div>
+    </div>
+    
+    <div class="game-status" id="gameStatus"></div>
+    
+    <div class="game-container">
+        <div class="top-row">
+            <div class="stock-waste-area">
+                <div class="stock-pile" id="stockPile" onclick="drawFromStock()">
+                    <div class="card-back">🃏</div>
+                    <div class="pile-label">牌库</div>
+                </div>
+                <div class="waste-pile" id="wastePile" onclick="handleWasteClick()">
+                    <div class="pile-label">弃牌</div>
+                </div>
+            </div>
+            
+            <div class="foundation-area" id="foundationArea"></div>
+        </div>
+        
+        <div class="tableau-area" id="tableauArea"></div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn btn-primary" onclick="resetGame()">🔄 重新开始</button>
+        <button class="btn btn-secondary" onclick="undoMove()">↩️ 撤销</button>
+    </div>
+    
+    <div class="instructions">
+        <h3>📖 游戏说明</h3>
+        <ul>
+            <li><strong>🎯 目标：</strong>将所有卡牌按稀有度和点数从低到高放到上方的回收区中</li>
+            <li><strong>📱 操作：</strong>点击卡牌选中，再点击目标位置放置；可选中一叠牌移动</li>
+            <li><strong>📊 牌列规则：</strong>按点数降序排列，相邻牌稀有度必须不同（交替颜色）</li>
+            <li><strong>📊 回收区规则：</strong>同稀有度，按点数升序排列（从1到8）</li>
+            <li><strong>🏆 空列：</strong>只有传奇（最高稀有度）的牌可以放到空列</li>
+            <li><strong>🃏 牌库：</strong>点击牌库翻牌，翻完后可重洗（会扣分）</li>
+        </ul>
+        <div class="rarity-legend">
+            <div class="rarity-item">
+                <div class="rarity-dot" style="background: #2ecc71;"></div>
+                <span>稀有</span>
+            </div>
+            <div class="rarity-item">
+                <div class="rarity-dot" style="background: #3498db;"></div>
+                <span>超稀有</span>
+            </div>
+            <div class="rarity-item">
+                <div class="rarity-dot" style="background: #9b59b6;"></div>
+                <span>史诗</span>
+            </div>
+            <div class="rarity-item">
+                <div class="rarity-dot" style="background: #e74c3c;"></div>
+                <span>神话</span>
+            </div>
+            <div class="rarity-item">
+                <div class="rarity-dot" style="background: #f1c40f;"></div>
+                <span>传奇</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-links">
+        <a href="https://qm.qq.com/q/w5F7DvE0Pm" target="_blank" class="bottom-btn bottom-btn-blue">💬 提交反馈</a>
+    </div>
+    
+    <a href="/#games" class="back-link">← 返回游戏大厅</a>
+    
+    <div class="victory-overlay" id="victoryOverlay">
+        <div class="victory-content">
+            <div class="victory-title">🎉 恭喜通关！</div>
+            <div class="victory-subtitle" id="victorySubtitle">你是真正的卡牌大师！</div>
+            <button class="btn btn-primary" onclick="resetGame()">🔄 再来一局</button>
+        </div>
+    </div>
+    
+    <div class="modal-overlay hidden" id="leaderboardModal">
+        <div class="modal leaderboard-modal">
+            <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            <div class="modal-icon">🏆</div>
+            <h2>卡牌大师排行榜</h2>
+            <p>得分越高，排名越高！</p>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div style="text-align:center;padding:20px;color:#999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

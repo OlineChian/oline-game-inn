@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<!--
+  Oline荒野游戏客栈 - 游戏大厅（主页）
+  ==============================
+  功能：游戏卡片展示、悬浮排行榜、昵称管理、活动入口
+  数据源：GET /api/games（动态加载游戏列表）
+  排行榜：GET /api/leaderboards（悬浮轮播最佳纪录）
+  昵称：localStorage 'gameNickname'，未设置时弹窗引导
+  样式：依赖 common.css（橙金黑主题组件库）
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oline荒野游戏客栈</title>
+    <!-- DNS预解析 -->
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <!-- 图标异步加载 -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></noscript>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/navbar.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 滚动进度条 */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(237,117,38,0.1) 0%, #F8C93F 30%, #ED7526 65%, rgba(237,117,38,0.1) 100%);
+            width: 0%;
+            z-index: 9999;
+            transition: width 0.1s linear;
+        }
+
+        /* Hero 首屏 */
+        .hero {
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            z-index: 1;
+            transition: background 0.6s ease;
+        }
+        .hero-bg.scrolled {
+            background: linear-gradient(180deg, #000 0%, rgba(237,117,38,0.15) 50%, rgba(237,117,38,0.25) 100%);
+        }
+        /* 下滑后粒子颜色也变为橙金 */
+        .hero-scrolled .hero-canvas {
+            opacity: 0.6;
+        }
+        .hero-scrolled .blob {
+            opacity: 0.35;
+        }
+        .hero-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            opacity: 0.4;
+        }
+        .hero-brandbook-pattern {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            opacity: 0.04;
+            background-image: repeating-linear-gradient(
+                45deg, transparent, transparent 10px,
+                rgba(237, 117, 38, 0.03) 10px,
+                rgba(237, 117, 38, 0.03) 20px
+            );
+        }
+        .hero-deco {
+            position: absolute;
+            z-index: 3;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .hero-sparkles {
+            position: absolute;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 0 1.5rem;
+        }
+        .hero-prize-pill {
+            display: inline-block;
+            background: rgba(237, 117, 38, 0.15);
+            border: 1px solid rgba(237, 117, 38, 0.3);
+            color: var(--color-orange-main);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+        .hero-title {
+            font-size: clamp(2rem, 8vw, 5rem);
+            font-weight: 900;
+            color: #fff;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+        }
+        .hero-title span {
+            color: var(--color-gold-accent);
+        }
+        .hero-subtitle {
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            color: var(--text-on-dark-muted);
+            margin-bottom: 2.5rem;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        /* 返回大厅时跳过动画 */
+        .no-anim {
+            opacity: 1 !important;
+            animation: none !important;
+        }
+        .hero-scroll-hint {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        .scroll-arrow {
+            width: 28px;
+            height: 28px;
+            border-right: 2px solid var(--color-orange-main);
+            border-bottom: 2px solid var(--color-orange-main);
+            transform: rotate(45deg);
+            animation: scrollArrowBounce 1.8s ease infinite;
+            margin: 0 auto;
+        }
+        @keyframes scrollArrowBounce {
+            0%, 100% { transform: rotate(45deg) translateY(0); }
+            50% { transform: rotate(45deg) translateY(8px); }
+        }
+
+        /* 光晕 blob */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(248, 201, 63, 0.15), transparent 70%);
+            animation: blobFloat 12s ease-in-out infinite;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .blob-1 { width: 500px; height: 500px; top: -15%; left: -8%; }
+        .blob-2 { width: 350px; height: 350px; bottom: 5%; right: -5%; animation-delay: -4s; }
+        @keyframes blobFloat {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+            50% { transform: translate(30px, -25px) scale(1.1); opacity: 0.3; }
+            100% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+        }
+
+        /* 星光 */
+        .sparkle {
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            animation: sparkleTwinkle 3s ease infinite;
+        }
+        .sp1 { top: 12%; left: 18%; animation-delay: 0s; }
+        .sp2 { top: 22%; right: 22%; animation-delay: -1s; }
+        .sp3 { bottom: 28%; left: 28%; animation-delay: -2s; }
+        .sp4 { top: 48%; right: 12%; animation-delay: -0.5s; }
+        .sp5 { bottom: 18%; right: 32%; animation-delay: -1.5s; }
+        @keyframes sparkleTwinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.5); }
+        }
+
+        /* Hero 多层装饰：圆角矩形 */
+        .hero-deco-rect {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+            border-radius: 24px;
+            border: 1.5px solid rgba(237,117,38,0.1);
+            background: rgba(237,117,38,0.03);
+        }
+        .hero-deco-rect-1 {
+            width: 180px; height: 220px;
+            top: 15%; left: 5%;
+            transform: rotate(-8deg);
+            animation: heroRectFloat1 14s ease-in-out infinite;
+        }
+        .hero-deco-rect-2 {
+            width: 140px; height: 160px;
+            top: 50%; right: 8%;
+            border-radius: 30px;
+            border-color: rgba(248,201,63,0.12);
+            background: rgba(248,201,63,0.03);
+            transform: rotate(12deg);
+            animation: heroRectFloat2 16s ease-in-out infinite;
+        }
+        .hero-deco-rect-3 {
+            width: 100px; height: 130px;
+            bottom: 20%; left: 12%;
+            border-radius: 16px;
+            border-color: rgba(255,160,60,0.08);
+            background: rgba(255,160,60,0.02);
+            transform: rotate(-5deg);
+            animation: heroRectFloat3 12s ease-in-out infinite;
+        }
+        @keyframes heroRectFloat1 {
+            0%, 100% { transform: rotate(-8deg) translate(0, 0); opacity: 0.5; }
+            50% { transform: rotate(-5deg) translate(20px, -15px); opacity: 0.8; }
+        }
+        @keyframes heroRectFloat2 {
+            0%, 100% { transform: rotate(12deg) translate(0, 0); opacity: 0.4; }
+            50% { transform: rotate(15deg) translate(-15px, 10px); opacity: 0.7; }
+        }
+        @keyframes heroRectFloat3 {
+            0%, 100% { transform: rotate(-5deg) translate(0, 0); opacity: 0.3; }
+            50% { transform: rotate(-2deg) translate(10px, -20px); opacity: 0.6; }
+        }
+
+        /* Hero 多层装饰：圆形 */
+        .hero-deco-circle {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+            border-radius: 50%;
+            border: 1.5px solid rgba(248,201,63,0.08);
+        }
+        .hero-deco-circle-1 {
+            width: 200px; height: 200px;
+            top: 10%; right: 15%;
+            animation: heroCirclePulse1 8s ease-in-out infinite;
+        }
+        .hero-deco-circle-2 {
+            width: 120px; height: 120px;
+            bottom: 25%; right: 22%;
+            border-color: rgba(237,117,38,0.12);
+            background: radial-gradient(circle, rgba(237,117,38,0.04), transparent);
+            animation: heroCirclePulse2 6s ease-in-out infinite;
+        }
+        .hero-deco-circle-3 {
+            width: 80px; height: 80px;
+            top: 40%; left: 8%;
+            border-color: rgba(255,160,60,0.1);
+            animation: heroCirclePulse3 10s ease-in-out infinite;
+        }
+        @keyframes heroCirclePulse1 {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.15); opacity: 0.6; }
+        }
+        @keyframes heroCirclePulse2 {
+            0%, 100% { transform: scale(1); opacity: 0.25; }
+            50% { transform: scale(1.25); opacity: 0.55; }
+        }
+        @keyframes heroCirclePulse3 {
+            0%, 100% { transform: scale(1); opacity: 0.2; }
+            50% { transform: scale(1.3); opacity: 0.5; }
+        }
+
+        /* 旋转环 */
+        .hero-orbit-ring {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+            border-radius: 50%;
+            border: 1px solid rgba(248,201,63,0.06);
+        }
+        .hero-orbit-ring-1 {
+            width: 300px; height: 300px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation: orbitSpin1 20s linear infinite;
+        }
+        .hero-orbit-ring-2 {
+            width: 220px; height: 220px;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            border-style: dashed;
+            border-color: rgba(237,117,38,0.05);
+            animation: orbitSpin2 25s linear infinite;
+        }
+        @keyframes orbitSpin1 {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes orbitSpin2 {
+            from { transform: translate(-50%, -50%) rotate(45deg); }
+            to { transform: translate(-50%, -50%) rotate(405deg); }
+        }
+
+        /* 主题色艺术展示区 */
+        .art-showcase {
+            position: relative;
+            width: 100%;
+            min-height: 65vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(180deg, #000 0%, #1a0a00 15%, rgba(237,117,38,0.12) 35%, rgba(248,201,63,0.08) 60%, #0d0d0d 100%);
+        }
+        .art-gradient {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(237,117,38,0.18) 0%, transparent 70%);
+            z-index: 1;
+            animation: artGradientPulse 6s ease-in-out infinite;
+        }
+        @keyframes artGradientPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        /* 光球 */
+        .art-orb {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(60px);
+        }
+        .art-orb-1 {
+            width: 300px; height: 300px;
+            top: 10%; left: 15%;
+            background: radial-gradient(circle, rgba(248,201,63,0.35), transparent);
+            animation: orbFloat1 8s ease-in-out infinite;
+        }
+        .art-orb-2 {
+            width: 250px; height: 250px;
+            top: 55%; right: 10%;
+            background: radial-gradient(circle, rgba(237,117,38,0.3), transparent);
+            animation: orbFloat2 10s ease-in-out infinite;
+        }
+        .art-orb-3 {
+            width: 180px; height: 180px;
+            top: 30%; left: 55%;
+            background: radial-gradient(circle, rgba(255,160,60,0.25), transparent);
+            animation: orbFloat3 7s ease-in-out infinite;
+        }
+        @keyframes orbFloat1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -20px) scale(1.2); }
+        }
+        @keyframes orbFloat2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, 25px) scale(1.15); }
+        }
+        @keyframes orbFloat3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-20px, -30px) scale(1.25); }
+        }
+        /* 几何装饰 */
+        .art-geo {
+            position: absolute;
+            z-index: 3;
+            pointer-events: none;
+            border: 1px solid rgba(237,117,38,0.12);
+        }
+        .art-geo-1 {
+            width: 120px; height: 120px;
+            top: 20%; right: 20%;
+            border-radius: 20px;
+            transform: rotate(15deg);
+            animation: geoRotate1 20s linear infinite;
+        }
+        .art-geo-2 {
+            width: 80px; height: 80px;
+            bottom: 25%; left: 12%;
+            border-radius: 50%;
+            animation: geoPulse 4s ease-in-out infinite;
+        }
+        .art-geo-3 {
+            width: 60px; height: 60px;
+            top: 15%; left: 40%;
+            border-radius: 4px;
+            transform: rotate(45deg);
+            animation: geoRotate2 15s linear infinite;
+        }
+        @keyframes geoRotate1 { from { transform: rotate(15deg); } to { transform: rotate(375deg); } }
+        @keyframes geoRotate2 { from { transform: rotate(45deg); } to { transform: rotate(405deg); } }
+        @keyframes geoPulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.3); opacity: 1; }
+        }
+        /* 网格图案 */
+        .art-grid-pattern {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(237,117,38,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(237,117,38,0.3) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        /* 活动入口链接 */
+        .art-link {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .art-link:hover { transform: translateY(-4px); }
+        .art-link:active { transform: scale(0.97); }
+        .art-glow-ring {
+            width: 160px; height: 160px;
+            margin: 0 auto 2rem;
+            border-radius: 50%;
+            border: 2px solid rgba(248,201,63,0.2);
+            background: radial-gradient(circle, rgba(248,201,63,0.06), transparent);
+            animation: glowRing 3s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.4s ease;
+        }
+        .art-link:hover .art-glow-ring {
+            border-color: rgba(248,201,63,0.5);
+            box-shadow: 0 0 50px rgba(248,201,63,0.2), 0 0 100px rgba(237,117,38,0.1);
+        }
+        .art-glow-ring::after {
+            content: '🎉';
+            font-size: 48px;
+            animation: glowRingIcon 3s ease-in-out infinite;
+        }
+        @keyframes glowRing {
+            0%, 100% { box-shadow: 0 0 30px rgba(248,201,63,0.1), 0 0 60px rgba(237,117,38,0.05); transform: scale(1); }
+            50% { box-shadow: 0 0 50px rgba(248,201,63,0.2), 0 0 100px rgba(237,117,38,0.1); transform: scale(1.05); }
+        }
+        @keyframes glowRingIcon {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .art-label {
+            display: block;
+            font-size: 0.75rem;
+            letter-spacing: 4px;
+            color: var(--color-orange-main);
+            opacity: 0.7;
+            margin-bottom: 0.8rem;
+            font-weight: bold;
+        }
+        .art-title {
+            font-size: clamp(1.6rem, 5vw, 2.5rem);
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 0.8rem;
+            background: linear-gradient(135deg, #fff 0%, #F8C93F 50%, #ED7526 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .art-desc {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: var(--text-fade);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        /* 活动入口提示 */
+        .art-hint {
+            display: inline-block;
+            margin-top: 1.2rem;
+            padding: 8px 24px;
+            border-radius: 20px;
+            background: rgba(248,201,63,0.1);
+            border: 1px solid rgba(248,201,63,0.2);
+            color: var(--color-gold-accent);
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .art-link:hover .art-hint {
+            background: rgba(248,201,63,0.2);
+            border-color: rgba(248,201,63,0.4);
+        }
+        /* 艺术展示区入场动画（返回大厅时使用） */
+        .art-showcase .art-link {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .art-showcase.art-visible .art-link {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 板块 */
+        .section {
+            padding: 2rem 0 5rem;
+            position: relative;
+            width: 100%;
+        }
+        .section-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            width: 100%;
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .section-label {
+            font-size: 0.85rem;
+            color: var(--color-orange-main);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+        .section-title {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+        .section-desc {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: var(--text-fade);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 分割线 */
+        .s-sep-svg {
+            width: 100%;
+            height: 72px;
+            display: block;
+        }
+
+        /* 用户信息栏 */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            background: var(--bg-card);
+            border: 1px solid #222;
+            padding: 10px 20px;
+            border-radius: var(--radius-lg);
+        }
+        .user-avatar { font-size: 24px; }
+        .user-nickname { color: var(--text-on-dark); font-weight: bold; font-size: 14px; }
+        .change-nickname {
+            background: rgba(237, 117, 38, 0.15);
+            border: 1px solid rgba(237, 117, 38, 0.3);
+            color: var(--color-orange-main);
+            padding: 5px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all var(--transition-normal);
+        }
+        .change-nickname:hover {
+            background: rgba(237, 117, 38, 0.3);
+        }
+        .change-nickname:active { transform: scale(0.95); }
+
+        /* 游戏网格 */
+        .games-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 3vh;
+            width: 100%;
+        }
+        .games-row {
+            display: grid;
+            gap: 2.5vh;
+            width: 100%;
+        }
+        .online-games-row { grid-template-columns: repeat(2, 1fr); }
+        .offline-games-row { grid-template-columns: repeat(3, 1fr); }
+        .games-divider {
+            border-top: 2px solid rgba(237, 117, 38, 0.15);
+            margin: 1vh 0;
+        }
+
+        /* 游戏卡片 */
+        .game-card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+            min-height: 100px;
+        }
+        .game-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--color-orange-main);
+            box-shadow: 0 8px 30px rgba(237, 117, 38, 0.12);
+        }
+        .game-card:active { transform: scale(0.98); }
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ED7526, #F8C93F);
+            transform: scaleX(0);
+            transition: transform var(--transition-normal);
+        }
+        .game-card:hover::before { transform: scaleX(1); }
+
+        .game-icon {
+            font-size: clamp(26px, 4vw, 38px);
+            flex-shrink: 0;
+            width: clamp(55px, 8vw, 70px);
+            height: clamp(55px, 8vw, 70px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card-alt);
+            border-radius: 14px;
+            border: 1px solid #222;
+        }
+        .game-info { flex: 1; min-width: 0; }
+        .game-card h2 {
+            font-size: clamp(14px, 2.5vw, 17px);
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .online-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            background: rgba(0, 184, 148, 0.2);
+            border: 1px solid rgba(0, 184, 148, 0.3);
+            color: #00b894;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 12px;
+            animation: onlineGlow 2s ease-in-out infinite;
+        }
+        @keyframes onlineGlow {
+            0%, 100% { box-shadow: 0 2px 8px rgba(0, 184, 148, 0.2); }
+            50% { box-shadow: 0 2px 15px rgba(0, 184, 148, 0.4); }
+        }
+        .game-card p {
+            color: var(--text-secondary);
+            font-size: clamp(10px, 1.8vw, 12px);
+            line-height: 1.4;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .game-play-btn {
+            flex-shrink: 0;
+            padding: 10px 22px;
+            background: var(--color-orange-main);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: clamp(12px, 2vw, 14px);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            text-decoration: none;
+        }
+        .game-play-btn:hover {
+            transform: translateY(-2px);
+            filter: drop-shadow(0 0 8px rgba(237, 117, 38, 0.4));
+        }
+        .game-play-btn:active { transform: scale(0.95); }
+
+        /* 活动卡片特殊样式 */
+        .activity-card {
+            border: 2px solid rgba(248, 201, 63, 0.4);
+            box-shadow: 0 8px 30px rgba(248, 201, 63, 0.08);
+        }
+        .activity-card:hover {
+            border-color: var(--color-gold-accent);
+            box-shadow: 0 12px 40px rgba(248, 201, 63, 0.15);
+        }
+        .activity-card .game-icon { font-size: clamp(35px, 6vw, 50px); }
+        .activity-card .game-play-btn {
+            background: var(--color-gold-accent);
+            color: #000;
+        }
+        .activity-card::before {
+            background: linear-gradient(90deg, #F8C93F, #ED7526);
+        }
+        .activity-badge {
+            position: absolute;
+            top: 15px;
+            right: -30px;
+            background: linear-gradient(135deg, #ED7526, #ff6b6b);
+            color: white;
+            padding: 5px 35px;
+            font-size: 12px;
+            font-weight: bold;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        /* 联机角标 */
+        .online-corner-badge {
+            position: absolute;
+            top: 12px;
+            right: -28px;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 4px 30px;
+            font-size: 11px;
+            font-weight: bold;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 8px rgba(9, 132, 227, 0.3);
+        }
+
+        /* 最佳纪录栏（始终显示在昵称和游戏之间） */
+        .leaderboard-bar {
+            width: 100%;
+            margin-bottom: 1rem;
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: var(--radius-md);
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all var(--transition-normal);
+        }
+        .leaderboard-bar.sticky {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            border-color: rgba(237, 117, 38, 0.2);
+            box-shadow: 0 5px 30px rgba(0,0,0,0.5);
+            padding: 6px 12px;
+        }
+        .leaderboard-best-scores {
+            flex: 1;
+            min-width: 0;
+            height: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        .best-scores-scroll {
+            transition: transform 0.5s ease-in-out;
+        }
+        .best-score-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 40px;
+            padding: 0 12px;
+            color: var(--text-on-dark);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .best-score-game { color: var(--text-on-dark); font-weight: bold; }
+        .best-score-text { color: var(--text-on-dark-muted); }
+        .best-score-player { color: var(--color-orange-main); font-weight: bold; }
+        .best-score-value { color: var(--color-gold-accent); font-weight: bold; font-size: 16px; }
+        .best-score-unit { color: rgba(255,255,255,0.6); font-size: 12px; margin-left: 2px; }
+
+        /* 排行榜展开按钮 */
+        .leaderboard-expand {
+            flex-shrink: 0;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            margin-top: 0;
+            margin-right: 4px;
+        }
+        .leaderboard-expand-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(237, 117, 38, 0.1);
+            border: 1px solid rgba(237, 117, 38, 0.2);
+            color: var(--color-orange-main);
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.15;
+            white-space: normal;
+            word-break: keep-all;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            height: 85%;
+            max-width: 80px;
+            min-height: 28px;
+        }
+        .leaderboard-expand-btn:hover {
+            background: rgba(237, 117, 38, 0.2);
+        }
+
+        /* 底部按钮区 */
+        .footer {
+            margin-top: 5rem;
+            color: var(--text-on-dark-muted);
+            font-size: clamp(12px, 2.5vw, 14px);
+            text-align: center;
+        }
+        .bottom-links {
+            margin-top: 3rem;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* 全屏排行榜页面 */
+        .leaderboard-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            animation: lbPageIn var(--transition-normal);
+            overflow-y: auto;
+        }
+        .leaderboard-page.hidden { display: none; }
+        @keyframes lbPageIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .lb-page-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.96);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(237, 117, 38, 0.15);
+        }
+        .lb-page-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-on-dark);
+        }
+        .lb-page-close {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-round);
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--text-on-dark);
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-normal);
+        }
+        .lb-page-close:hover { background: rgba(255,255,255,0.2); }
+
+        .lb-page-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 12px 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .lb-page-tab {
+            padding: 8px 18px;
+            background: var(--bg-card-alt);
+            border: 1px solid #333;
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all var(--transition-normal);
+            white-space: nowrap;
+        }
+        .lb-page-tab:hover { border-color: var(--color-orange-main); color: var(--color-orange-main); }
+        .lb-page-tab.active {
+            background: var(--color-orange-main);
+            color: white;
+            border-color: transparent;
+        }
+
+        .lb-page-content {
+            flex: 1;
+            padding: 0 20px 30px;
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .lb-page-list {
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: var(--radius-lg);
+            padding: 20px;
+        }
+        /* 全屏排行榜难度标签 */
+        .lb-diff-section {
+            padding: 0 20px 10px;
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .lb-diff-section .difficulty-tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .lb-diff-section .difficulty-tab {
+            padding: 8px 20px;
+            border-radius: 25px;
+            border: 1.5px solid #333;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .lb-diff-section .difficulty-tab:hover {
+            border-color: rgba(237,117,38,0.4);
+            background: rgba(237,117,38,0.06);
+            color: var(--text-on-dark);
+        }
+        .lb-diff-section .difficulty-tab.active {
+            border-color: var(--color-orange-main);
+            background: linear-gradient(135deg, rgba(237,117,38,0.15), rgba(248,201,63,0.1));
+            color: var(--color-gold-accent);
+            box-shadow: 0 0 16px rgba(237,117,38,0.12);
+        }
+        .lb-diff-section .difficulty-tab.all-tab.active {
+            border-color: var(--color-gold-accent);
+            color: var(--color-gold-accent);
+            background: linear-gradient(135deg, rgba(248,201,63,0.12), rgba(237,117,38,0.08));
+        }
+        /* 难度色标指示条 */
+        .lb-diff-section .difficulty-tab::before {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .lb-diff-section .difficulty-tab.active::before {
+            width: 20px;
+        }
+        .lb-diff-section .difficulty-tab:not(.all-tab).active::before {
+            background: var(--color-gold-accent);
+        }
+        .lb-diff-section .difficulty-tab.all-tab.active::before {
+            background: var(--color-gold-accent);
+        }
+        /* 排行榜难度标签 */
+        .leaderboard-diff-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+        .diff-easy { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+        .diff-normal { background: rgba(255, 234, 167, 0.15); color: #ffeaa7; }
+        .diff-hard { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .online-games-row { grid-template-columns: 1fr; }
+            .offline-games-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .games-row { grid-template-columns: 1fr !important; }
+            .lb-page-tabs { padding: 10px; }
+            .lb-page-tab { padding: 6px 12px; font-size: 12px; }
+            .hero { min-height: 90vh; }
+            .section { padding: 1.5rem 0 3rem; }
+            /* 最佳纪录手机端双行优化 */
+            .leaderboard-bar {
+                flex-direction: column;
+                padding: 8px 10px;
+                gap: 4px;
+            }
+            .leaderboard-best-scores {
+                flex: none;
+                width: 100%;
+                height: 64px;
+            }
+            .best-score-item {
+                flex-direction: column;
+                justify-content: center;
+                height: 64px;
+                gap: 4px;
+                padding: 0 6px;
+                white-space: normal;
+                font-size: 13px;
+            }
+            .best-score-item .best-score-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .best-score-prefix { font-size: 12px; }
+            .best-score-game { font-size: 13px; font-weight: bold; }
+            .best-score-value { font-size: 14px; }
+            .best-score-unit { font-size: 11px; }
+            .best-score-text { font-size: 12px; }
+            .best-score-player { font-size: 13px; }
+            .leaderboard-expand {
+                width: 100%;
+                height: auto;
+                margin-right: 0;
+            }
+            .leaderboard-expand-btn {
+                width: 100%;
+                max-width: none;
+                height: auto;
+                min-height: 32px;
+                font-size: 13px;
+                padding: 6px 12px;
+                border-radius: 8px;
+                line-height: 1.15;
+            }
+            .leaderboard-bar.sticky { flex-direction: column; padding: 6px 8px; gap: 2px; }
+            .leaderboard-bar.sticky .leaderboard-best-scores { flex: none; width: 100%; height: 64px; }
+            .leaderboard-bar.sticky .leaderboard-expand { width: 100%; height: auto; margin-right: 0; }
+            .leaderboard-bar.sticky .leaderboard-expand-btn { width: 100%; max-width: none; height: auto; min-height: 30px; }
+            .leaderboard-bar.sticky .best-score-item { height: 64px; }
+            .leaderboard-bar.sticky .leaderboard-expand { height: 100%; }
+            .leaderboard-bar.sticky .leaderboard-expand-btn { height: 85%; }
+        }
+        @media (orientation: landscape) and (max-height: 500px) {
+            .hero { min-height: auto; padding: 80px 0 40px; }
+            .hero-title { font-size: 28px; }
+            .games-row {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+                gap: 2vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="site-navbar" data-page="home"></div>
+    <script src="/navbar.js"></script>
+    <script>
+    <!-- 滚动进度条 -->
+    <div class="scroll-progress" id="scrollProgress"></div>
+
+    <!-- Hero 首屏 -->
+    <section class="hero" id="inicio">
+        <div class="hero-bg"></div>
+        <canvas class="hero-canvas" id="heroCanvas"></canvas>
+        <div class="hero-brandbook-pattern"></div>
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <!-- 多层装饰：圆角矩形 -->
+        <div class="hero-deco-rect hero-deco-rect-1"></div>
+        <div class="hero-deco-rect hero-deco-rect-2"></div>
+        <div class="hero-deco-rect hero-deco-rect-3"></div>
+        <!-- 多层装饰：圆形 -->
+        <div class="hero-deco-circle hero-deco-circle-1"></div>
+        <div class="hero-deco-circle hero-deco-circle-2"></div>
+        <div class="hero-deco-circle hero-deco-circle-3"></div>
+        <!-- 旋转环 -->
+        <div class="hero-orbit-ring hero-orbit-ring-1"></div>
+        <div class="hero-orbit-ring hero-orbit-ring-2"></div>
+        <div class="hero-sparkles">
+            <span class="sparkle sp1"></span>
+            <span class="sparkle sp2"></span>
+            <span class="sparkle sp3"></span>
+            <span class="sparkle sp4"></span>
+            <span class="sparkle sp5"></span>
+        </div>
+        <div class="hero-content" id="heroContent">
+            <!-- 首次进入：展示完整动画；返回大厅：跳过动画 -->
+            <div class="hero-prize-pill" id="heroPill">🎮 5款精彩游戏 · 在线联机对战</div>
+            <h1 class="hero-title" id="heroTitle">
+                Oline荒野<br><span>游戏客栈</span>
+            </h1>
+            <p class="hero-subtitle" id="heroSubtitle">选择你喜欢的游戏，开始冒险吧！</p>
+            <div class="hero-actions" id="heroActions">
+                <a href="#games" class="btn btn-primary btn-lg">
+                    <i class="fas fa-gamepad"></i> 开始游戏
+                </a>
+                <a href="activity.html" class="btn btn-lg" style="background: linear-gradient(135deg, #F8C93F, #ED7526); color: #000;">
+                    🎁 活动进行中
+                </a>
+            </div>
+        </div>
+        <a href="#games" class="hero-scroll-hint">
+            <div class="scroll-arrow"></div>
+        </a>
+    </section>
+
+    <!-- 主题色艺术展示区 -->
+    <section class="art-showcase" id="artShowcase">
+        <div class="art-gradient"></div>
+        <div class="art-orb art-orb-1"></div>
+        <div class="art-orb art-orb-2"></div>
+        <div class="art-orb art-orb-3"></div>
+        <div class="art-geo art-geo-1"></div>
+        <div class="art-geo art-geo-2"></div>
+        <div class="art-geo art-geo-3"></div>
+        <div class="art-grid-pattern"></div>
+        <a href="activity.html" class="art-link" id="activityLink">
+            <div class="art-glow-ring" id="activityBadge"></div>
+            <div class="art-text">
+                <span class="art-label">OLINE GAME INN</span>
+                <h2 class="art-title" id="activityTitle">初夏挑战季活动正在进行</h2>
+                <p class="art-desc" id="activityDesc">游玩下方游戏 · 参与赛事预测 · 有机会赢宝石</p>
+                <span class="art-hint" id="activityHint">🎁 点击进入活动页面</span>
+            </div>
+        </a>
+    </section>
+
+    <!-- 游戏板块 -->
+    <section class="section" id="games">
+        <div class="section-inner">
+            <div class="section-header">
+                <div class="section-label">🎮 Games</div>
+                <h2 class="section-title">选择你的冒险</h2>
+                <p class="section-desc">联机对战 or 单机挑战，总有一款适合你</p>
+            </div>
+
+            <!-- 用户信息栏 -->
+            <div class="user-info" id="userInfo" style="display: none;">
+                <span class="user-avatar">👤</span>
+                <span class="user-nickname" id="userNickname">玩家</span>
+                <button class="change-nickname" onclick="showNicknameModal()">修改昵称</button>
+            </div>
+
+            <!-- 最佳纪录栏（始终显示在昵称和游戏之间） -->
+            <div class="leaderboard-bar" id="leaderboardBar">
+                <div class="leaderboard-best-scores">
+                    <div class="best-scores-scroll" id="bestScoresScroll">加载中...</div>
+                </div>
+                <div class="leaderboard-expand">
+                    <button class="leaderboard-expand-btn" onclick="openLeaderboardPage()">
+                        🏆 查看完整排行榜
+                    </button>
+                </div>
+            </div>
+
+            <!-- 游戏卡片区域 -->
+            <div class="games-grid">
+                <div id="gameCardsContainer">
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                        加载中...
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 底部链接 -->
+    <div class="section-inner" style="text-align:center;">
+        <div class="bottom-links">
+            <a href="https://space.bilibili.com/487810678" target="_blank" class="btn btn-pink">🎬 作者主页</a>
+            <a href="https://qm.qq.com/q/w5F7DvE0Pm" target="_blank" class="btn btn-blue">💬 提交反馈</a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Oline荒野游戏客栈 | 用 ❤️ 制作</p>
+    </div>
+
+    <!-- 昵称弹窗 -->
+    <div class="modal-overlay" id="nicknameModal">
+        <div class="modal">
+            <div class="modal-icon">🎮</div>
+            <h2>欢迎来到游戏合集！</h2>
+            <p>请输入你的昵称，参与排行榜竞技<br>昵称会保存在本地，随时可以修改</p>
+            <input type="text" class="modal-input" id="nicknameInput" placeholder="输入你的昵称" maxlength="20">
+            <button class="btn btn-primary" style="width:100%; padding:12px 30px; font-size:16px;" id="nicknameConfirmBtn" onclick="saveNickname()">开始游戏</button>
+        </div>
+    </div>
+
+    <!-- 全屏排行榜页面 -->
+    <div class="leaderboard-page hidden" id="leaderboardPage">
+        <div class="lb-page-header">
+            <span class="lb-page-title">🏆 游戏排行榜</span>
+            <button class="lb-page-close" onclick="closeLeaderboardPage()">×</button>
+        </div>
+        <div class="lb-page-tabs" id="lbPageTabs"></div>
+        <div class="difficulty-section lb-diff-section" id="lbDiffSection" style="display:none;">
+            <div class="difficulty-tabs" id="lbDiffTabs"></div>
+        </div>
+        <div class="lb-page-content">
+            <div class="lb-page-list" id="lbPageList">
+                <div style="text-align:center;padding:30px;color:var(--text-secondary);">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 首次进入检测 ==========
+        // Hero 始终显示，但从游戏页返回大厅时跳过入场动画
+        const hasVisitedLobby = sessionStorage.getItem('visitedLobby');
+        if (hasVisitedLobby) {
+            // 返回大厅：跳过动画，直接显示内容
+            document.getElementById('heroPill').classList.add('no-anim');
+            document.getElementById('heroTitle').classList.add('no-anim');
+            document.getElementById('heroSubtitle').classList.add('no-anim');
+            document.getElementById('heroActions').classList.add('no-anim');
+            // 艺术展示区也跳过动画
+            document.getElementById('artShowcase').classList.add('art-visible');
+        } else {
+            // 首次进入：标记已访问，展示完整 Hero 动画
+            sessionStorage.setItem('visitedLobby', 'true');
+            document.getElementById('heroPill').classList.add('fade-in-down');
+            document.getElementById('heroPill').style.setProperty('--delay', '0s');
+            document.getElementById('heroTitle').classList.add('fade-in-up');
+            document.getElementById('heroTitle').style.setProperty('--delay', '0.1s');
+            document.getElementById('heroSubtitle').classList.add('fade-in-up');
+            document.getElementById('heroSubtitle').style.setProperty('--delay', '0.2s');
+            document.getElementById('heroActions').classList.add('fade-in-up');
+            document.getElementById('heroActions').style.setProperty('--delay', '0.3s');
+        }
+
+        // ========== 滚动进度条 ==========
+        const progressBar = document.getElementById('scrollProgress');
+        const heroBg = document.querySelector('.hero-bg');
+        const heroEl = document.getElementById('inicio');
+        window.addEventListener('scroll', () => {
+            const winHeight = window.innerHeight;
+            const docHeight = document.body.scrollHeight - winHeight;
+            const scrollTop = window.scrollY;
+            const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+            progressBar.style.width = percent + "%";
+
+            // 下滑后 Hero 背景从纯黑渐变为橙黄色（仅在 Hero 可见时）
+            if (heroEl && heroEl.style.display !== 'none') {
+                if (scrollTop > 60) {
+                    heroBg.classList.add('scrolled');
+                    heroEl.classList.add('hero-scrolled');
+                } else {
+                    heroBg.classList.remove('scrolled');
+                    heroEl.classList.remove('hero-scrolled');
+                }
+            }
+        });
+
+        // ========== Hero 粒子画布 ==========
+        (function() {
+            const canvas = document.getElementById('heroCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animId;
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function createParticles() {
+                particles = [];
+                const count = Math.min(Math.floor(window.innerWidth * 0.08), 80);
+                for (let i = 0; i < count; i++) {
+                    particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 0.4,
+                        vy: (Math.random() - 0.5) * 0.4,
+                        size: Math.random() * 2 + 0.5,
+                        opacity: Math.random() * 0.4 + 0.1
+                    });
+                }
+            }
+            createParticles();
+            window.addEventListener('resize', createParticles);
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const heroEl = document.getElementById('inicio');
+                const isScrolled = heroEl && heroEl.classList.contains('hero-scrolled');
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0) p.x = canvas.width;
+                    if (p.x > canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = canvas.height;
+                    if (p.y > canvas.height) p.y = 0;
+                    // 下滑后粒子变为金色
+                    const r = isScrolled ? 248 : 237;
+                    const g = isScrolled ? 201 : 117;
+                    const b = isScrolled ? 63 : 38;
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                animId = requestAnimationFrame(animate);
+            }
+            animate();
+        })();
+
+        // ========== 全局变量 ==========
+        let gameList = [];
+        let currentGameTab = '';
+        let leaderboardBarTop = 0;
+        let currentBestScoreIndex = 0;
+        let bestScoresData = [];
+        let carouselInterval = null;
+        let lbPageGameTab = '';
+
+        // ========== 昵称管理 ==========
+        function checkNickname() {
+            const nickname = localStorage.getItem('gameNickname');
+            if (nickname && nickname.trim()) {
+                showUserInfo(nickname);
+                document.getElementById('nicknameModal').classList.add('hidden');
+            } else {
+                showNicknameModal();
+            }
+        }
+        function showNicknameModal() {
+            document.getElementById('nicknameModal').classList.remove('hidden');
+            document.getElementById('nicknameInput').focus();
+        }
+        function saveNickname() {
+            const input = document.getElementById('nicknameInput');
+            const nickname = input.value.trim();
+            if (!nickname) {
+                input.style.borderColor = '#e74c3c';
+                setTimeout(() => input.style.borderColor = '#333', 1000);
+                return;
+            }
+            localStorage.setItem('gameNickname', nickname);
+            showUserInfo(nickname);
+            document.getElementById('nicknameModal').classList.add('hidden');
+        }
+        function showUserInfo(nickname) {
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('userNickname').textContent = nickname;
+        }
+        document.getElementById('nicknameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') saveNickname();
+        });
+
+        // ========== 全屏排行榜页面 ==========
+        let lbPageDifficulty = null;
+        let lbPageAvailableDiffs = [];
+
+        async function openLeaderboardPage() {
+            await loadGameList();
+            if (!lbPageGameTab && gameList.length > 0) {
+                lbPageGameTab = gameList.filter(g => g.showOnHome !== false)[0]?.id || gameList[0].id;
+            }
+            lbPageDifficulty = null;
+            renderLbPageTabs();
+            loadLbPageData();
+            document.getElementById('leaderboardPage').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLeaderboardPage() {
+            document.getElementById('leaderboardPage').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function renderLbPageTabs() {
+            const container = document.getElementById('lbPageTabs');
+            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            container.innerHTML = visibleGames.map(game => `
+                <button class="lb-page-tab ${game.id === lbPageGameTab ? 'active' : ''}"
+                        onclick="switchLbPageTab('${game.id}')">
+                    ${game.icon} ${game.name}
+                </button>
+            `).join('');
+        }
+        function switchLbPageTab(gameId) {
+            lbPageGameTab = gameId;
+            lbPageDifficulty = null;
+            renderLbPageTabs();
+            loadLbPageData();
+        }
+        function renderLbDiffTabs(diffs) {
+            lbPageAvailableDiffs = diffs || [];
+            const section = document.getElementById('lbDiffSection');
+            const container = document.getElementById('lbDiffTabs');
+            if (lbPageAvailableDiffs.length === 0) { section.style.display = 'none'; return; }
+            section.style.display = 'block';
+            const diffLabels = { 'easy': '😊 简单', 'normal': '😐 中等', 'hard': '😈 困难' };
+            let html = `<button class="difficulty-tab all-tab ${lbPageDifficulty === null ? 'active' : ''}" onclick="switchLbDiff(null)">📊 全部</button>`;
+            html += lbPageAvailableDiffs.map(d => `
+                <button class="difficulty-tab ${lbPageDifficulty === d ? 'active' : ''}" onclick="switchLbDiff('${d}')">${diffLabels[d] || d}</button>
+            `).join('');
+            container.innerHTML = html;
+        }
+        function switchLbDiff(diff) { lbPageDifficulty = diff; renderLbDiffTabs(lbPageAvailableDiffs); loadLbPageData(); }
+        // 根据游戏返回对应的难度标签文字
+        function getDiffLabel(gameId, diff) {
+            const diffTexts = {
+                'rosa-ember-online': { easy: '简单AI', normal: '中等AI', hard: '困难AI' },
+                '8bit-arcade-oline': { easy: '简单(单机)', normal: '中等(单机)', hard: '困难(单机)' },
+                'belle-challenge': { easy: '简单', normal: '中等', hard: '困难' },
+                'buster-montage': { easy: '简单', normal: '中等', hard: '困难' }
+            };
+            return (diffTexts[gameId] && diffTexts[gameId][diff]) || { easy: '简单', normal: '中等', hard: '困难' }[diff] || diff;
+        }
+        async function loadLbPageData() {
+            const listContainer = document.getElementById('lbPageList');
+            listContainer.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">加载中...</div>';
+            try {
+                let url = `/api/leaderboard/${lbPageGameTab}?limit=50`;
+                if (lbPageDifficulty) url += `&difficulty=${encodeURIComponent(lbPageDifficulty)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!lbPageDifficulty || lbPageAvailableDiffs.length === 0) {
+                    renderLbDiffTabs(data.availableDifficulties || []);
+                }
+                if (data.success && data.leaderboard.length > 0) {
+                    listContainer.innerHTML = data.leaderboard.map((item, index) => {
+                        const diff = item.extra && item.extra.difficulty;
+                        const diffTag = diff ? `<span class="leaderboard-diff-tag diff-${diff}">${getDiffLabel(lbPageGameTab, diff)}</span>` : '';
+                        return `<div class="leaderboard-item">
+                            <div class="leaderboard-rank ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">${index + 1}</div>
+                            <div class="leaderboard-name">${escapeHtml(item.nickname)}${diffTag}</div>
+                            <div class="leaderboard-score">${item.score}<span class="leaderboard-unit">${data.config.unit}</span></div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    listContainer.innerHTML = `
+                        <div class="leaderboard-empty">
+                            <div class="leaderboard-empty-icon">🎯</div>
+                            <p>暂无排行记录</p>
+                            <p style="font-size:12px;margin-top:5px;">快去挑战成为第一名吧！</p>
+                        </div>`;
+                }
+            } catch (error) {
+                listContainer.innerHTML = `
+                    <div class="leaderboard-empty">
+                        <div class="leaderboard-empty-icon">❌</div>
+                        <p>加载失败</p>
+                        <p style="font-size:12px;margin-top:5px;">请确保服务器已启动</p>
+                    </div>`;
+            }
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLeaderboardPage();
+        });
+
+        // ========== 活动入口加载 ==========
+        async function loadActivityInfo() {
+            try {
+                const response = await fetch('/api/activities');
+                const data = await response.json();
+                if (data.success && data.activities && data.activities.length > 0) {
+                    const activity = data.activities[0];
+                    const titleEl = document.getElementById('activityTitle');
+                    const descEl = document.getElementById('activityDesc');
+                    const hintEl = document.getElementById('activityHint');
+                    const linkEl = document.getElementById('activityLink');
+                    const badgeEl = document.getElementById('activityBadge');
+                    if (titleEl && activity.name) titleEl.textContent = activity.name;
+                    if (descEl && activity.description) descEl.textContent = activity.description;
+                    if (hintEl) hintEl.textContent = '🎁 点击参与活动';
+                    if (linkEl && activity.path) linkEl.href = 'activity.html';
+                    if (badgeEl) badgeEl.style.animation = 'glowRing 1.5s ease-in-out infinite';
+                }
+            } catch (error) {
+                console.warn('加载活动信息失败:', error);
+            }
+        }
+
+        // ========== 最佳纪录轮播 ==========
+        function initLeaderboardBar() {
+            loadGameList().then(() => loadBestScores());
+            loadActivityInfo();
+            const bar = document.getElementById('leaderboardBar');
+            leaderboardBarTop = bar.offsetTop;
+            window.addEventListener('scroll', handleScroll);
+        }
+        async function loadGameList() {
+            if (gameList.length > 0) return;
+            try {
+                const response = await fetch('/api/games?all=true');
+                const data = await response.json();
+                if (data.success && data.games.length > 0) {
+                    gameList = data.games;
+                    if (!currentGameTab && gameList.length > 0) {
+                        currentGameTab = gameList[0].id;
+                    }
+                }
+            } catch (error) {
+                console.error('加载游戏列表失败:', error);
+            }
+        }
+        async function loadBestScores() {
+            const scrollContainer = document.getElementById('bestScoresScroll');
+            scrollContainer.innerHTML = '<div class="best-score-item"><span style="color:var(--text-on-dark);font-size:14px;">加载中...</span></div>';
+            try {
+                const bestScores = [];
+                const visibleGames = gameList.filter(g => g.showOnHome !== false);
+                for (const game of visibleGames) {
+                    try {
+                        const response = await fetch(`/api/leaderboard/${game.id}?limit=1`);
+                        const data = await response.json();
+                        if (data.success && data.leaderboard.length > 0) {
+                            bestScores.push({
+                                game, score: data.leaderboard[0].score,
+                                unit: data.config.unit, nickname: data.leaderboard[0].nickname,
+                                label: data.config.label || '成绩'
+                            });
+                        } else {
+                            bestScores.push({ game, score: null, unit: data.config.unit, nickname: null, label: data.config.label || '成绩' });
+                        }
+                    } catch (e) {
+                        bestScores.push({ game, score: null, unit: '分', nickname: null, label: '成绩' });
+                    }
+                }
+                bestScoresData = bestScores;
+                currentBestScoreIndex = 0;
+                renderBestScores(bestScores);
+                startCarousel();
+                // 每60秒刷新一次数据（静默刷新，不重置轮播位置）
+                setTimeout(refreshBestScoresData, 60000);
+            } catch (error) {
+                scrollContainer.innerHTML = '<div class="best-score-item"><span style="color:var(--text-on-dark);font-size:14px;">加载失败</span></div>';
+                setTimeout(loadBestScores, 8000);
+            }
+        }
+        function renderBestScores(scores) {
+            const scrollContainer = document.getElementById('bestScoresScroll');
+            scrollContainer.innerHTML = scores.map(item => `
+                <div class="best-score-item">
+                    <div class="best-score-row">
+                        <span class="best-score-game">${item.game.name}</span>
+                    </div>
+                    <div class="best-score-row">
+                        <span class="best-score-text">最佳记录：</span>
+                        <span class="best-score-value">
+                            ${item.score !== null ? item.score : '暂无'}
+                            <span class="best-score-unit">${item.score !== null ? item.unit : ''}</span>
+                        </span>
+                        <span class="best-score-text">保持者</span>
+                        <span class="best-score-player">${item.nickname !== null ? escapeHtml(item.nickname) : '暂无'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        // 静默刷新数据（不重置轮播位置，只在数据变化时更新内容）
+        async function refreshBestScoresData() {
+            if (!bestScoresData.length) return;
+            const newScores = [];
+            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            for (const game of visibleGames) {
+                try {
+                    const response = await fetch(`/api/leaderboard/${game.id}?limit=1`);
+                    const data = await response.json();
+                    if (data.success && data.leaderboard.length > 0) {
+                        newScores.push({
+                            game, score: data.leaderboard[0].score,
+                            unit: data.config.unit, nickname: data.leaderboard[0].nickname,
+                            label: data.config.label || '成绩'
+                        });
+                    } else {
+                        newScores.push({ game, score: null, unit: data.config.unit, nickname: null, label: data.config.label || '成绩' });
+                    }
+                } catch (e) {
+                    newScores.push({ game, score: null, unit: '分', nickname: null, label: '成绩' });
+                }
+            }
+            // 检查数据是否有变化
+            const hasChanged = JSON.stringify(newScores) !== JSON.stringify(bestScoresData);
+            if (hasChanged) {
+                bestScoresData = newScores;
+                currentBestScoreIndex = 0;
+                renderBestScores(newScores);
+                startCarousel();
+            }
+            setTimeout(refreshBestScoresData, 60000);
+        }
+        function startCarousel() {
+            if (carouselInterval) clearInterval(carouselInterval);
+            if (bestScoresData.length <= 1) return;
+            carouselInterval = setInterval(() => {
+                currentBestScoreIndex = (currentBestScoreIndex + 1) % bestScoresData.length;
+                const scrollContainer = document.getElementById('bestScoresScroll');
+                const itemHeight = scrollContainer.querySelector('.best-score-item')?.offsetHeight || 40;
+                scrollContainer.style.transform = `translateY(-${currentBestScoreIndex * itemHeight}px)`;
+            }, 3000);
+        }
+        function handleScroll() {
+            const bar = document.getElementById('leaderboardBar');
+            if (!bar) return;
+            const scrollY = window.scrollY;
+            if (scrollY > leaderboardBarTop) {
+                if (!bar.classList.contains('sticky')) {
+                    bar.classList.add('sticky');
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'leaderboard-placeholder';
+                    placeholder.style.height = bar.offsetHeight + 'px';
+                    // 插入到 bar 后面，保持布局不塌陷
+                    bar.parentNode.insertBefore(placeholder, bar.nextSibling);
+                }
+            } else {
+                bar.classList.remove('sticky');
+                // 找到并移除 placeholder
+                const placeholder = document.querySelector('.leaderboard-placeholder');
+                if (placeholder) placeholder.remove();
+            }
+        }
+
+        // ========== 游戏卡片渲染 ==========
+        window.addEventListener('load', function() {
+            checkNickname();
+            initLeaderboardBar();
+            loadGameCards();
+        });
+        async function loadGameCards() {
+            const container = document.getElementById('gameCardsContainer');
+            try {
+                const response = await fetch('/api/games');
+                const data = await response.json();
+                if (data.success && data.games.length > 0) {
+                    document.querySelector('.hero-subtitle').textContent = `${data.total}款精彩游戏，选择你喜欢的开始冒险吧！`;
+                    const onlineGames = data.games.filter(g => g.isOnline);
+                    const offlineGames = data.games.filter(g => !g.isOnline);
+                    const generateCard = (game, idx) => `
+                        <a href="/game/${game.id}" class="game-card fade-in-up" style="--delay:${0.1 + idx * 0.05}s">
+                            ${game.isOnline ? '<div class="online-corner-badge">在线联机</div>' : ''}
+                            <div class="game-icon">${game.icon}</div>
+                            <div class="game-info">
+                                <h2>${game.name}</h2>
+                                <p>${game.description}</p>
+                                <span class="game-tag ${game.tagClass}">${game.tag}</span>
+                            </div>
+                            <div class="game-play-btn">开始游玩</div>
+                        </a>`;
+                    let html = '';
+                    if (onlineGames.length > 0) {
+                        html += `<div class="games-row online-games-row">${onlineGames.map((g, i) => generateCard(g, i)).join('')}</div>`;
+                        html += '<div class="games-divider"></div>';
+                    }
+                    if (offlineGames.length > 0) {
+                        html += `<div class="games-row offline-games-row">${offlineGames.map((g, i) => generateCard(g, onlineGames.length + i)).join('')}</div>`;
+                    }
+                    container.outerHTML = html;
+                } else {
+                    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">暂无游戏</div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">加载失败，请刷新重试</div>';
+            }
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

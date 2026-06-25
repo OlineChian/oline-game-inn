@@ -1,0 +1,87 @@
+/* ===========================
+   GameHeader Component Styles
+   ===========================
+   游戏页统一顶部栏
+=========================== */
+
+#site-game-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--gameheader-bg, rgba(0, 0, 0, 0.85));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(237, 117, 38, 0.2);
+}
+
+.game-header-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+
+.game-header-back:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.game-header-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+.game-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-header-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(237, 117, 38, 0.4);
+  background: rgba(237, 117, 38, 0.15);
+  color: #ED7526;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.game-header-btn:hover {
+  background: rgba(237, 117, 38, 0.3);
+  color: #F8C93F;
+}
+
+/* 页面 body 需要留出顶部导航空间 */
+body.has-game-header {
+  padding-top: 48px;
+}

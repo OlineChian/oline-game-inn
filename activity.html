@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活动中心 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/navbar.css">
+    <style>
+        body {
+            min-height: 100vh;
+            padding: 60px 3vw 2vh 3vw;
+        }
+
+        /* 导航栏 */
+        .game-actions {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 1px solid rgba(237, 117, 38, 0.15);
+        }
+        .game-action-btn {
+            background: transparent;
+            border: 2px solid var(--color-orange-main);
+            color: var(--text-on-dark);
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: clamp(12px, 2.5vw, 14px);
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all var(--transition-normal);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .game-action-btn:hover {
+            background: var(--color-orange-main);
+            color: #000;
+        }
+        .game-action-btn:active { transform: scale(0.95); }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 3vh;
+        }
+        .header h1 {
+            font-size: clamp(24px, 6vw, 40px);
+            margin-bottom: 1vh;
+        }
+        .header p {
+            font-size: clamp(12px, 2.5vw, 16px);
+            opacity: 0.8;
+        }
+
+        /* 用户信息栏 */
+        .user-info {
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: var(--radius-lg);
+            padding: 15px 20px;
+            margin-bottom: 3vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .user-info .nickname {
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: bold;
+        }
+        .user-info .points {
+            background: linear-gradient(135deg, #F8C93F, #ED7526);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            font-size: clamp(16px, 3.5vw, 22px);
+        }
+
+        /* 活动列表 */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 3vh;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .activity-card {
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: 14px;
+            padding: 20px 25px;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .activity-card:hover {
+            transform: translateX(5px);
+            border-color: var(--color-orange-main);
+            box-shadow: 0 8px 30px rgba(237, 117, 38, 0.1);
+        }
+        .activity-card:active { transform: translateX(2px); }
+        .activity-card.expired {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .activity-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .activity-text { flex: 1; min-width: 0; }
+        .activity-icon {
+            font-size: 36px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-card-alt);
+            border-radius: 14px;
+            border: 1px solid #222;
+            flex-shrink: 0;
+        }
+        .activity-name {
+            font-size: clamp(16px, 3vw, 20px);
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        .activity-desc {
+            font-size: clamp(12px, 2vw, 13px);
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .activity-time {
+            font-size: clamp(11px, 1.8vw, 12px);
+            color: var(--text-muted);
+        }
+
+        /* 活动状态 */
+        .activity-status-wrapper {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        .activity-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: clamp(12px, 2vw, 13px);
+            font-weight: bold;
+            text-align: center;
+            min-width: 80px;
+        }
+        .status-active {
+            background: rgba(0, 184, 148, 0.2);
+            border: 1px solid rgba(0, 184, 148, 0.3);
+            color: #00b894;
+        }
+        .status-expired {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #333;
+            color: var(--text-muted);
+        }
+        .status-upcoming {
+            background: rgba(237, 117, 38, 0.15);
+            border: 1px solid rgba(237, 117, 38, 0.3);
+            color: var(--color-orange-main);
+        }
+        .countdown {
+            font-size: clamp(11px, 1.8vw, 12px);
+            color: var(--color-orange-main);
+            font-weight: bold;
+            text-align: right;
+        }
+
+        /* 空状态 */
+        .back-link {
+            text-align: center;
+            margin-top: 3vh;
+        }
+        .back-link a {
+            color: var(--text-on-dark);
+            text-decoration: none;
+            font-size: clamp(12px, 2.5vw, 15px);
+            opacity: 0.8;
+            transition: opacity var(--transition-normal);
+        }
+        .back-link a:hover { opacity: 1; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: var(--radius-lg);
+        }
+        .empty-icon { font-size: 60px; margin-bottom: 20px; opacity: 0.7; }
+        .empty-text {
+            font-size: clamp(14px, 3vw, 18px);
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 600px) {
+            .activity-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .activity-status-wrapper {
+                flex-direction: row;
+                align-items: center;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="site-navbar" data-page="activity"></div>
+    <script src="/navbar.js"></script>
+    <script>
+    <div class="game-actions">
+        <a href="/#games" class="game-action-btn">← 返回大厅</a>
+        <button class="game-action-btn" onclick="showLeaderboard()">🏆 排行榜</button>
+    </div>
+
+    <div class="header">
+        <h1>🎉 活动中心</h1>
+        <p>参与活动，赢取丰厚奖励！</p>
+    </div>
+
+    <div class="user-info">
+        <div class="nickname">👤 <span id="userNickname">游客</span></div>
+        <div class="points">💎 积分: <span id="userPoints">0</span></div>
+    </div>
+
+    <div class="activity-list" id="activityList"></div>
+
+    <!-- 排行榜弹窗 -->
+    <div class="modal-overlay hidden" id="leaderboardModal">
+        <div class="modal" style="max-width:500px;">
+            <button class="close-modal" onclick="closeLeaderboard()">×</button>
+            <div class="modal-icon">🏆</div>
+            <h2>游戏排行榜</h2>
+            <p>看看谁是最强玩家！</p>
+            <div class="leaderboard-tabs" id="leaderboardTabs"></div>
+            <div class="leaderboard-list" id="leaderboardList">
+                <div style="text-align:center;padding:20px;color:var(--text-muted);">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const nickname = localStorage.getItem('gameNickname') || '游客';
+        document.getElementById('userNickname').textContent = nickname;
+
+        async function loadActivities() {
+            const listContainer = document.getElementById('activityList');
+            try {
+                const response = await fetch('/api/activities');
+                const data = await response.json();
+                if (data.success && data.activities.length > 0) {
+                    listContainer.innerHTML = data.activities.map(activity => {
+                        const now = new Date();
+                        const startTime = new Date(activity.startTime);
+                        const endTime = new Date(activity.endTime);
+                        let statusClass, statusText;
+                        if (now < startTime) { statusClass = 'status-upcoming'; statusText = '即将开始'; }
+                        else if (now > endTime) { statusClass = 'status-expired'; statusText = '已结束'; }
+                        else { statusClass = 'status-active'; statusText = '进行中'; }
+                        const isExpired = now > endTime;
+                        return `<div class="activity-card ${isExpired ? 'expired' : ''}"
+                                onclick="${isExpired ? '' : `window.location.href='activities/${activity.path}'`}">
+                            <div class="activity-info">
+                                <div class="activity-icon">${activity.icon}</div>
+                                <div class="activity-text">
+                                    <div class="activity-name">${activity.name}</div>
+                                    <div class="activity-desc">${activity.description}</div>
+                                    <div class="activity-time">📅 ${formatDate(startTime)} - ${formatDate(endTime)}</div>
+                                </div>
+                            </div>
+                            <div class="activity-status-wrapper">
+                                <span class="activity-status ${statusClass}">${statusText}</span>
+                                ${!isExpired ? `<div class="countdown" id="countdown-${activity.id}"></div>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+                    data.activities.forEach(activity => {
+                        const endTime = new Date(activity.endTime);
+                        if (new Date() < endTime) startCountdown(activity.id, endTime);
+                    });
+                } else {
+                    listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">暂无活动，敬请期待！</div></div>`;
+                }
+            } catch (error) {
+                listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败，请刷新重试</div></div>`;
+            }
+        }
+        function formatDate(date) { return `${date.getMonth() + 1}月${date.getDate()}日`; }
+        function startCountdown(activityId, endTime) {
+            function update() {
+                const now = new Date();
+                const diff = endTime - now;
+                if (diff <= 0) { const el = document.getElementById(`countdown-${activityId}`); if (el) el.textContent = '活动已结束'; return; }
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                let text = '⏰ 距离结束还有 ';
+                if (days > 0) text += `${days}天`;
+                text += `${hours}时${minutes}分`;
+                const el = document.getElementById(`countdown-${activityId}`);
+                if (el) el.textContent = text;
+                setTimeout(update, 60000);
+            }
+            update();
+        }
+        async function loadUserPoints() {
+            if (nickname === '游客') return;
+            try {
+                const response = await fetch(`/api/user/${encodeURIComponent(nickname)}/points`);
+                const data = await response.json();
+                if (data.success) document.getElementById('userPoints').textContent = data.points.total || 0;
+            } catch (error) { console.log('加载积分失败:', error); }
+        }
+        loadActivities();
+        loadUserPoints();
+
+        // 排行榜弹窗
+        let gameList = [];
+        let currentGameTab = '';
+        async function showLeaderboard() {
+            document.getElementById('leaderboardModal').classList.remove('hidden');
+            await loadGameList();
+            renderLeaderboardTabs();
+            loadLeaderboard(currentGameTab);
+        }
+        async function loadGameList() {
+            if (gameList.length > 0) return;
+            try {
+                const response = await fetch('/api/games?all=true');
+                const data = await response.json();
+                if (data.success && data.games.length > 0) {
+                    gameList = data.games;
+                    if (!currentGameTab && gameList.length > 0) currentGameTab = gameList[0].id;
+                }
+            } catch (error) { console.error('加载游戏列表失败:', error); }
+        }
+        function closeLeaderboard() { document.getElementById('leaderboardModal').classList.add('hidden'); }
+        function renderLeaderboardTabs() {
+            const tabsContainer = document.getElementById('leaderboardTabs');
+            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            tabsContainer.innerHTML = visibleGames.map(game => `
+                <button class="leaderboard-tab ${game.id === currentGameTab ? 'active' : ''}" onclick="switchGameTab('${game.id}')">${game.icon} ${game.name}</button>
+            `).join('');
+        }
+        function switchGameTab(gameId) { currentGameTab = gameId; renderLeaderboardTabs(); loadLeaderboard(gameId); }
+        async function loadLeaderboard(gameId) {
+            const listContainer = document.getElementById('leaderboardList');
+            listContainer.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">加载中...</div>';
+            try {
+                const response = await fetch(`/api/leaderboard/${gameId}`);
+                const data = await response.json();
+                if (data.success && data.leaderboard.length > 0) {
+                    listContainer.innerHTML = data.leaderboard.map((item, index) => `
+                        <div class="leaderboard-item">
+                            <div class="leaderboard-rank ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">${index + 1}</div>
+                            <div class="leaderboard-name">${escapeHtml(item.nickname)}</div>
+                            <div class="leaderboard-score">${item.score}<span class="leaderboard-unit">${data.config.unit}</span></div>
+                        </div>
+                    `).join('');
+                } else {
+                    listContainer.innerHTML = `<div class="leaderboard-empty"><div class="leaderboard-empty-icon">🎯</div><p>暂无排行记录</p><p style="font-size:12px;margin-top:5px;">快去挑战成为第一名吧！</p></div>`;
+                }
+            } catch (error) {
+                listContainer.innerHTML = `<div class="leaderboard-empty"><div class="leaderboard-empty-icon">❌</div><p>加载失败</p><p style="font-size:12px;margin-top:5px;">请确保服务器已启动</p></div>`;
+            }
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('leaderboardModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) { if (e.target === this) closeLeaderboard(); });
+            }
+        });
+    </script>
+</body>
+</html>

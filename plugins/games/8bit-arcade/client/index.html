@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8比特街机 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/game-header.css">
+    <style>
+        :root {
+            --color-accent: #9b59b6;
+            --color-accent-dark: #8e44ad;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-family: 'Impact', sans-serif;
+            color: #9b59b6;
+            text-shadow: 0 0 20px rgba(155, 89, 182, 0.5);
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        /* 菜单屏幕 */
+        #menuScreen {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(155, 89, 182, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .difficulty-select {
+            margin: 15px 0;
+        }
+        .difficulty-select label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .difficulty-select select {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 14px;
+        }
+        .difficulty-select select option {
+            background: #1a1a2e;
+        }
+        
+        /* 等待屏幕 */
+        #waitingScreen {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        .room-code-display {
+            background: rgba(155, 89, 182, 0.3);
+            padding: 20px 40px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .room-code-display .code {
+            font-size: 36px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #9b59b6;
+        }
+        .players-list {
+            margin: 20px 0;
+        }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .player-item.self {
+            background: rgba(155, 89, 182, 0.2);
+            border: 1px solid #9b59b6;
+        }
+        .player-name {
+            font-weight: bold;
+        }
+        .player-role {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+        .status-msg {
+            color: #f1c40f;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        /* 游戏屏幕 */
+        #gameScreen {
+            display: none;
+            text-align: center;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            text-align: center;
+        }
+        .info-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #9b59b6;
+        }
+        #gameCanvas {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            border: 3px solid rgba(155, 89, 182, 0.3);
+            max-width: 100%;
+            touch-action: manipulation;
+        }
+        .game-controls {
+            margin-top: 15px;
+        }
+        .hint {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        /* 结果屏幕 */
+        #resultScreen {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .result-title {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .result-details {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        .result-details p {
+            margin: 10px 0;
+        }
+        
+        .back-link {
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            color: #9b59b6;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="has-game-header">
+    <div id="site-game-header"></div>
+    <script src="/game-header.js"></script>
+    <script>
+        renderGameHeader({ title: '8比特街机', backUrl: '/#games', showLeaderboard: false });
+    </script>
+    <div class="header">
+        <h1>🕹️ 8比特街机</h1>
+        <p>经典跑酷联机对战，比拼最高分！</p>
+    </div>
+    
+    <div class="game-container">
+        <!-- 菜单屏幕 -->
+        <div id="menuScreen">
+            <div class="input-group">
+                <label>你的昵称</label>
+                <input type="text" id="nicknameInput" placeholder="输入昵称" maxlength="10">
+            </div>
+            
+            <div class="difficulty-select">
+                <label>选择难度</label>
+                <select id="difficultySelect">
+                    <option value="easy">😊 简单</option>
+                    <option value="normal" selected>😐 普通</option>
+                    <option value="hard">😈 困难</option>
+                </select>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" id="createRoomBtn">🎮 创建房间</button>
+            </div>
+            
+            <div style="margin: 20px 0; color: rgba(255,255,255,0.4);">或者</div>
+            
+            <div class="input-group">
+                <label>输入房间码加入</label>
+                <input type="text" id="roomCodeInput" placeholder="6位房间码" maxlength="6">
+            </div>
+            
+            <button class="btn btn-secondary" id="joinRoomBtn">🚪 加入房间</button>
+        </div>
+        
+        <!-- 等待屏幕 -->
+        <div id="waitingScreen">
+            <h2>房间已创建！</h2>
+            <div class="room-code-display">
+                <div>房间码</div>
+                <div class="code" id="displayRoomCode">------</div>
+            </div>
+            <button class="btn btn-secondary" id="copyRoomBtn">📋 复制房间码</button>
+            
+            <div class="players-list" id="playersList"></div>
+            
+            <div class="status-msg" id="statusMsg">等待对手加入...</div>
+            
+            <button class="btn btn-primary" id="startGameBtn" style="display: none;">🚀 开始游戏</button>
+            <button class="btn btn-secondary" id="leaveRoomBtn">🚪 离开房间</button>
+        </div>
+        
+        <!-- 游戏屏幕 -->
+        <div id="gameScreen">
+            <div class="game-info">
+                <div class="info-item">
+                    <div class="info-label">🎮 你的得分</div>
+                    <div class="info-value" id="localScore">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">👤 对手得分</div>
+                    <div class="info-value" id="opponentScore">0</div>
+                </div>
+            </div>
+            
+            <canvas id="gameCanvas" width="500" height="400"></canvas>
+            
+            <div class="game-controls">
+                <button class="btn btn-secondary" id="backToMenuBtn">← 返回</button>
+            </div>
+            
+            <div class="hint">按 空格键 / 点击屏幕 跳跃</div>
+        </div>
+        
+        <!-- 结果屏幕 -->
+        <div id="resultScreen">
+            <div class="result-title" id="resultTitle">🎉 获胜！</div>
+            <div class="result-details" id="resultDetails"></div>
+            <button class="btn btn-primary" id="restartGameBtn">🔄 再来一局</button>
+            <a href="/#games" class="back-link">← 返回游戏大厅</a>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

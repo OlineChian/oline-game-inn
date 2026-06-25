@@ -1,0 +1,19 @@
+{
+  "id": "activity",
+  "name": "活动系统",
+  "version": "1.0.0",
+  "description": "活动自动发现、积分管理、预测投票、抽奖系统",
+  "type": "core",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js",
+    "client": "client/index.js"
+  },
+  "dependencies": ["user"],
+  "provides": ["activity-api", "points-api", "lottery-api", "prediction-api"],
+  "config": {
+    "activitiesDir": "activities",
+    "lotteryEnabled": true,
+    "predictionEnabled": true
+  }
+}

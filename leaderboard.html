@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排行榜 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/navbar.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3vh 5vw 5vh;
+        }
+
+        /* 返回按钮 */
+        .back-btn {
+            align-self: flex-start;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            background: transparent;
+            border: 2px solid var(--color-orange-main);
+            color: var(--text-on-dark);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all var(--transition-normal);
+            margin-bottom: 2vh;
+        }
+        .back-btn:hover { background: var(--color-orange-main); color: #000; }
+        .back-btn:active { transform: scale(0.95); }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 3vh;
+        }
+        .header h1 {
+            font-size: clamp(28px, 6vw, 42px);
+            color: var(--text-on-dark);
+            margin-bottom: 1vh;
+        }
+        .header p {
+            font-size: clamp(13px, 2.5vw, 16px);
+            color: var(--text-on-dark-muted);
+        }
+
+        /* 游戏切换Tab */
+        .game-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2.5vh;
+            max-width: 700px;
+            width: 100%;
+        }
+        .game-tab {
+            padding: 10px 18px;
+            border: 1px solid #333;
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all var(--transition-normal);
+            white-space: nowrap;
+        }
+        .game-tab:hover { border-color: var(--color-orange-main); color: var(--color-orange-main); }
+        .game-tab.active {
+            background: var(--color-orange-main);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* 难度切换 */
+        .difficulty-section {
+            margin-bottom: 2.5vh;
+            text-align: center;
+        }
+        .difficulty-label {
+            color: var(--text-on-dark-muted);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .difficulty-tabs {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .difficulty-tab {
+            padding: 8px 18px;
+            border: 1.5px solid #333;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-secondary);
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .difficulty-tab:hover {
+            border-color: rgba(237,117,38,0.4);
+            background: rgba(237,117,38,0.06);
+            color: var(--text-on-dark);
+        }
+        .difficulty-tab.active {
+            border-color: var(--color-orange-main);
+            background: linear-gradient(135deg, rgba(237,117,38,0.15), rgba(248,201,63,0.1));
+            color: var(--color-gold-accent);
+            box-shadow: 0 0 16px rgba(237,117,38,0.12);
+        }
+        .difficulty-tab.all-tab {
+            border-color: rgba(248, 201, 63, 0.25);
+        }
+        .difficulty-tab.all-tab.active {
+            border-color: var(--color-gold-accent);
+            color: var(--color-gold-accent);
+            background: linear-gradient(135deg, rgba(248,201,63,0.12), rgba(237,117,38,0.08));
+        }
+        /* 难度色标指示条 */
+        .difficulty-tab::before {
+            content: '';
+            position: absolute;
+            bottom: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--color-gold-accent);
+            transition: width 0.3s ease;
+        }
+        .difficulty-tab.active::before {
+            width: 20px;
+        }
+        .difficulty-hidden { display: none; }
+
+        /* 排行榜卡片 */
+        .leaderboard-card {
+            background: var(--bg-card);
+            border: 1px solid #222;
+            border-radius: var(--radius-lg);
+            padding: 25px 20px;
+            max-width: 600px;
+            width: 100%;
+            animation: cardSlideUp 0.4s ease;
+        }
+        @keyframes cardSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .leaderboard-card .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #222;
+        }
+        .card-header .game-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header .game-icon { font-size: 32px; }
+        .card-header .game-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+        .card-header .total-count {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .leaderboard-list { min-height: 200px; }
+
+        .leaderboard-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .leaderboard-diff-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+        .diff-easy { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
+        .diff-normal { background: rgba(255, 234, 167, 0.15); color: #ffeaa7; }
+        .diff-hard { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; }
+
+        /* 加载 */
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 14px;
+            gap: 6px;
+        }
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-orange-main);
+            border-radius: var(--radius-round);
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .footer {
+            margin-top: 4vh;
+            color: var(--text-on-dark-muted);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .leaderboard-card { padding: 18px 12px; }
+            .game-tab { padding: 8px 14px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="site-navbar" data-page="leaderboard"></div>
+    <script src="/navbar.js"></script>
+    <script>
+    <a href="index.html" class="back-btn">← 返回游戏大厅</a>
+
+    <div class="header">
+        <h1>🏆 游戏排行榜</h1>
+        <p id="headerSubtitle">看看谁是最强玩家！</p>
+    </div>
+
+    <div class="game-tabs" id="gameTabs"></div>
+
+    <div class="difficulty-section" id="difficultySection">
+        <div class="difficulty-label">选择难度查看</div>
+        <div class="difficulty-tabs" id="difficultyTabs"></div>
+    </div>
+
+    <div class="leaderboard-card">
+        <div class="card-header">
+            <div class="game-info">
+                <span class="game-icon" id="currentGameIcon">🕹️</span>
+                <div>
+                    <div class="game-name" id="currentGameName">加载中...</div>
+                    <div class="total-count" id="totalCount"></div>
+                </div>
+            </div>
+        </div>
+        <div class="leaderboard-list" id="leaderboardList">
+            <div class="loading-spinner">
+                <span>加载中</span>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Oline荒野游戏客栈 | 排行榜数据实时更新</p>
+    </div>
+
+    <script>
+        let gameList = [];
+        let currentGameId = '';
+        let currentDifficulty = null;
+        let availableDifficulties = [];
+
+        async function init() {
+            await loadGameList();
+            const params = new URLSearchParams(window.location.search);
+            const presetGame = params.get('game');
+            if (presetGame && gameList.find(g => g.id === presetGame)) {
+                currentGameId = presetGame;
+            } else if (gameList.length > 0) {
+                currentGameId = gameList[0].id;
+            }
+            renderGameTabs();
+            loadLeaderboard();
+        }
+        async function loadGameList() {
+            if (gameList.length > 0) return;
+            try {
+                const response = await fetch('/api/games?all=true');
+                const data = await response.json();
+                if (data.success) gameList = data.games.filter(g => g.leaderboard);
+            } catch (error) { console.error('加载游戏列表失败:', error); }
+        }
+        function renderGameTabs() {
+            const container = document.getElementById('gameTabs');
+            container.innerHTML = gameList.map(g => `
+                <button class="game-tab ${g.id === currentGameId ? 'active' : ''}" onclick="switchGame('${g.id}')">${g.icon} ${g.name}</button>
+            `).join('');
+        }
+        function switchGame(gameId) {
+            if (gameId === currentGameId) return;
+            currentGameId = gameId;
+            currentDifficulty = null;
+            renderGameTabs();
+            loadLeaderboard();
+        }
+        function renderDifficultyTabs() {
+            const container = document.getElementById('difficultyTabs');
+            const section = document.getElementById('difficultySection');
+            if (availableDifficulties.length === 0) { section.classList.add('difficulty-hidden'); return; }
+            section.classList.remove('difficulty-hidden');
+            const diffLabels = { 'easy': '😊 简单', 'normal': '😐 中等', 'hard': '😈 困难' };
+            let html = `<button class="difficulty-tab all-tab ${currentDifficulty === null ? 'active' : ''}" onclick="switchDifficulty(null)">📊 全部</button>`;
+            html += availableDifficulties.map(d => `
+                <button class="difficulty-tab ${currentDifficulty === d ? 'active' : ''}" onclick="switchDifficulty('${d}')">${diffLabels[d] || d}</button>
+            `).join('');
+            container.innerHTML = html;
+        }
+        function switchDifficulty(diff) { currentDifficulty = diff; renderDifficultyTabs(); loadLeaderboard(); }
+        // 根据游戏返回对应的难度标签文字
+        function getDiffLabel(gameId, diff) {
+            const diffTexts = {
+                'rosa-ember-online': { easy: '简单AI', normal: '中等AI', hard: '困难AI' },
+                '8bit-arcade-oline': { easy: '简单(单机)', normal: '中等(单机)', hard: '困难(单机)' },
+                'belle-challenge': { easy: '简单', normal: '中等', hard: '困难' },
+                'buster-montage': { easy: '简单', normal: '中等', hard: '困难' }
+            };
+            return (diffTexts[gameId] && diffTexts[gameId][diff]) || { easy: '简单', normal: '中等', hard: '困难' }[diff] || diff;
+        }
+
+        async function loadLeaderboard() {
+            if (!currentGameId) return;
+            const listContainer = document.getElementById('leaderboardList');
+            listContainer.innerHTML = `<div class="loading-spinner"><span>加载中</span><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>`;
+            const game = gameList.find(g => g.id === currentGameId);
+            if (game) {
+                document.getElementById('currentGameIcon').textContent = game.icon;
+                document.getElementById('currentGameName').textContent = game.name;
+            }
+            try {
+                let url = `/api/leaderboard/${currentGameId}?limit=50`;
+                if (currentDifficulty) url += `&difficulty=${encodeURIComponent(currentDifficulty)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                availableDifficulties = data.availableDifficulties || [];
+                renderDifficultyTabs();
+                document.getElementById('totalCount').textContent =
+                    `共 ${data.total} 条记录` + (data.allTotal !== undefined ? `（总计 ${data.allTotal}）` : '');
+                if (data.success && data.leaderboard.length > 0) {
+                    listContainer.innerHTML = data.leaderboard.map((item, index) => {
+                        const diff = item.extra && item.extra.difficulty;
+                        const diffTag = diff ? `<span class="leaderboard-diff-tag diff-${diff}">${getDiffLabel(currentGameId, diff)}</span>` : '';
+                        const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleDateString('zh-CN') : '';
+                        return `<div class="leaderboard-item">
+                            <div class="leaderboard-rank ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">${index + 1}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="leaderboard-name">${escapeHtml(item.nickname)}${diffTag}</div>
+                                <div class="leaderboard-meta">${timeStr}</div>
+                            </div>
+                            <div class="leaderboard-score">${item.score}<span class="leaderboard-unit">${data.config.unit}</span></div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    listContainer.innerHTML = `<div class="leaderboard-empty"><div class="leaderboard-empty-icon">🎯</div><p>暂无排行记录</p><p style="font-size:12px;margin-top:5px;">快去挑战成为第一名吧！</p></div>`;
+                }
+            } catch (error) {
+                listContainer.innerHTML = `<div class="leaderboard-empty"><div class="leaderboard-empty-icon">❌</div><p>加载失败</p><p style="font-size:12px;margin-top:5px;">请确保服务器已启动</p></div>`;
+            }
+        }
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

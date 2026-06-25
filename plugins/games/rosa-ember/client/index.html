@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>罗莎琥珀好姐妹 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/game-header.css">
+    <style>
+        :root {
+            --color-rosa: #2ecc71;
+            --color-amber: #e74c3c;
+        }
+        body.has-game-header { padding-top: 48px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: #2ecc71;
+            text-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        /* 菜单 */
+        #menuScreen {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-rosa {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+        .btn-amber {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+        
+        /* 等待 */
+        #waitingScreen {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        .room-code-display {
+            background: rgba(46, 204, 113, 0.2);
+            padding: 20px 40px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .room-code-display .code {
+            font-size: 36px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #2ecc71;
+        }
+        .players-list { margin: 20px 0; }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .player-item.self { background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; }
+        .status-msg { color: #f1c40f; margin: 15px 0; }
+        
+        /* 游戏 */
+        #gameScreen {
+            display: none;
+            text-align: center;
+        }
+        .turn-indicator {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .turn-rosa { color: #2ecc71; }
+        .turn-amber { color: #e74c3c; }
+        .global-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+        }
+        .mini-board {
+            aspect-ratio: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .mini-board.disabled { opacity: 0.5; cursor: not-allowed; }
+        .mini-board.winner-rosa { background: rgba(46, 204, 113, 0.3); }
+        .mini-board.winner-amber { background: rgba(231, 76, 60, 0.3); }
+        .cell {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(20px, 6vw, 36px);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cell:hover:not(.taken) { background: rgba(255, 255, 255, 0.15); }
+        .cell.rosa { color: #2ecc71; }
+        .cell.amber { color: #e74c3c; }
+        .cell.taken { cursor: not-allowed; }
+        
+        /* 结果 */
+        #resultScreen {
+            display: none;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .result-title { font-size: 48px; margin-bottom: 20px; }
+        .result-details { font-size: 18px; line-height: 1.8; margin-bottom: 30px; }
+        
+        .back-link {
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+        }
+        .back-link:hover { color: #2ecc71; }
+    </style>
+</head>
+<body class="has-game-header">
+    <div id="site-game-header"></div>
+    <script src="/game-header.js"></script>
+    <script>
+        renderGameHeader({ title: '罗莎琥珀好姐妹', backUrl: '/#games', showLeaderboard: false });
+    </script>
+    <div class="header">
+        <h1>🌿 罗莎琥珀好姐妹</h1>
+        <p>终极井字棋联机对战</p>
+    </div>
+    
+    <div class="game-container">
+        <!-- 菜单 -->
+        <div id="menuScreen">
+            <div class="input-group">
+                <label>你的昵称</label>
+                <input type="text" id="nicknameInput" placeholder="输入昵称" maxlength="10">
+            </div>
+            <button class="btn btn-rosa" id="createRoomBtn">🌿 创建房间（罗莎）</button>
+            <div style="margin: 15px 0; color: rgba(255,255,255,0.4);">或者</div>
+            <div class="input-group">
+                <label>输入房间码</label>
+                <input type="text" id="roomCodeInput" placeholder="6位房间码" maxlength="6">
+            </div>
+            <button class="btn btn-secondary" id="joinRoomBtn">🚪 加入房间</button>
+        </div>
+        
+        <!-- 等待 -->
+        <div id="waitingScreen">
+            <h2>房间已创建！</h2>
+            <div class="room-code-display">
+                <div>房间码</div>
+                <div class="code" id="displayRoomCode">------</div>
+            </div>
+            <button class="btn btn-secondary" id="copyRoomBtn">📋 复制房间码</button>
+            <div class="players-list" id="playersList"></div>
+            <div class="status-msg" id="statusMsg">等待对手加入...</div>
+            <button class="btn btn-secondary" id="leaveRoomBtn">🚪 离开房间</button>
+        </div>
+        
+        <!-- 游戏 -->
+        <div id="gameScreen">
+            <div class="turn-indicator" id="turnIndicator">等待开始...</div>
+            <div class="global-board" id="globalBoard"></div>
+            <button class="btn btn-secondary" id="backBtn" style="margin-top: 15px;">← 返回</button>
+        </div>
+        
+        <!-- 结果 -->
+        <div id="resultScreen">
+            <div class="result-title" id="resultTitle">🎉</div>
+            <div class="result-details" id="resultDetails"></div>
+            <button class="btn btn-rosa" id="restartBtn">🔄 再来一局</button>
+            <a href="/#games" class="back-link">← 返回游戏大厅</a>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

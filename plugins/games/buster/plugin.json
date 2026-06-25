@@ -1,0 +1,26 @@
+{
+  "id": "buster-montage",
+  "name": "巴斯特的蒙太奇",
+  "version": "1.0.0",
+  "description": "经典打砖块游戏，击碎所有砖块获得高分",
+  "type": "game",
+  "icon": "🎾",
+  "author": "Oline Team",
+  "entry": {
+    "client": "client/index.html"
+  },
+  "dependencies": ["leaderboard"],
+  "provides": ["buster-montage-game"],
+  "config": {
+    "difficulties": {
+      "easy": { "ballSpeed": 3, "paddleWidth": 80, "brickRows": 4, "brickCols": 7 },
+      "normal": { "ballSpeed": 5, "paddleWidth": 60, "brickRows": 6, "brickCols": 9 },
+      "hard": { "ballSpeed": 7, "paddleWidth": 45, "brickRows": 8, "brickCols": 11 }
+    },
+    "leaderboard": {
+      "sort": "desc",
+      "unit": "分",
+      "label": "得分"
+    }
+  }
+}
