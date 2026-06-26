@@ -763,8 +763,13 @@ async function submitScore(score) {
         console.log('未设置昵称，跳过成绩提交');
         return;
     }
+    if (!window.ScoreSigner) {
+        console.log('ScoreSigner 未加载，跳过成绩提交');
+        return;
+    }
 
     try {
+        const sig = await window.ScoreSigner.sign({ gameId: 'buster-montage', nickname, score });
         const response = await fetch('/api/leaderboard/buster-montage', {
             method: 'POST',
             headers: {
@@ -773,7 +778,10 @@ async function submitScore(score) {
             body: JSON.stringify({
                 nickname: nickname,
                 score: score,
-                extra: { difficulty: difficulty }
+                extra: { difficulty: difficulty },
+                timestamp: sig.timestamp,
+                nonce: sig.nonce,
+                signature: sig.signature
             })
         });
 

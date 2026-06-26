@@ -701,14 +701,22 @@ function drawBird(ctx, x, y, w, h, frameCount) {
 async function submitScoreToLeaderboard(score, mode) {
   const nickname = localStorage.getItem('gameNickname');
   if (!nickname || !nickname.trim()) return;
+  if (!window.ScoreSigner) {
+    console.warn('[8bit] ScoreSigner 未加载，跳过成绩提交');
+    return;
+  }
   try {
+    const sig = await window.ScoreSigner.sign({ gameId: '8bit-arcade', nickname, score });
     await fetch('/api/leaderboard/8bit-arcade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nickname,
         score,
-        extra: { difficulty: currentDifficulty, mode }
+        extra: { difficulty: currentDifficulty, mode },
+        timestamp: sig.timestamp,
+        nonce: sig.nonce,
+        signature: sig.signature
       })
     });
   } catch (e) {

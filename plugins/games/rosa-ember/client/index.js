@@ -288,15 +288,23 @@ async function submitToLeaderboard(winner) {
 async function submitWinToLeaderboard(mode, difficulty) {
   const nickname = localStorage.getItem('gameNickname');
   if (!nickname || !nickname.trim()) return;
+  if (!window.ScoreSigner) {
+    console.warn('ScoreSigner 未加载，跳过成绩提交');
+    return;
+  }
 
   try {
+    const sig = await window.ScoreSigner.sign({ gameId: 'rosa-ember', nickname, score: 1 });
     await fetch('/api/leaderboard/rosa-ember', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nickname,
         score: 1,
-        extra: { mode, difficulty: difficulty || mode, result: 'win' }
+        extra: { mode, difficulty: difficulty || mode, result: 'win' },
+        timestamp: sig.timestamp,
+        nonce: sig.nonce,
+        signature: sig.signature
       })
     });
   } catch (e) {

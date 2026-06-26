@@ -4,6 +4,7 @@
  */
 
 const LeaderboardService = require('./service');
+const { verifySubmission } = require('./security');
 const fs = require('fs');
 const path = require('path');
 
@@ -119,6 +120,13 @@ module.exports = function(app, context) {
     app.post('/api/leaderboard/:game', (req, res) => {
       const gameId = req.params.game;
       const { nickname, score, extra } = req.body;
+
+      // 安全校验：HMAC 签名 + 时间窗口 + nonce 防重放
+      // 历史数据保留不动；新提交必须携带合法签名，否则拒绝
+      const verification = verifySubmission(gameId, req.body);
+      if (!verification.ok) {
+        return res.status(verification.code).json({ success: false, error: verification.error });
+      }
 
       // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算
       const result = service.submitScore(gameId, { nickname, score, extra }, siteConfig);

@@ -805,8 +805,13 @@ async function loadLeaderboard() {
 async function submitScore(score) {
     const nickname = localStorage.getItem('gameNickname');
     if (!nickname) return;
-    
+    if (!window.ScoreSigner) {
+        console.log('ScoreSigner 未加载，跳过成绩提交');
+        return;
+    }
+
     try {
+        const sig = await window.ScoreSigner.sign({ gameId: 'tara-cards', nickname, score });
         await fetch('/api/leaderboard/tara-cards', {
             method: 'POST',
             headers: {
@@ -817,7 +822,10 @@ async function submitScore(score) {
                 score: score,
                 extra: {
                     moves: moves
-                }
+                },
+                timestamp: sig.timestamp,
+                nonce: sig.nonce,
+                signature: sig.signature
             })
         });
     } catch (error) {

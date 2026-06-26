@@ -388,10 +388,15 @@ async function submitScore(score) {
         console.log('未设置昵称，跳过成绩提交');
         return;
     }
+    if (!window.ScoreSigner) {
+        console.log('ScoreSigner 未加载，跳过成绩提交');
+        return;
+    }
 
     const diffMap = { 'easy': 'easy', 'medium': 'normal', 'hard': 'hard' };
 
     try {
+        const sig = await window.ScoreSigner.sign({ gameId: 'belle-challenge', nickname, score });
         const response = await fetch('/api/leaderboard/belle-challenge', {
             method: 'POST',
             headers: {
@@ -400,7 +405,10 @@ async function submitScore(score) {
             body: JSON.stringify({
                 nickname: nickname,
                 score: score,
-                extra: { difficulty: diffMap[currentDiff] || 'normal' }
+                extra: { difficulty: diffMap[currentDiff] || 'normal' },
+                timestamp: sig.timestamp,
+                nonce: sig.nonce,
+                signature: sig.signature
             })
         });
 

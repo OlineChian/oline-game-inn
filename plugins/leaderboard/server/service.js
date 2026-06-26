@@ -239,8 +239,22 @@ class LeaderboardService {
       return { error: '游戏不存在', code: 404 };
     }
 
-    if (!nickname || !score) {
+    // 修复：原 `!score` 会误拦 score=0；改为显式空值判断，允许 0 分提交
+    if (!nickname || score === undefined || score === null) {
       return { error: '昵称和分数不能为空', code: 400 };
+    }
+
+    const scoreNum = Number(score);
+    if (!Number.isFinite(scoreNum)) {
+      return { error: '分数格式错误', code: 400 };
+    }
+
+    // 分数合理性校验：挡住明显离谱的伪造高分（scoreCap/scoreFloor 来自 config）
+    if (typeof config.scoreCap === 'number' && scoreNum > config.scoreCap) {
+      return { error: '分数超出合理范围', code: 400 };
+    }
+    if (typeof config.scoreFloor === 'number' && scoreNum < config.scoreFloor) {
+      return { error: '分数低于合理范围', code: 400 };
     }
 
     const key = `${gameId}:${this.boardKey}`;
@@ -248,7 +262,7 @@ class LeaderboardService {
 
     const record = {
       nickname: String(nickname).slice(0, 20),
-      score: Number(score),
+      score: scoreNum,
       extra: extra || {},
       timestamp: Date.now()
     };
