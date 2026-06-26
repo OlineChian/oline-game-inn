@@ -513,6 +513,97 @@
             opacity: 1;
             transform: translateY(0);
         }
+        /* ============ 第二屏左右循环切换板块（沿用橙金黑主题） ============ */
+        .art-carousel {
+            position: relative; z-index: 10;
+            width: 100%; max-width: 1200px;
+            margin: 0 auto; overflow: hidden;
+            border: 1px solid rgba(248,201,63,0.15);
+            border-radius: 24px;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .art-carousel-track {
+            display: flex;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: transform;
+        }
+        .art-carousel .art-link {
+            min-width: 100%; flex-shrink: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 3rem 2rem; box-sizing: border-box;
+        }
+        /* 大幅游戏入口 slide：横向布局（SVG 插画 + 文字） */
+        .art-slide-game { flex-direction: row !important; gap: 3rem; text-align: left; }
+        .art-slide-game .art-text { text-align: left; margin: 0; }
+        .art-slide-game .art-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900; letter-spacing: 1px;
+        }
+        .art-slide-game .art-desc { font-weight: 600; }
+        /* 纯代码 SVG 几何插画容器（无位图，沿用主题玻璃容器） */
+        .art-game-illustration {
+            width: clamp(280px, 35vw, 480px);
+            aspect-ratio: 16 / 9;
+            border: 1px solid rgba(248,201,63,0.25);
+            border-radius: 20px;
+            overflow: hidden; flex-shrink: 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 0 30px rgba(237,117,38,0.15);
+            background: #8DDC65;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .art-game-svg { width: 100%; height: 100%; display: block; }
+        .art-slide-game:hover .art-game-illustration {
+            transform: scale(1.03);
+            box-shadow: 0 14px 50px rgba(0,0,0,0.5), 0 0 50px rgba(248,201,63,0.25);
+        }
+        /* 左右箭头：玻璃质感圆形按钮 */
+        .art-carousel-arrow {
+            position: absolute; top: 50%;
+            transform: translateY(-50%);
+            width: 52px; height: 52px; border-radius: 50%;
+            background: rgba(237,117,38,0.6); color: #fff;
+            border: 1px solid rgba(248,201,63,0.4);
+            font-size: 32px; font-weight: 900; line-height: 1;
+            cursor: pointer; z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .art-carousel-arrow:hover {
+            background: rgba(237,117,38,0.9);
+            box-shadow: 0 6px 24px rgba(237,117,38,0.4);
+            transform: translateY(calc(-50% - 2px));
+        }
+        .art-carousel-arrow:active { transform: translateY(calc(-50% + 2px)); }
+        .art-carousel-prev { left: 16px; }
+        .art-carousel-next { right: 16px; }
+        /* 指示点 */
+        .art-carousel-dots {
+            position: absolute; bottom: 14px;
+            left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 20;
+        }
+        .art-carousel-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .art-carousel-dot.active {
+            background: var(--color-gold-accent);
+            width: 28px; border-radius: 6px;
+            box-shadow: 0 0 10px rgba(248,201,63,0.6);
+        }
+        /* 窄屏：游戏入口 slide 改为竖排 */
+        @media (max-width: 768px) {
+            .art-slide-game { flex-direction: column !important; gap: 1.5rem; text-align: center; }
+            .art-slide-game .art-text { text-align: center; }
+            .art-game-illustration { width: 90%; max-width: 360px; }
+            .art-carousel-arrow { width: 44px; height: 44px; font-size: 26px; }
+        }
 
         /* 板块 */
         .section {
@@ -1173,15 +1264,54 @@
         <div class="art-geo art-geo-2"></div>
         <div class="art-geo art-geo-3"></div>
         <div class="art-grid-pattern"></div>
-        <a href="activity.html" class="art-link" id="activityLink">
-            <div class="art-glow-ring" id="activityBadge"></div>
-            <div class="art-text">
-                <span class="art-label">OLINE GAME INN</span>
-                <h2 class="art-title" id="activityTitle">客栈迎新，试玩领宝石</h2>
-                <p class="art-desc" id="activityDesc">试玩五款游戏 · 提交成绩 · 参与抽奖领宝石</p>
-                <span class="art-hint" id="activityHint">🎁 点击进入活动页面</span>
+        <!-- 左右循环切换板块（大幅入口） -->
+        <div class="art-carousel" id="artCarousel">
+            <div class="art-carousel-track" id="artCarouselTrack">
+                <!-- Slide 1: 客栈迎新活动入口 -->
+                <a href="activity.html" class="art-slide art-link" id="activityLink">
+                    <div class="art-glow-ring" id="activityBadge"></div>
+                    <div class="art-text">
+                        <span class="art-label">OLINE GAME INN</span>
+                        <h2 class="art-title" id="activityTitle">客栈迎新，试玩领宝石</h2>
+                        <p class="art-desc" id="activityDesc">试玩五款游戏 · 提交成绩 · 参与抽奖领宝石</p>
+                        <span class="art-hint" id="activityHint">🎁 点击进入活动页面</span>
+                    </div>
+                </a>
+                <!-- Slide 2: 乱斗前线大幅入口（纯代码 SVG 几何插画，无位图） -->
+                <a href="/game/brawl-frontline" class="art-slide art-slide-game art-link">
+                    <div class="art-game-illustration">
+                        <svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" class="art-game-svg" preserveAspectRatio="xMidYMid meet">
+                            <!-- 草地背景 -->
+                            <rect x="0" y="0" width="320" height="180" fill="#8DDC65"/>
+                            <!-- 道路 -->
+                            <path d="M 160 0 L 160 180" stroke="#CFA16A" stroke-width="36" fill="none"/>
+                            <!-- 基地（蓝色方形，粗描边） -->
+                            <rect x="138" y="128" width="44" height="44" fill="#3B82F6" stroke="#222" stroke-width="3" rx="6"/>
+                            <!-- 英雄（绿色圆形） -->
+                            <circle cx="160" cy="98" r="13" fill="#22C55E" stroke="#222" stroke-width="3"/>
+                            <!-- 敌人（红色几何：方形+菱形+圆形） -->
+                            <rect x="98" y="38" width="16" height="16" fill="#FF595E" stroke="#222" stroke-width="3" transform="rotate(45 106 46)"/>
+                            <circle cx="206" cy="56" r="9" fill="#FF595E" stroke="#222" stroke-width="3"/>
+                            <rect x="148" y="14" width="14" height="14" fill="#FF595E" stroke="#222" stroke-width="3" transform="rotate(45 155 21)"/>
+                            <!-- Boss（紫色六边形） -->
+                            <polygon points="60,90 76,80 92,90 92,108 76,118 60,108" fill="#6C5CE7" stroke="#222" stroke-width="3"/>
+                            <!-- 金币图标（黄色圆形） -->
+                            <circle cx="270" cy="30" r="8" fill="#FFC83D" stroke="#E6A700" stroke-width="2.5"/>
+                            <circle cx="290" cy="42" r="6" fill="#FFC83D" stroke="#E6A700" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="art-text">
+                        <span class="art-label">FRONTLINE BRAWL</span>
+                        <h2 class="art-title">乱斗前线</h2>
+                        <p class="art-desc">单人 Roguelike 塔防基地经营 · 招募英雄 · 挑战无限波次</p>
+                        <span class="art-hint">进入战场</span>
+                    </div>
+                </a>
             </div>
-        </a>
+            <button class="art-carousel-arrow art-carousel-prev" id="artCarouselPrev" aria-label="上一个">‹</button>
+            <button class="art-carousel-arrow art-carousel-next" id="artCarouselNext" aria-label="下一个">›</button>
+            <div class="art-carousel-dots" id="artCarouselDots"></div>
+        </div>
     </section>
 
     <!-- 游戏板块 -->
@@ -1465,7 +1595,8 @@
         }
         function renderLbPageTabs() {
             const tabsContainer = document.getElementById('lbPageTabs');
-            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            // 排行榜页面：所有有 leaderboard 配置的游戏都参与（与 showOnHome 解耦）
+            const visibleGames = gameList.filter(g => g.leaderboard);
             tabsContainer.innerHTML = visibleGames.map((g, i) =>
                 `<button class="lb-page-tab ${i === lbPageIndex ? 'active' : ''}" onclick="switchLbPageGame(${i})">${g.icon || '🎮'} ${g.name}</button>`
             ).join('');
@@ -1497,13 +1628,14 @@
             const listContainer = document.getElementById('lbPageList');
             listContainer.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">加载中...</div>';
             try {
-                const visibleGames = gameList.filter(g => g.showOnHome !== false);
+                // 排行榜页面：所有有 leaderboard 配置的游戏都参与（与 showOnHome 解耦）
+                const visibleGames = gameList.filter(g => g.leaderboard);
                 const currentGame = visibleGames[lbPageIndex];
                 if (!currentGame) return;
                 // mode=history 返回全部不聚合；mode=best 按配置聚合
                 let url = `/api/leaderboard/${currentGame.id}?limit=50&mode=${lbPageMode}`;
                 if (lbPageDifficulty) url += `&difficulty=${encodeURIComponent(lbPageDifficulty)}`;
-                const response = await fetch(url);
+                const response = await fetch(url, { cache: 'no-cache' });
                 const data = await response.json();
                 lbPageAvailableDiffs = data.availableDifficulties || [];
                 renderLbPageDiffTabs();
@@ -1573,10 +1705,66 @@
             }
         }
 
+        // ========== 第二屏左右循环切换板块 ==========
+        const artCarousel = {
+            current: 0,
+            total: 0,
+            autoTimer: null,
+            autoInterval: 4000,
+            init() {
+                const track = document.getElementById('artCarouselTrack');
+                const dots = document.getElementById('artCarouselDots');
+                if (!track || !dots) return;
+                this.total = track.querySelectorAll('.art-slide').length;
+                if (this.total <= 1) return;  // 单个 slide 无需轮播
+                this.track = track;
+                this.dots = dots;
+                // 渲染指示点
+                dots.innerHTML = Array.from({ length: this.total }, (_, i) =>
+                    `<span class="art-carousel-dot${i === 0 ? ' active' : ''}" data-idx="${i}"></span>`
+                ).join('');
+                dots.querySelectorAll('.art-carousel-dot').forEach(d => {
+                    d.addEventListener('click', () => this.goTo(parseInt(d.dataset.idx)));
+                });
+                document.getElementById('artCarouselPrev').addEventListener('click', () => this.prev());
+                document.getElementById('artCarouselNext').addEventListener('click', () => this.next());
+                // 鼠标悬停暂停 / 离开恢复
+                const carousel = document.getElementById('artCarousel');
+                carousel.addEventListener('mouseenter', () => this.stopAuto());
+                carousel.addEventListener('mouseleave', () => this.startAuto());
+                // 键盘左右键
+                document.addEventListener('keydown', (e) => {
+                    if (window.scrollY < 100) return;  // 仅在首屏生效
+                    const rect = document.getElementById('artShowcase').getBoundingClientRect();
+                    if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+                    if (e.key === 'ArrowLeft') this.prev();
+                    else if (e.key === 'ArrowRight') this.next();
+                });
+                this.startAuto();
+            },
+            goTo(idx) {
+                this.current = ((idx % this.total) + this.total) % this.total;
+                this.track.style.transform = `translateX(-${this.current * 100}%)`;
+                this.dots.querySelectorAll('.art-carousel-dot').forEach((d, i) => {
+                    d.classList.toggle('active', i === this.current);
+                });
+            },
+            next() { this.goTo(this.current + 1); },
+            prev() { this.goTo(this.current - 1); },
+            startAuto() {
+                this.stopAuto();
+                this.autoTimer = setInterval(() => this.next(), this.autoInterval);
+            },
+            stopAuto() {
+                if (this.autoTimer) { clearInterval(this.autoTimer); this.autoTimer = null; }
+            }
+        };
+
         // ========== 最佳纪录轮播 ==========
         function initLeaderboardBar() {
             loadGameList().then(() => loadBestScores());
             loadActivityInfo();
+            artCarousel.init();
             const bar = document.getElementById('leaderboardBar');
             leaderboardBarTop = bar.offsetTop;
             window.addEventListener('scroll', handleScroll);
@@ -1601,10 +1789,11 @@
             scrollContainer.innerHTML = '<div class="best-score-item"><span style="color:var(--text-on-dark);font-size:14px;">加载中...</span></div>';
             try {
                 const bestScores = [];
-                const visibleGames = gameList.filter(g => g.showOnHome !== false);
+                // 排行榜轮播：所有有 leaderboard 配置的游戏都参与（与 showOnHome 解耦）
+                const visibleGames = gameList.filter(g => g.leaderboard);
                 for (const game of visibleGames) {
                     try {
-                        const response = await fetch(`/api/leaderboard/${game.id}?limit=1`);
+                        const response = await fetch(`/api/leaderboard/${game.id}?limit=1`, { cache: 'no-cache' });
                         const data = await response.json();
                         if (data.success && data.leaderboard.length > 0) {
                             bestScores.push({
@@ -1653,10 +1842,11 @@
         async function refreshBestScoresData() {
             if (!bestScoresData.length) return;
             const newScores = [];
-            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            // 排行榜轮播：所有有 leaderboard 配置的游戏都参与（与 showOnHome 解耦）
+            const visibleGames = gameList.filter(g => g.leaderboard);
             for (const game of visibleGames) {
                 try {
-                    const response = await fetch(`/api/leaderboard/${game.id}?limit=1`);
+                    const response = await fetch(`/api/leaderboard/${game.id}?limit=1`, { cache: 'no-cache' });
                     const data = await response.json();
                     if (data.success && data.leaderboard.length > 0) {
                         newScores.push({

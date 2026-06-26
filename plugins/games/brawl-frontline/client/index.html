@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BRAWL FRONTLINE - Oline荒野游戏客栈</title>
+    <title>乱斗前线 - Oline荒野游戏客栈</title>
     <link rel="stylesheet" href="/common.css">
     <link rel="stylesheet" href="/game-header.css">
     <link rel="stylesheet" href="style.css">
@@ -12,30 +12,52 @@
     <!-- 顶部栏（复用 game-header.css 样式类，避免全局污染） -->
     <div id="site-game-header" class="game-header">
         <a href="/#games" class="game-header-back">← 返回</a>
-        <div class="game-header-title">BRAWL FRONTLINE</div>
+        <div class="game-header-title">乱斗前线</div>
         <div class="game-header-actions">
             <button class="game-header-btn" id="bf-lb-btn">🏆 排行榜</button>
+            <button class="game-header-btn bf-retire-btn hidden" id="bf-retire-btn" title="以当前成绩录入排行榜并退出">🏳️ 功成身退</button>
         </div>
     </div>
 
-    <!-- 顶部 HUD（精简：金币/券/波数/击杀/强化进度，无基地长条） -->
+    <!-- 顶部 HUD：6 个双行 tab，无 emoji，宽度一致 -->
     <div class="bf-hud">
-        <div class="bf-hud-item bf-hud-gold"><span class="bf-hud-icon">💰</span><span id="bf-gold">0</span></div>
-        <div class="bf-hud-item bf-hud-tickets"><span class="bf-hud-icon">🎫</span><span id="bf-tickets">0</span></div>
-        <div class="bf-hud-item bf-hud-wave"><span class="bf-hud-icon">🌊</span>第<span id="bf-wave">0</span>波</div>
-        <div class="bf-hud-item bf-hud-kills"><span class="bf-hud-icon">💀</span><span id="bf-kills">0</span></div>
-        <div class="bf-hud-buff">
-            <span class="bf-hud-buff-icon">⚡</span>
-            <div class="bf-buff-bar-wrap"><div class="bf-buff-bar" id="bf-buff-bar"></div></div>
-            <span id="bf-buff-text">0/40</span>
+        <div class="bf-hud-tab gold">
+            <span class="bf-hud-label">金币</span>
+            <span class="bf-hud-value" id="bf-gold">0</span>
         </div>
-        <button class="bf-hud-vault" id="bf-vault-btn" title="主题季宝库">🏦<span id="bf-vault-lv">1</span></button>
+        <div class="bf-hud-tab tickets">
+            <span class="bf-hud-label">英雄券</span>
+            <span class="bf-hud-value" id="bf-tickets">0</span>
+        </div>
+        <div class="bf-hud-tab wave">
+            <span class="bf-hud-label">当前</span>
+            <span class="bf-hud-value">第<span id="bf-wave">1</span>波</span>
+        </div>
+        <button class="bf-hud-tab buff" id="bf-buff-btn" title="强化选择">
+            <span class="bf-hud-label">强化选择</span>
+            <span class="bf-hud-value" id="bf-buff-text">0-40</span>
+        </button>
+        <button class="bf-hud-tab vault" id="bf-vault-btn" title="宝库">
+            <span class="bf-hud-label">宝库</span>
+            <span class="bf-hud-value">等级<span id="bf-vault-lv">1</span></span>
+        </button>
+        <button class="bf-hud-tab unlock" id="bf-unlock-btn" title="英雄解锁">
+            <span class="bf-hud-label">解锁</span>
+            <span class="bf-hud-value">英雄</span>
+        </button>
     </div>
 
     <!-- 主区域：全宽战场 -->
     <div class="bf-main">
         <div class="bf-canvas-wrap">
             <canvas id="bf-canvas"></canvas>
+            <!-- 首次进入炮台位置提示（关闭后不再显示） -->
+            <div class="bf-tip-facility hidden" id="bf-tip-facility">
+                <button class="bf-tip-close" id="bf-tip-close" aria-label="关闭">×</button>
+                <div class="bf-tip-arrow"></div>
+                <div class="bf-tip-title">添加炮台</div>
+                <div class="bf-tip-desc">点击虚线圆圈建造防御设施</div>
+            </div>
         </div>
     </div>
 

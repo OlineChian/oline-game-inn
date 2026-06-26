@@ -1,0 +1,45 @@
+/* ============================================================
+   切斯特牌 - 糖果槽样式（Balatro 墨绿面板）
+   独立模块，仅使用 CSS 变量
+   设计：墨绿面板 + 稀有度硬边框 + 字号放大 + 白字阴影
+   ============================================================ */
+
+/* ---------- 糖果槽容器 ---------- */
+.cc-candies { flex: 1; display: flex; gap: 6px; justify-content: center; }
+.cc-candy-slot {
+    flex: 1; max-width: 150px; padding: 10px 6px;
+    background: var(--bg-card); border: 2px dashed var(--bg-input-border);
+    border-radius: var(--radius-sm); color: var(--text-muted);
+    font-family: var(--font-body); font-size: var(--fs-tiny); text-align: center; cursor: pointer;
+    transition: filter 0.05s;
+    position: relative;
+}
+.cc-candy-slot:hover { filter: brightness(1.15); }
+.cc-candy-slot.has-candy {
+    background: var(--bg-card-alt); border-style: solid;
+    color: var(--color-gold-accent); font-weight: 700;
+    perspective: 700px;
+}
+.cc-candy-emoji { font-size: 32px; line-height: 1.2; }
+.cc-candy-name { font-family: var(--font-display); font-size: var(--fs-tiny); margin-top: 4px; letter-spacing: 0.5px; text-shadow: var(--text-shadow-sm); }
+
+/* ---------- 稀有度边框（实体边框，无光晕） ---------- */
+.cc-rarity-common { border-color: var(--color-rarity-common); }
+.cc-rarity-rare { border-color: var(--color-rarity-rare); }
+.cc-rarity-epic { border-color: var(--color-rarity-epic); }
+.cc-rarity-mythic { border-color: var(--color-rarity-mythic); }
+.cc-rarity-legendary { border-color: var(--color-rarity-legendary); }
+
+/* ---------- 3D 翻转动画（像素步进） ---------- */
+.cc-candy-inner {
+    position: relative; transition: transform 0.3s steps(4); transform-style: preserve-3d;
+}
+.cc-candy-slot.is-flipped .cc-candy-inner { transform: rotateY(180deg); }
+.cc-candy-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.cc-candy-back {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    transform: rotateY(180deg); padding: 6px;
+    background: var(--bg-card-alt);
+    color: var(--text-primary); font-family: var(--font-body);
+    font-size: var(--fs-tiny); font-weight: 600; line-height: 1.4; text-align: center;
+}

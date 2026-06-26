@@ -15,6 +15,7 @@
  */
 import { clamp } from './utils.js';
 import { BUFF_TARGETS } from '../data/enemies.js';
+import { getStarterHeroIds } from '../data/heroes.js';
 
 /** 逻辑画布尺寸（渲染时按容器缩放） */
 export const VIEW = { w: 480, h: 720 };
@@ -24,11 +25,11 @@ export const LAYOUT = {
   spawn: { x: 240, y: 30, w: 440, h: 60 },       // 敌人刷新区
   battle: { x: 0, y: 80, w: 480, h: 360 },        // 战斗区域
   baseLine: 580,                                  // 基地前线（敌人抵达此线攻击基地）
-  base: { x: 240, y: 650, w: 220, h: 90 },        // 主基地
+  base: { x: 240, y: 600, w: 220, h: 70 },        // 主基地（上移+减高避免被卡牌遮挡）
   vault: { x: 240, y: 550 },                      // A 主题季宝库
   starRoad: { x: 240, y: 470 },                   // B 星妙之路
   facilitySlots: [{ x: 110, y: 470 }, { x: 370, y: 470 }], // C 建造位
-  heroZone: { yMin: 90, yMax: 560 }               // 英雄活动 y 范围
+  heroZone: { yMin: 80, yMax: 560 }               // 英雄活动 y 范围（最远可到红色边界 y=80）
 };
 
 /** 基地初始生命 */
@@ -61,6 +62,8 @@ export const Game = {
       heroStars: {},          // 全局星级映射 { heroId: starLevel }
       paused: false,
       heroChoices: [],        // 起始 3 选 1
+      unlockedHeroes: getStarterHeroIds(),  // 已解锁英雄（开局含初始+稀有）
+      unlockChoices: [],      // 当前解锁候选池（3 选 1）
       selectedHero: null,
       finalScore: 0
     };
@@ -69,7 +72,8 @@ export const Game = {
       enemies: [],
       projectiles: [],
       particles: [],
-      turrets: []             // Jessie 超级技能召唤的炮台
+      turrets: [],            // 杰西超级技能召唤的炮台
+      summons: []             // 塔拉超级技能召唤的友方单位
     };
     this.buildings = {
       vault: { level: 1, goldAcc: 0 },
@@ -122,6 +126,7 @@ export const Game = {
         s.combat.update(dt);
         s.economy.update(dt);
         s.buildings.update(dt);
+        s.facilities.update(dt);
         this._updateParticles(dt);
         this._checkPhaseTrans();
         break;

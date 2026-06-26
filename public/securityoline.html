@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作弊与安全管理</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1f2329;
+    --text-muted: #8a9099;
+    --primary: #4f7cff;
+    --primary-hover: #3a63d8;
+    --danger: #e5484d;
+    --danger-hover: #c73641;
+    --success: #30a46c;
+    --warn: #f5a623;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 24px 0 0;
+    font-weight: 600;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  input:focus { border-color: var(--primary); }
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: var(--bg); }
+  button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  button.primary:hover { background: var(--primary-hover); }
+  button.danger { color: var(--danger); border-color: var(--border); }
+  button.danger:hover { background: #fef0f0; }
+  button.sm { padding: 3px 10px; font-size: 13px; }
+  .token-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    word-break: break-word;
+  }
+  th {
+    background: #fafbfc;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+  tr.expired td { opacity: .55; }
+  .time-cell { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+  .ip-cell { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  .reason-cell { max-width: 320px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .badge-purge { background: #fdeeee; color: var(--danger); }
+  .badge-ban { background: #fff4e6; color: var(--warn); }
+  .badge-expired { background: #eef0f3; color: var(--text-muted); }
+  .status {
+    margin-top: 16px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok { background: #eaf6ef; color: var(--success); }
+  .status.err { background: #fdeeee; color: var(--danger); }
+  .empty { text-align: center; color: var(--text-muted); padding: 40px; }
+  .summary {
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>作弊与安全管理</h1>
+    <div class="toolbar">
+      <button class="primary" onclick="loadBans()">刷新</button>
+    </div>
+    <div class="token-wrap">
+      <label for="adminToken">管理员Token(可选)</label>
+      <input type="text" id="adminToken" placeholder="未设ADMIN_TOKEN则留空" style="width:200px">
+    </div>
+  </div>
+
+  <div class="summary" id="summary">加载中...</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>昵称</th>
+        <th>IP</th>
+        <th>封禁原因</th>
+        <th>类型</th>
+        <th>封禁时间</th>
+        <th>解禁时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="bansBody">
+      <tr><td colspan="7" class="empty">加载中...</td></tr>
+    </tbody>
+  </table>
+
+  <div class="status" id="status"></div>
+
+<script>
+var adminToken = '';
+
+// Token 持久化
+(function initToken() {
+  var saved = localStorage.getItem('adminToken');
+  if (saved) {
+    document.getElementById('adminToken').value = saved;
+    adminToken = saved;
+  }
+})();
+document.getElementById('adminToken').addEventListener('change', function() {
+  adminToken = this.value.trim();
+  localStorage.setItem('adminToken', adminToken);
+});
+
+function authHeaders() {
+  var h = {};
+  if (adminToken) h['x-admin-token'] = adminToken;
+  return h;
+}
+
+function showStatus(msg, isOk) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status show ' + (isOk ? 'ok' : 'err');
+  if (isOk) setTimeout(function() { el.className = 'status'; }, 2500);
+}
+
+function fmtTime(ts) {
+  if (!ts) return '-';
+  var d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleString('zh-CN', { hour12: false });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+
+// 倒计时（剩余封禁时间）
+function fmtRemaining(until) {
+  var ms = Number(until) - Date.now();
+  if (ms <= 0) return '已过期';
+  var days = Math.floor(ms / 86400000);
+  var hours = Math.floor((ms % 86400000) / 3600000);
+  if (days > 0) return '剩 ' + days + ' 天 ' + hours + ' 小时';
+  var mins = Math.floor((ms % 3600000) / 60000);
+  if (hours > 0) return '剩 ' + hours + ' 小时 ' + mins + ' 分';
+  return '剩 ' + mins + ' 分';
+}
+
+function renderBans(bans) {
+  var body = document.getElementById('bansBody');
+  var summary = document.getElementById('summary');
+
+  if (!bans || bans.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" class="empty">暂无封禁记录</td></tr>';
+    summary.textContent = '共 0 条封禁记录';
+    return;
+  }
+
+  var active = bans.filter(function(b) { return !b.expired; });
+  var expired = bans.filter(function(b) { return b.expired; });
+  summary.textContent = '共 ' + bans.length + ' 条记录（' +
+    '生效中 ' + active.length + ' / 已过期 ' + expired.length + '）';
+
+  body.innerHTML = '';
+  bans.forEach(function(b) {
+    var tr = document.createElement('tr');
+    if (b.expired) tr.className = 'expired';
+
+    var badgeClass = b.expired ? 'badge-expired' :
+                     (b.action === 'purge' ? 'badge-purge' : 'badge-ban');
+    var badgeText = b.expired ? '已过期' :
+                    (b.action === 'purge' ? '清除+封禁' : '仅封禁');
+
+    var untilText = fmtTime(b.until);
+    if (!b.expired) untilText += '<br><span style="color:var(--success);font-size:11px">' +
+      escapeHtml(fmtRemaining(b.until)) + '</span>';
+
+    var encodedIp = encodeURIComponent(b.ip);
+    tr.innerHTML =
+      '<td>' + escapeHtml(b.nickname || '-') + '</td>' +
+      '<td class="ip-cell">' + escapeHtml(b.ip) + '</td>' +
+      '<td class="reason-cell">' + escapeHtml(b.reason || '-') + '</td>' +
+      '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
+      '<td class="time-cell">' + fmtTime(b.at) + '</td>' +
+      '<td class="time-cell">' + untilText + '</td>' +
+      '<td>' +
+        '<button class="sm danger" onclick="unbanIp(\'' + escapeAttr(encodedIp) + '\',\'' + escapeAttr(b.nickname || b.ip) + '\')">解封</button>' +
+      '</td>';
+    body.appendChild(tr);
+  });
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/'/g, "\\'");
+}
+
+function loadBans() {
+  fetch('/api/security/bans', { headers: authHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        showStatus(data.error || '加载失败', false);
+        document.getElementById('bansBody').innerHTML =
+          '<tr><td colspan="7" class="empty">' + escapeHtml(data.error || '加载失败') + '</td></tr>';
+        return;
+      }
+      renderBans(data.bans || []);
+    })
+    .catch(function(err) {
+      showStatus('加载失败: ' + err.message, false);
+      document.getElementById('bansBody').innerHTML =
+        '<tr><td colspan="7" class="empty">加载失败：' + escapeHtml(err.message) + '</td></tr>';
+    });
+}
+
+function unbanIp(encodedIp, label) {
+  if (!confirm('确认解除 ' + label + ' 的封禁？')) return;
+  fetch('/api/security/bans/' + encodedIp, {
+    method: 'DELETE',
+    headers: authHeaders()
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showStatus('已解封 IP: ' + data.ip, true);
+        loadBans();
+      } else {
+        showStatus(data.error || '解封失败', false);
+      }
+    })
+    .catch(function(err) { showStatus('解封失败: ' + err.message, false); });
+}
+
+// 启动：自动加载
+loadBans();
+</script>
+</body>
+</html>

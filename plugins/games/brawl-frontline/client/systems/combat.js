@@ -24,6 +24,29 @@ export const Combat = {
           if (distance(p, en) <= en.radius + (p.radius || 4)) {
             Enemies.takeDamage(en, p.damage);
             this._hitFx(p);
+            // 火箭爆炸：对范围内所有敌人造成额外伤害（布洛克超能）
+            if (p.explode) {
+              for (const en2 of Game.entities.enemies) {
+                if (en2 === en) continue;
+                if (distance(p, en2) <= p.explode.radius) {
+                  Enemies.takeDamage(en2, p.explode.damage);
+                }
+              }
+              for (let k = 0; k < 12; k++) {
+                const ang = (k / 12) * Math.PI * 2;
+                Game.spawnParticle({ x: p.x, y: p.y, vx: Math.cos(ang) * 150, vy: Math.sin(ang) * 150, life: 0.4, maxLife: 0.4, color: p.color, size: 4 });
+              }
+            }
+            // 杰西子弹弹射：对附近另一敌人造成额外伤害
+            if (p.bounce) {
+              for (const en2 of Game.entities.enemies) {
+                if (en2 === en) continue;
+                if (distance(p, en2) <= p.bounce.radius + en2.radius) {
+                  Enemies.takeDamage(en2, p.damage * p.bounce.damageRate);
+                  break;
+                }
+              }
+            }
             hit = true;
             break;
           }
@@ -54,7 +77,9 @@ export const Combat = {
       radius: opts.radius || 4,
       color: opts.color || '#ffd700',
       life: opts.life || 2,
-      targetTeam: opts.targetTeam || 'enemy'
+      targetTeam: opts.targetTeam || 'enemy',
+      bounce: opts.bounce || null,
+      explode: opts.explode || null
     });
   },
 

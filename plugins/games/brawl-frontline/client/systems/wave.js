@@ -38,15 +38,47 @@ export const Wave = {
     Game.state.phase = 'wave';
   },
 
-  /** 无限波次生成（第 7 波起） */
+  /** 无限波次生成（第 7 波起）- 数量指数级增长，混合所有敌人类型 */
   _generateEndless(n) {
     const extra = n - 6;
-    const gruntCount = 8 + extra * 2;
-    const heavyCount = 3 + extra;
-    for (let i = 0; i < gruntCount; i++) this.queue.push({ id: 'grunt-bot', delay: i * 0.7 });
-    for (let i = 0; i < heavyCount; i++) this.queue.push({ id: 'heavy-bot', delay: 50 + i * 1.5 });
-    // 每 5 波加一个 Boss
-    if (n % 5 === 0) this.queue.push({ id: 'mega-pig', delay: 80 });
+    // 数量指数级增长，设上限避免画面卡顿（60+25+18+12+8 = 123 只封顶）
+    const gruntCount = Math.min(60, 6 + Math.floor(Math.pow(1.28, extra)));
+    const heavyCount = Math.min(25, 2 + Math.floor(Math.pow(1.22, extra)));
+    const gunnerCount = Math.min(18, 1 + Math.floor(Math.pow(1.20, extra)));
+    const bomberCount = Math.min(12, 1 + Math.floor(extra * 0.6));
+    const shieldCount = Math.min(8, Math.floor(extra / 2));
+    // 出怪间隔随波数缩短（数量多时密集出怪，避免一波耗时过长）
+    const gruntInterval = Math.max(0.15, 0.5 - extra * 0.02);
+    const heavyInterval = Math.max(0.3, 0.8 - extra * 0.03);
+    const gunnerInterval = Math.max(0.2, 0.6 - extra * 0.02);
+    const gruntEnd = (gruntCount - 1) * gruntInterval;
+    const heavyEnd = gruntEnd + 2 + (heavyCount - 1) * heavyInterval;
+    // 普通机器人（紧凑出怪）
+    for (let i = 0; i < gruntCount; i++) {
+      this.queue.push({ id: 'grunt-bot', delay: i * gruntInterval });
+    }
+    // 胖机器人（grunt 之后 2s 开始）
+    for (let i = 0; i < heavyCount; i++) {
+      this.queue.push({ id: 'heavy-bot', delay: gruntEnd + 2 + i * heavyInterval });
+    }
+    // 快射手（与胖机器人同期穿插）
+    for (let i = 0; i < gunnerCount; i++) {
+      this.queue.push({ id: 'gunner-bot', delay: gruntEnd + 1 + i * gunnerInterval });
+    }
+    // 爆破兵（heavy 之后）
+    for (let i = 0; i < bomberCount; i++) {
+      this.queue.push({ id: 'bomber-bot', delay: heavyEnd + 1 + i * 1.5 });
+    }
+    // 盾卫（每 2 波追加 1 只）
+    for (let i = 0; i < shieldCount; i++) {
+      this.queue.push({ id: 'shield-guard', delay: heavyEnd + 0.5 + i * 2 });
+    }
+    // Boss（每 5 波一次，轮换 4 种 Boss）
+    if (n % 5 === 0) {
+      const bosses = ['shield-boss', 'berserker-boss', 'elite-summoner', 'mega-pig'];
+      const idx = (Math.floor(n / 5) - 2) % bosses.length;
+      this.queue.push({ id: bosses[idx], delay: heavyEnd + 3 });
+    }
   },
 
   update(dt) {

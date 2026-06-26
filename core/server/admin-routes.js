@@ -44,6 +44,14 @@ function registerAdminRoutes(app) {
 
   console.log('[Admin] Route registered: GET /adminoline');
 
+  // 作弊与安全管理页面（浏览器地址栏直接访问）
+  // GET /securityoline 返回封禁记录管理页面（页面内通过 API 查询/解封）
+  app.get('/securityoline', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', '..', 'public', 'securityoline.html'));
+  });
+
+  console.log('[Admin] Route registered: GET /securityoline');
+
   // 重新从持久化源全量加载存储内存镜像
   // 适用场景：外部直接修改 kv_store 表 / store.json 后，让运行中进程同步更新
   app.post('/admin/storage/reload', async (req, res) => {

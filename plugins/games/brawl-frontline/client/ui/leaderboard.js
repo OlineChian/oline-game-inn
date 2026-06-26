@@ -22,7 +22,7 @@ export const Leaderboard = {
     const list = document.getElementById('bf-lb-list');
     list.innerHTML = '<div class="bf-lb-loading">加载中...</div>';
     try {
-      const res = await fetch(`/api/leaderboard/${GAME_ID}`);
+      const res = await fetch(`/api/leaderboard/${GAME_ID}`, { cache: 'no-cache' });
       const data = await res.json();
       if (data.success && data.leaderboard.length > 0) {
         list.innerHTML = data.leaderboard.map((item, i) => `

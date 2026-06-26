@@ -1,6 +1,28 @@
-/* BRAWL FRONTLINE 样式
-   主题色全部使用 /common.css 的 CSS 变量（橙金黑），不硬编码 hex
-   布局：顶部 HUD + 全宽 Canvas + 底部英雄卡片区（手机端友好） */
+/* 乱斗前线样式 - Code-Only Comic UI（扁平/高饱和/粗描边/大圆角/Supercell 阴影） */
+:root {
+  --bf-bg: #EEF5FF;            /* 主背景 浅蓝 */
+  --bf-card: #FFFFFF;          /* 卡片背景 */
+  --bf-card-alt: #F5F5F5;      /* 次级背景 */
+  --bf-text: #222;             /* 主文字 */
+  --bf-text-2: #666;           /* 次文字 */
+  --bf-text-3: #999;           /* 弱文字 */
+  --bf-border: #222;           /* 统一描边色 */
+  --bf-bw: 3px;                /* 统一边框宽度 */
+  --bf-primary: #3B82F6;       /* 主色蓝 */
+  --bf-primary-btn: #2563EB;   /* 按钮蓝 */
+  --bf-primary-hover: #1D4ED8; /* hover 蓝 */
+  --bf-gold: #FFC83D;          /* 金币黄 */
+  --bf-gold-border: #E6A700;   /* 金币边框 */
+  --bf-gem: #6C5CE7;           /* 宝石紫 */
+  --bf-enemy: #FF595E;         /* 敌人红 */
+  --bf-upgrade: #22C55E;       /* 升级绿 */
+  --bf-shadow: 0 5px 0 #222;   /* Supercell 阴影 */
+  --bf-shadow-sm: 0 3px 0 #222;
+  --bf-r: 16px;                /* 通用圆角 */
+  --bf-r-card: 20px;           /* 卡牌圆角 */
+  --bf-r-btn: 999px;           /* 按钮圆角 */
+  --bf-font: Inter, 'Noto Sans SC', Arial, sans-serif;
+}
 
 /* 通用隐藏类 */
 .hidden { display: none !important; }
@@ -12,63 +34,92 @@ body {
   height: 100dvh;
   margin: 0;
   overflow: hidden;
-  background: var(--color-dark-bg);
-  color: var(--text-white);
-  font-family: var(--font-body);
+  background: var(--bf-bg);
+  color: var(--bf-text);
+  font-family: var(--bf-font);
 }
 .game-header { flex-shrink: 0; position: relative; z-index: 30; }
 
-/* ============ 顶部 HUD（精简，彩色背景区分） ============ */
+/* ============ 顶部 HUD：双行 tab，扁平粗边框 ============ */
 .bf-hud {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 6px;
-  padding: 6px 10px;
-  background: var(--bg-card);
-  border-bottom: 2px solid var(--color-orange-main);
+  padding: 8px 10px;
+  background: var(--bf-card);
+  border-bottom: var(--bf-bw) solid var(--bf-border);
   flex-shrink: 0;
-  font-size: 14px;
   font-weight: bold;
   position: relative;
   z-index: 25;
 }
-.bf-hud-item {
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border-radius: var(--radius-md);
-  white-space: nowrap;
+/* 所有 tab 统一双行结构：label（上）+ value（下） */
+.bf-hud-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px;
+  min-width: 64px;
+  padding: 6px 8px;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r);
+  font-family: var(--bf-font); font-weight: bold;
+  cursor: default;
+  position: relative; overflow: hidden;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.bf-hud-icon { font-size: 15px; }
-.bf-hud-gold { background: rgba(248,201,63,0.2); color: var(--color-gold-accent); }
-.bf-hud-tickets { background: rgba(58,134,255,0.2); color: #6fb0ff; }
-.bf-hud-wave { background: rgba(237,117,38,0.2); color: var(--color-orange-main); }
-.bf-hud-kills { background: rgba(255,107,107,0.2); color: #ff8a8a; }
+.bf-hud-tab .bf-hud-label {
+  font-size: 10px; opacity: 0.7; letter-spacing: 1px;
+}
+.bf-hud-tab .bf-hud-value {
+  font-size: 15px; white-space: nowrap; font-weight: 700;
+}
+/* 各 tab 配色（扁平高饱和） */
+.bf-hud-tab.gold { background: var(--bf-gold); color: #222; }
+.bf-hud-tab.tickets { background: #DDDDDD; color: #222; }
+.bf-hud-tab.wave { background: var(--bf-primary); color: #fff; }
+.bf-hud-tab.buff {
+  background: var(--bf-gem); color: #fff;
+  cursor: pointer;
+}
+.bf-hud-tab.vault {
+  background: var(--bf-card-alt); color: var(--bf-text);
+  cursor: pointer;
+}
+.bf-hud-tab.unlock {
+  background: var(--bf-gold); color: #222;
+  cursor: pointer;
+}
+.bf-hud-tab.buff:active, .bf-hud-tab.vault:active, .bf-hud-tab.unlock:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--bf-border);
+}
 
-/* 强化进度条 */
-.bf-hud-buff {
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border-radius: var(--radius-md);
-  background: rgba(155,93,229,0.2); color: #c8a8ff;
-  flex: 1; min-width: 100px; max-width: 200px;
-}
-.bf-hud-buff-icon { font-size: 14px; }
-.bf-buff-bar-wrap {
-  flex: 1; height: 8px; background: var(--bg-input-border);
-  border-radius: var(--radius-sm); overflow: hidden; min-width: 40px;
-}
-.bf-buff-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, #9b5de5, #c8a8ff);
+/* 进度条整体背景填充（::before 伪元素，通过 --progress 变量控制宽度） */
+.bf-hud-tab.buff::before, .bf-hud-tab.vault::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--progress, 0%);
+  z-index: 0;
   transition: width 0.2s ease;
 }
-#bf-buff-text { font-size: 11px; min-width: 36px; text-align: right; }
+.bf-hud-tab.buff::before { background: rgba(255,255,255,0.3); }
+.bf-hud-tab.vault::before { background: rgba(255,200,61,0.5); }
+.bf-hud-tab.buff > *, .bf-hud-tab.vault > * { position: relative; z-index: 1; }
+/* 满进度高亮 */
+.bf-hud-tab.buff.ready { background: #7c6cff; }
+.bf-hud-tab.vault.ready { background: var(--bf-gold); }
+/* 锁定 / 满级 */
+.bf-hud-tab.vault.locked { opacity: 0.5; }
+.bf-hud-tab.vault.maxed { background: var(--bf-upgrade); color: #fff; }
 
-/* 宝库按钮 */
-.bf-hud-vault {
-  padding: 4px 8px; border: none; border-radius: var(--radius-md);
-  background: rgba(244,162,97,0.2); color: #f4a261;
-  font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap;
+/* 强化选择推到右侧：金币/英雄券/波次在左，强化/宝库/解锁在右（全屏通用） */
+.bf-hud-tab.buff { margin-left: auto; }
+
+/* 窄屏（手机）：压缩 tab 内边距和最小宽度，确保 6 个按钮能放下且 buff 靠右 */
+@media (max-width: 480px) {
+  .bf-hud { gap: 3px; padding: 5px 4px; }
+  .bf-hud-tab { min-width: 44px; padding: 4px 3px; }
+  .bf-hud-tab .bf-hud-label { font-size: 9px; letter-spacing: 0.3px; }
+  .bf-hud-tab .bf-hud-value { font-size: 12px; }
 }
-.bf-hud-vault:active { transform: scale(0.95); }
 
 /* ============ 主区域：全宽战场 ============ */
 .bf-main {
@@ -82,18 +133,72 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0a0a;
+  background: #8DDC65;  /* 草地色作为战场底色 */
   position: relative;
   z-index: 1;
+  padding-bottom: 16px;  /* 画布底部与卡片区留间距，避免基地血量被遮挡 */
 }
-#bf-canvas { display: block; background: #0a0a0a; }
+#bf-canvas { display: block; background: #8DDC65; }
 
-/* ============ 底部英雄卡片区（横向滑动） ============ */
+/* ============ 首次进入炮台位置提示 ============ */
+.bf-tip-facility {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bf-card);
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r);
+  box-shadow: var(--bf-shadow);
+  padding: 12px 18px 10px;
+  z-index: 20;
+  font-family: var(--bf-font);
+  text-align: center;
+  animation: bf-tip-pop 0.3s ease;
+  max-width: 80%;
+}
+@keyframes bf-tip-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+.bf-tip-close {
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--bf-enemy);
+  color: #fff;
+  border: var(--bf-bw) solid var(--bf-border);
+  font-size: 16px; font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--bf-shadow-sm);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.bf-tip-close:active { transform: translateY(2px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-tip-title {
+  font-size: 15px; font-weight: 900; color: var(--bf-text);
+  letter-spacing: 1px; margin-bottom: 2px;
+}
+.bf-tip-desc { font-size: 11px; color: var(--bf-text-2); font-weight: 600; }
+/* 向下小箭头（指向 slot 位置） */
+.bf-tip-arrow {
+  position: absolute;
+  bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--bf-border);
+}
+
+/* ============ 底部英雄卡片区（横向滑动，3:4 比例，纯色背景） ============ */
 .bf-cards-scroll {
   flex-shrink: 0;
-  background: var(--bg-card);
-  border-top: 2px solid var(--color-orange-main);
-  padding: 8px 6px;
+  background: var(--bf-card);
+  border-top: var(--bf-bw) solid var(--bf-border);
+  padding: 10px 8px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -103,113 +208,92 @@ body {
 }
 .bf-cards {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   min-width: min-content;
 }
 .bf-card {
   flex-shrink: 0;
-  width: 116px;
-  min-height: 132px;
-  border-radius: var(--radius-md);
-  padding: 8px 8px 7px;
+  width: 120px;
+  min-height: 160px;  /* 3:4 比例 */
+  border-radius: var(--bf-r-card);
+  padding: 0 8px 8px;
   cursor: pointer;
   position: relative;
-  background: var(--bg-card-alt);
-  background-blend-mode: overlay;
-  border: 2px solid transparent;
-  transition: transform 0.12s, border-color 0.12s;
+  background-color: var(--bf-card);
+  border: var(--bf-bw) solid var(--rarity-color, var(--bf-card-alt));
+  box-shadow: var(--bf-shadow);
+  transition: transform 0.2s ease, border-color 0.2s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
 }
-/* 定位装饰背景（半透明图案，不干扰文字阅读） */
-.bf-card.role-melee {
-  background-image:
-    repeating-linear-gradient(45deg, rgba(237,117,38,0.16) 0 6px, transparent 6px 14px),
-    var(--bg-card-alt);
-}
-.bf-card.role-ranged {
-  background-image:
-    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.22) 4px, transparent 5px),
-    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.14) 9px, transparent 10px),
-    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.08) 14px, transparent 15px),
-    var(--bg-card-alt);
-}
-.bf-card.role-tank {
-  background-image:
-    linear-gradient(135deg, rgba(244,162,97,0.18) 0%, transparent 45%),
-    linear-gradient(225deg, rgba(244,162,97,0.18) 0%, transparent 45%),
-    var(--bg-card-alt);
-}
-.bf-card.role-summon {
-  background-image:
-    radial-gradient(circle at 15% 85%, rgba(46,196,182,0.20) 3px, transparent 4px),
-    radial-gradient(circle at 15% 85%, rgba(46,196,182,0.12) 8px, transparent 9px),
-    var(--bg-card-alt);
-}
-.bf-card:active { transform: scale(0.96); }
-.bf-card.selected { border-color: var(--color-gold-accent); }
-/* 卡片顶部色条（英雄专属色） */
-.bf-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: var(--card-color, #888);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+.bf-card:hover { transform: translateY(-2px); }
+.bf-card:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-card.selected { border-color: var(--bf-gold); }
+
+/* 顶部定位色条：突破 padding+border，撑到卡片边缘（保留用户确定：坦克黄/射手蓝/召唤青/近战红/治疗绿） */
+.bf-card-role-bar {
+  height: 24px;
+  margin: calc(-1 * var(--bf-bw)) calc(-1 * (var(--bf-bw) + 8px)) 4px;
+  padding: 0 calc(var(--bf-bw) + 8px);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--role-color, #888);
+  color: #fff;
+  font-size: 12px; font-weight: 900;
+  letter-spacing: 2px;
+  border-bottom: var(--bf-bw) solid var(--bf-border);
 }
 
 /* 卡片内容 */
 .bf-card-top {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 11px; margin-top: 2px;
+  font-size: 11px;
 }
-.bf-card-stars { color: var(--color-gold-accent); font-weight: bold; }
-.bf-card-hp { color: #4fe0b0; font-weight: bold; }
+.bf-card-stars { color: var(--bf-gold-border); font-weight: 900; }
+.bf-card-hp { color: var(--bf-upgrade); font-weight: 700; }
 .bf-card-name {
-  font-size: 20px; font-weight: bold; text-align: center;
-  margin: 4px 0 2px 0; color: #fff;
-}
-.bf-card-role-tag {
-  font-size: 10px; text-align: center;
-  color: var(--card-color, #fff); font-weight: bold;
-  padding: 1px 0; opacity: 0.85;
-  letter-spacing: 1px;
+  font-size: 18px; font-weight: 900; text-align: center;
+  margin: 4px 0 2px 0; color: var(--bf-text); letter-spacing: 1px;
 }
 .bf-card-stats {
-  font-size: 10px; color: var(--text-secondary);
-  text-align: center; line-height: 1.3;
+  display: flex; flex-direction: column; gap: 1px;
+  font-size: 10px; color: var(--bf-text-2);
+  text-align: center; line-height: 1.3; font-weight: 600;
 }
+.bf-card-stat-line { white-space: nowrap; }
 .bf-card-super {
-  font-size: 10px; text-align: center; margin-top: 3px;
-  padding: 2px 4px; border-radius: var(--radius-sm);
-  font-weight: bold;
+  font-size: 10px; text-align: center; margin-top: 4px;
+  padding: 3px 4px; border-radius: var(--bf-r);
+  font-weight: 700;
+  border: 2px solid var(--bf-border);
 }
 .bf-card-super.locked {
-  color: var(--text-muted);
-  background: rgba(255,255,255,0.05);
+  color: var(--bf-text-3);
+  background: var(--bf-card-alt);
 }
 .bf-card-super.unlocked {
-  color: var(--color-gold-accent);
-  background: rgba(248,201,63,0.15);
+  color: #222;
+  background: var(--bf-gold);
 }
 .bf-card-count {
-  position: absolute; top: 6px; right: 6px;
-  background: var(--color-orange-main); color: #fff;
-  font-size: 10px; font-weight: bold;
-  padding: 1px 6px; border-radius: var(--radius-xl);
-  min-width: 18px; text-align: center;
+  position: absolute; top: 4px; right: 6px;
+  background: var(--bf-enemy); color: #fff;
+  font-size: 10px; font-weight: 900;
+  padding: 1px 8px; border-radius: var(--bf-r-btn);
+  min-width: 20px; text-align: center;
+  border: 2px solid var(--bf-border);
+  z-index: 2;
 }
 
 /* ============ 卡片操作弹层（招募/升星） ============ */
 .bf-card-popup {
   position: fixed;
   z-index: 45;
-  background: var(--bg-card);
-  border: 2px solid var(--color-gold-accent);
-  border-radius: var(--radius-md);
-  padding: 8px;
-  box-shadow: var(--shadow-modal);
+  background: var(--bf-card);
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r);
+  padding: 10px;
+  box-shadow: var(--bf-shadow);
   display: flex; flex-direction: column; gap: 6px;
   min-width: 200px;
 }
@@ -220,178 +304,353 @@ body {
   width: 0; height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 8px solid var(--color-gold-accent);
+  border-top: 8px solid var(--bf-border);
 }
 /* 按钮并排容器：招募+升星各占一半 */
 .bf-card-popup-btns {
   display: flex; flex-direction: row; gap: 6px;
 }
+/* 进度条式按钮：粗边框 + Supercell 阴影 */
 .bf-popup-btn {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; align-items: center;
-  padding: 7px 6px; border: none; border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: bold; cursor: pointer;
-  background: var(--color-orange-main); color: #fff;
-  gap: 2px; transition: transform 0.1s, opacity 0.15s;
+  padding: 10px 6px;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r);
+  font-size: 13px; font-weight: 900; cursor: pointer;
+  background: var(--bf-card-alt); color: var(--bf-text);
+  gap: 2px; transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative; overflow: hidden;
+  box-shadow: var(--bf-shadow-sm);
+  --btn-color: var(--bf-primary);
+  --progress: 0%;
 }
-.bf-popup-btn:active { transform: scale(0.96); }
-.bf-popup-btn:disabled {
-  background: var(--bg-input-border); color: var(--text-muted);
-  cursor: not-allowed;
+.bf-popup-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--progress);
+  background: var(--btn-color);
+  transition: width 0.2s ease;
+  z-index: 0;
+  opacity: 0.85;
 }
-/* 冷却状态：半透明 + 脉冲提示 */
+.bf-popup-btn > * { position: relative; z-index: 1; }
+.bf-popup-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--bf-border); }
+.bf-popup-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-popup-btn:disabled { cursor: not-allowed; }
+.bf-popup-btn:disabled::before { opacity: 0.4; }
+/* 招募=蓝色（英雄券色） */
+.bf-popup-btn.recruit { --btn-color: var(--bf-primary); }
+/* 升星/金库=金色（金币色） */
+.bf-popup-btn.starup { --btn-color: var(--bf-gold); }
+/* 锁定状态（波数未到） */
+.bf-popup-btn.locked { --progress: 0%; opacity: 0.5; }
+/* 冷却状态：脉冲提示 */
 .bf-popup-btn.cooldown {
-  opacity: 0.55; cursor: wait;
-  animation: bf-cooldown-pulse 0.35s ease-out;
+  cursor: wait;
+  animation: bf-cooldown-pulse 0.2s ease-out;
 }
 @keyframes bf-cooldown-pulse {
-  0%   { transform: scale(1); opacity: 0.3; }
-  50%  { transform: scale(0.94); opacity: 0.6; }
-  100% { transform: scale(1); opacity: 0.55; }
+  0%   { transform: scale(1); opacity: 0.4; }
+  50%  { transform: scale(0.94); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
 }
 .bf-popup-btn-label { line-height: 1.1; }
-.bf-popup-btn-cost { font-size: 10px; opacity: 0.9; }
-.bf-popup-btn.gold { background: var(--color-gold-accent); color: #000; }
-.bf-popup-btn.gold:disabled { background: var(--bg-input-border); color: var(--text-muted); }
+.bf-popup-btn-cost { font-size: 10px; opacity: 0.95; font-weight: 700; }
 
 /* ============ Toast ============ */
 .bf-toast {
   position: fixed; left: 50%; bottom: 160px;
   transform: translateX(-50%) translateY(20px);
-  background: var(--bg-overlay); color: var(--text-white);
-  padding: 8px 18px; border-radius: var(--radius-md);
-  font-size: 13px; opacity: 0; pointer-events: none;
-  transition: all 0.25s ease; z-index: 40;
+  background: var(--bf-card); color: var(--bf-text);
+  padding: 10px 22px; border-radius: var(--bf-r);
+  border: var(--bf-bw) solid var(--bf-border);
+  box-shadow: var(--bf-shadow);
+  font-size: 13px; font-weight: 700; opacity: 0; pointer-events: none;
+  transition: all 0.2s ease; z-index: 40;
 }
 .bf-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ============ 弹窗 ============ */
 .bf-modal {
-  position: fixed; inset: 0; background: var(--bg-overlay);
+  position: fixed; inset: 0; background: rgba(34,34,34,0.5);
   display: flex; align-items: center; justify-content: center;
   z-index: 50; padding: 16px;
 }
 .bf-modal.hidden { display: none; }
 .bf-modal-content {
-  background: var(--bg-card); border: 2px solid var(--color-orange-main);
-  border-radius: var(--radius-lg); padding: 20px;
+  background: var(--bf-card); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r); padding: 20px;
   max-width: 460px; width: 100%; max-height: 85vh; overflow-y: auto;
-  box-shadow: var(--shadow-modal); position: relative;
+  box-shadow: var(--bf-shadow); position: relative;
 }
 .bf-modal-close {
   position: absolute; top: 10px; right: 12px;
-  background: none; border: none; color: var(--text-secondary);
+  background: none; border: none; color: var(--bf-text-2);
   font-size: 24px; cursor: pointer;
 }
 .bf-modal-title {
-  text-align: center; font-size: 20px; font-weight: bold;
-  color: var(--color-gold-accent); margin-bottom: 16px;
+  text-align: center; font-size: 20px; font-weight: 900;
+  color: var(--bf-text); margin-bottom: 16px; letter-spacing: 1px;
 }
 
 /* ---- 英雄选择卡片 ---- */
 .bf-hero-choices { display: flex; flex-direction: column; gap: 10px; }
 .bf-hero-card {
   display: flex; flex-direction: column; align-items: center;
-  padding: 14px; border: 2px solid var(--bg-input-border);
-  border-radius: var(--radius-md); cursor: pointer;
-  transition: border-color 0.2s, transform 0.1s;
+  padding: 14px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r); cursor: pointer;
+  background: var(--bf-card);
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease;
 }
-.bf-hero-card:hover { border-color: var(--color-orange-main); }
-.bf-hero-card:active { transform: scale(0.98); }
+.bf-hero-card:hover { transform: translateY(-2px); }
+.bf-hero-card:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
 .bf-hero-card-icon {
   width: 48px; height: 48px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-weight: bold; font-size: 20px; color: #fff; margin-bottom: 6px;
-  border: 3px solid #fff;
+  font-weight: 900; font-size: 20px; color: #fff; margin-bottom: 6px;
+  border: var(--bf-bw) solid var(--bf-border);
 }
-.bf-hero-card-name { font-size: 16px; font-weight: bold; }
-.bf-hero-card-role { font-size: 12px; color: var(--text-muted); }
-.bf-hero-card-stat { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-.bf-hero-card-super { font-size: 11px; color: var(--color-gold-accent); margin-top: 2px; font-weight: bold; }
+.bf-hero-card-name { font-size: 16px; font-weight: 900; }
+.bf-hero-card-role { font-size: 12px; color: var(--bf-text-2); font-weight: 600; }
+.bf-hero-card-stat { font-size: 12px; color: var(--bf-text-2); margin-top: 4px; font-weight: 600; }
+.bf-hero-card-super { font-size: 11px; color: #222; margin-top: 4px; font-weight: 700; background: var(--bf-gold); padding: 2px 8px; border-radius: var(--bf-r); border: 2px solid var(--bf-border); }
 
 /* ---- 强化卡片 ---- */
 .bf-buff-choices { display: flex; flex-direction: column; gap: 10px; }
 .bf-buff-card {
-  padding: 14px; border: 2px solid; border-radius: var(--radius-md);
-  cursor: pointer; transition: transform 0.1s;
+  padding: 14px; border: var(--bf-bw) solid; border-radius: var(--bf-r);
+  cursor: pointer; background: var(--bf-card);
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease;
 }
-.bf-buff-card:active { transform: scale(0.98); }
-.bf-buff-quality { font-size: 11px; font-weight: bold; }
-.bf-buff-name { font-size: 15px; font-weight: bold; margin: 4px 0; }
-.bf-buff-desc { font-size: 12px; color: var(--text-secondary); }
+.bf-buff-card:hover { transform: translateY(-2px); }
+.bf-buff-card:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-buff-quality { font-size: 11px; font-weight: 900; }
+.bf-buff-name { font-size: 15px; font-weight: 900; margin: 4px 0; }
+.bf-buff-desc { font-size: 12px; color: var(--bf-text-2); font-weight: 600; }
 
 /* ---- 游戏结束 ---- */
 .bf-gameover-score {
-  text-align: center; font-size: 40px; font-weight: bold;
-  color: var(--color-gold-accent); margin: 8px 0;
+  text-align: center; font-size: 40px; font-weight: 900;
+  color: var(--bf-gold-border); margin: 8px 0; letter-spacing: 1px;
+  text-shadow: 0 2px 0 var(--bf-border);
 }
-.bf-gameover-score span { font-size: 16px; color: var(--text-secondary); }
-.bf-gameover-rank { text-align: center; color: var(--color-success); margin-bottom: 12px; font-weight: bold; }
+.bf-gameover-score span { font-size: 16px; color: var(--bf-text-2); }
+.bf-gameover-rank { text-align: center; color: var(--bf-upgrade); margin-bottom: 12px; font-weight: 900; }
 .bf-gameover-detail {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
-  font-size: 12px; color: var(--text-secondary);
-  padding: 10px; background: var(--bg-card-alt);
-  border-radius: var(--radius-md); margin-bottom: 14px;
+  font-size: 12px; color: var(--bf-text-2); font-weight: 600;
+  padding: 12px; background: var(--bf-card-alt);
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r);
+  margin-bottom: 14px;
+}
+
+/* ---- 功成身退按钮 + 确认弹窗 ---- */
+.bf-retire-btn {
+  background: var(--bf-upgrade); color: #fff;
+  border: var(--bf-bw) solid var(--bf-border);
+  box-shadow: var(--bf-shadow-sm);
+}
+.bf-retire-btn:hover {
+  background: #1ab852;
+}
+.bf-retire-score {
+  text-align: center; font-size: 13px;
+  color: var(--bf-text-2); margin-top: 4px; font-weight: 600;
+}
+.bf-retire-tip {
+  text-align: center; font-size: 12px;
+  color: var(--bf-enemy);
+  margin-bottom: 14px; font-weight: 900;
 }
 .bf-gameover-btns { display: flex; gap: 10px; }
 .bf-btn-primary, .bf-btn-secondary {
-  flex: 1; padding: 10px; border: none; border-radius: var(--radius-md);
-  font-weight: bold; cursor: pointer; font-size: 14px;
+  flex: 1; padding: 12px;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r-btn);
+  font-weight: 900; cursor: pointer; font-size: 14px; letter-spacing: 1px;
+  box-shadow: var(--bf-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: var(--bf-font);
 }
-.bf-btn-primary { background: var(--color-orange-main); color: var(--text-white); }
-.bf-btn-secondary { background: var(--bg-input-border); color: var(--text-white); }
+.bf-btn-primary { background: var(--bf-primary-btn); color: #fff; }
+.bf-btn-primary:hover { background: var(--bf-primary-hover); transform: translateY(-2px); box-shadow: 0 7px 0 var(--bf-border); }
+.bf-btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-btn-secondary { background: var(--bf-card-alt); color: var(--bf-text); }
+.bf-btn-secondary:hover { background: #DDDDDD; transform: translateY(-2px); box-shadow: 0 7px 0 var(--bf-border); }
+.bf-btn-secondary:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
 
 /* ---- 排行榜 ---- */
 .bf-lb-content { min-height: 300px; }
 .bf-lb-list { max-height: 50vh; overflow-y: auto; }
-.bf-lb-loading { text-align: center; padding: 30px; color: var(--text-muted); }
+.bf-lb-loading { text-align: center; padding: 30px; color: var(--bf-text-2); }
 .bf-lb-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px; border-bottom: 1px solid var(--bg-input-border);
+  padding: 10px; border-bottom: 2px solid var(--bf-card-alt);
 }
 .bf-lb-rank {
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-weight: bold; font-size: 13px; flex-shrink: 0;
-  background: var(--bg-input-border); color: var(--text-white);
+  font-weight: 900; font-size: 14px; flex-shrink: 0;
+  background: var(--bf-card-alt); color: var(--bf-text);
+  border: var(--bf-bw) solid var(--bf-border);
 }
-.bf-lb-rank.rank-1 { background: var(--color-gold-accent); color: #000; }
-.bf-lb-rank.rank-2 { background: #b8b8b8; color: #000; }
+.bf-lb-rank.rank-1 { background: var(--bf-gold); color: #222; }
+.bf-lb-rank.rank-2 { background: #DDDDDD; color: #222; }
 .bf-lb-rank.rank-3 { background: #cd7f32; color: #fff; }
-.bf-lb-name { flex: 1; font-size: 14px; }
-.bf-lb-score { font-size: 14px; font-weight: bold; color: var(--color-gold-accent); }
-.bf-lb-unit { font-size: 11px; color: var(--text-muted); margin-left: 2px; }
-.bf-lb-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.bf-lb-name { flex: 1; font-size: 14px; font-weight: 600; }
+.bf-lb-score { font-size: 14px; font-weight: 900; color: var(--bf-gold-border); }
+.bf-lb-unit { font-size: 11px; color: var(--bf-text-2); margin-left: 2px; }
+.bf-lb-empty { text-align: center; padding: 40px 20px; color: var(--bf-text-2); }
 .bf-lb-empty-icon { font-size: 32px; margin-bottom: 8px; }
 .bf-lb-empty-tip { font-size: 12px; margin-top: 4px; }
 
 /* ============ 宝库升级弹窗 ============ */
 .bf-vault-modal {
-  position: fixed; inset: 0; background: var(--bg-overlay);
+  position: fixed; inset: 0; background: rgba(34,34,34,0.5);
   display: flex; align-items: center; justify-content: center;
   z-index: 50; padding: 16px;
 }
 .bf-vault-modal.hidden { display: none; }
 .bf-vault-content {
-  background: var(--bg-card); border: 2px solid var(--color-gold-accent);
-  border-radius: var(--radius-lg); padding: 20px;
+  background: var(--bf-card); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r); padding: 20px;
   max-width: 320px; width: 100%; text-align: center;
+  box-shadow: var(--bf-shadow);
 }
-.bf-vault-title { font-size: 18px; font-weight: bold; color: var(--color-gold-accent); margin-bottom: 10px; }
-.bf-vault-info { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+.bf-vault-title { font-size: 18px; font-weight: 900; color: var(--bf-text); margin-bottom: 10px; letter-spacing: 1px; }
+.bf-vault-info { font-size: 13px; color: var(--bf-text-2); margin-bottom: 14px; line-height: 1.6; font-weight: 600; }
+.bf-vault-maxed { color: var(--bf-upgrade); font-weight: 900; padding: 8px; text-align: center; }
+
+/* ============ 未解锁英雄卡片（仅灰度，无锁 emoji） ============ */
+.bf-card.locked {
+  opacity: 0.5; filter: grayscale(0.85);
+}
+
+/* ============ 英雄解锁弹窗（横排3个 + 右上角关闭） ============ */
+.bf-modal-content:has(.bf-unlock-grid) {
+  max-width: 560px;
+  padding-top: 44px;
+}
+.bf-unlock-close-btn {
+  position: absolute; top: 10px; right: 12px;
+  width: 36px; height: 36px;
+  background: var(--bf-card-alt); color: var(--bf-text);
+  font-size: 24px; font-weight: 900; line-height: 1; cursor: pointer;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: 50%;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease, background 0.2s ease;
+  z-index: 2;
+}
+.bf-unlock-close-btn:hover { background: var(--bf-enemy); color: #fff; transform: scale(1.05); }
+.bf-unlock-close-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-unlock-title {
+  text-align: center; font-size: 18px; font-weight: 900;
+  color: var(--bf-text); margin-bottom: 10px; letter-spacing: 1px;
+}
+.bf-unlock-tickets {
+  text-align: center; color: var(--bf-text-2);
+  font-size: 13px; margin-bottom: 14px; font-weight: 600;
+}
+.bf-unlock-tickets b { color: var(--bf-gold-border); font-size: 15px; }
+.bf-unlock-empty {
+  text-align: center; padding: 30px 16px;
+  color: var(--bf-text-2); font-size: 14px; font-weight: 600;
+}
+.bf-unlock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  justify-items: center;
+}
+.bf-card.bf-unlock-card {
+  width: 100%;
+  max-width: 160px;
+  cursor: default;
+  display: flex; flex-direction: column;
+}
+.bf-card.bf-unlock-card.disabled { opacity: 0.55; }
+.bf-unlock-card-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border-top: 2px solid var(--bf-card-alt);
+}
+.bf-unlock-rarity-tag {
+  font-size: 10px; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.bf-unlock-cost {
+  font-size: 13px; font-weight: 900;
+  color: var(--bf-gold-border); text-align: center;
+}
+.bf-unlock-cost.insufficient { color: var(--bf-enemy); }
+.bf-unlock-card-btn {
+  width: 100%;
+  padding: 8px 0;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r-btn);
+  background: var(--bf-gold); color: #222;
+  font-family: var(--bf-font); font-size: 13px; font-weight: 900;
+  cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--bf-shadow-sm);
+}
+.bf-unlock-card-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--bf-border); }
+.bf-unlock-card-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-unlock-card-btn.disabled {
+  background: var(--bf-card-alt); color: var(--bf-text-3);
+  cursor: not-allowed;
+}
+
+/* ============ 设施购买弹窗 ============ */
+.bf-facility-modal {
+  position: fixed; inset: 0; background: rgba(34,34,34,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; padding: 16px;
+}
+.bf-facility-content {
+  background: var(--bf-card); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r); padding: 18px;
+  max-width: 360px; width: 100%;
+  box-shadow: var(--bf-shadow);
+}
+.bf-facility-title {
+  text-align: center; font-size: 16px; font-weight: 900;
+  color: var(--bf-text); margin-bottom: 12px; letter-spacing: 1px;
+}
+.bf-facility-list {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+}
+.bf-facility-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r); cursor: pointer;
+  background: var(--bf-card-alt); color: var(--bf-text);
+  font-family: var(--bf-font); text-align: left;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.bf-facility-item:hover { background: #DDDDDD; transform: translateY(-2px); }
+.bf-facility-item:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-facility-item.disabled { opacity: 0.45; cursor: not-allowed; }
+.bf-facility-name { font-size: 15px; font-weight: 900; }
+.bf-facility-desc { font-size: 11px; color: var(--bf-text-2); font-weight: 600; }
+.bf-facility-cost { font-size: 12px; font-weight: 900; color: var(--bf-gold-border); }
 
 /* ============ 手机端适配 ============ */
 @media (max-width: 640px) {
-  .bf-hud { font-size: 12px; gap: 4px; padding: 5px 6px; }
-  .bf-hud-item { padding: 3px 7px; }
-  .bf-hud-icon { font-size: 13px; }
-  .bf-hud-buff { min-width: 70px; }
-  #bf-buff-text { font-size: 10px; min-width: 30px; }
-  .bf-card { width: 100px; min-height: 120px; padding: 6px 6px 5px; }
+  .bf-hud { font-size: 12px; gap: 3px; padding: 4px 5px; }
+  .bf-hud-tab { min-width: 48px; padding: 3px 4px; }
+  .bf-hud-tab .bf-hud-label { font-size: 9px; }
+  .bf-hud-tab .bf-hud-value { font-size: 12px; }
+  .bf-card { width: 104px; min-height: 148px; padding: 0 6px 6px; }
   .bf-card-name { font-size: 17px; }
-  .bf-card-role-tag { font-size: 9px; }
+  .bf-card-role-bar { font-size: 10px; height: 18px; }
   .bf-card-stats { font-size: 9px; }
   .bf-card-super { font-size: 9px; }
   .bf-card-popup { min-width: 170px; }
   .bf-popup-btn { font-size: 12px; padding: 6px 4px; }
+  .bf-modal-content:has(.bf-unlock-grid) { max-width: 360px; }
+  .bf-unlock-grid { grid-template-columns: 1fr; }
+  .bf-card.bf-unlock-card { max-width: 220px; }
 }

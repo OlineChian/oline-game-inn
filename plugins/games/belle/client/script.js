@@ -540,7 +540,12 @@ async function submitScore(score) {
             })
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
+        // 403 = IP 被封禁：弹窗提示玩家联系管理员，而非误以为是 bug
+        if (response.status === 403 && window.BanNotice) {
+            window.BanNotice.show(data);
+            return;
+        }
         if (data.success) {
             console.log(`成绩提交成功！排名：${data.rank}/${data.total}`);
         } else {

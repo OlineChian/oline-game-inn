@@ -11,11 +11,13 @@ import { Combat } from './combat.js';
 import { Enemies } from './enemies.js';
 
 export const Buildings = {
-  /** 升级主题季宝库 */
+  /** 升级主题季宝库（需波数到达 + 金币足够） */
   upgradeVault() {
     const vault = Game.buildings.vault;
     const data = BUILDINGS['vault'];
     if (vault.level >= data.maxLevel) return { ok: false, msg: '已满级' };
+    const requiredWave = data.upgradeWaves[vault.level - 1];
+    if (Game.state.wave < requiredWave) return { ok: false, msg: `第${requiredWave}波可升级` };
     const cost = data.upgradeCost[vault.level - 1];
     if (Game.state.gold < cost) return { ok: false, msg: '金币不足' };
     Game.state.gold -= cost;
@@ -82,15 +84,22 @@ export const Buildings = {
     return { ok: true };
   },
 
-  /** 获取宝库当前等级信息 */
+  /** 获取宝库当前等级信息（含波数/金币进度） */
   getVaultInfo() {
     const vault = Game.buildings.vault;
     const data = BUILDINGS['vault'];
+    const isMax = vault.level >= data.maxLevel;
+    const requiredWave = isMax ? null : data.upgradeWaves[vault.level - 1];
+    const cost = isMax ? null : data.upgradeCost[vault.level - 1];
+    const waveReady = !isMax && Game.state.wave >= requiredWave;
     return {
       level: vault.level,
       maxLevel: data.maxLevel,
       goldPerSec: data.levels[vault.level - 1].goldPerSec,
-      upgradeCost: vault.level < data.maxLevel ? data.upgradeCost[vault.level - 1] : null
+      upgradeCost: cost,
+      requiredWave,
+      waveReady,
+      isMax
     };
   }
 };

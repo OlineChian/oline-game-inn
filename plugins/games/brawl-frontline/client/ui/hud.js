@@ -1,6 +1,7 @@
 /**
- * 顶部 HUD：金币/英雄券/波数/击杀/强化进度 实时更新
- * 基地血量已移除（在 Canvas 上展示），金币券只在 HUD 显示一次
+ * 顶部 HUD：5 个双行 tab 实时更新
+ * 金币 / 英雄券 / 当前波 / 强化选择 / 宝库
+ * 强化与宝库使用 --progress CSS 变量驱动整体进度条背景
  */
 import { Game } from '../core/game.js';
 import { BUFF_TARGETS } from '../data/enemies.js';
@@ -14,10 +15,10 @@ export const Hud = {
       gold: document.getElementById('bf-gold'),
       tickets: document.getElementById('bf-tickets'),
       wave: document.getElementById('bf-wave'),
-      kills: document.getElementById('bf-kills'),
-      buffBar: document.getElementById('bf-buff-bar'),
+      buffBtn: document.getElementById('bf-buff-btn'),
       buffText: document.getElementById('bf-buff-text'),
-      vaultLv: document.getElementById('bf-vault-lv')
+      vaultLv: document.getElementById('bf-vault-lv'),
+      vaultBtn: document.getElementById('bf-vault-btn')
     };
   },
 
@@ -29,18 +30,33 @@ export const Hud = {
     if (e.gold) e.gold.textContent = fmtNum(st.gold);
     if (e.tickets) e.tickets.textContent = st.tickets;
     if (e.wave) e.wave.textContent = st.wave;
-    if (e.kills) e.kills.textContent = st.kills;
-    // 强化进度条：当前阶段击杀 / 当前阶段目标跨度
+    // 强化选择：文本 [已杀敌]-[下次目标]，整体进度条由 --progress 驱动
     const target = st.buffTarget || BUFF_TARGETS[0];
-    const prevTarget = st.buffTargetIdx > 0
-      ? BUFF_TARGETS[st.buffTargetIdx - 1]
-      : 0;
+    const prevTarget = st.buffTargetIdx > 0 ? BUFF_TARGETS[st.buffTargetIdx - 1] : 0;
     const cur = st.killCounter - prevTarget;
     const span = target - prevTarget;
-    const ratio = Math.max(0, Math.min(1, cur / span));
-    if (e.buffBar) e.buffBar.style.width = `${ratio * 100}%`;
-    if (e.buffText) e.buffText.textContent = `${st.killCounter}/${target}`;
-    // 宝库等级
+    const buffRatio = Math.max(0, Math.min(1, cur / span));
+    if (e.buffText) e.buffText.textContent = `${st.killCounter}-${target}`;
+    if (e.buffBtn) {
+      e.buffBtn.style.setProperty('--progress', `${buffRatio * 100}%`);
+      e.buffBtn.classList.toggle('ready', buffRatio >= 1);
+    }
+    // 宝库：等级 + 整体进度条（--progress 驱动）
     if (e.vaultLv) e.vaultLv.textContent = Game.buildings.vault.level;
+    if (e.vaultBtn) {
+      const vi = Game.systems.buildings.getVaultInfo();
+      e.vaultBtn.classList.remove('ready', 'locked', 'maxed');
+      if (vi.isMax) {
+        e.vaultBtn.classList.add('maxed');
+        e.vaultBtn.style.setProperty('--progress', '0%');
+      } else if (!vi.waveReady) {
+        e.vaultBtn.classList.add('locked');
+        e.vaultBtn.style.setProperty('--progress', '0%');
+      } else {
+        const r = Math.min(1, st.gold / vi.upgradeCost);
+        e.vaultBtn.style.setProperty('--progress', `${r * 100}%`);
+        if (r >= 1) e.vaultBtn.classList.add('ready');
+      }
+    }
   }
 };

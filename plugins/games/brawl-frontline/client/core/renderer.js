@@ -1,16 +1,24 @@
 /**
- * Canvas 渲染器
+ * Canvas 渲染器（Code-Only Comic UI）
  * 逻辑坐标（VIEW 480×720）→ 屏幕坐标（按容器缩放，保持比例）
- * 绘制顺序：背景区域 → 建筑基地 → 实体（敌人/英雄/炮台）→ 投射物 → 粒子
+ *
+ * 设计语言：
+ * - 地图：Grass #8DDC65 / Road #CFA16A / Water #5BC0EB / Wall #777
+ * - 敌人几何：●普通 / ◆快速 / ■坦克 / ⬢Boss
+ * - 血条 8px：灰底 + 绿血 + 蓝护盾 + 紫 Boss
+ * - 描边 3px solid #222 + Supercell 阴影 0 5px 0 #222
  */
 import { Game, VIEW, LAYOUT } from './game.js';
+import {
+  COLOR, BW, FONT,
+  drawShape, strokeShape, roundRect,
+  drawBar, drawShieldBar, drawChargeBar, drawShadow
+} from './shapes.js';
 
 export const Renderer = {
   canvas: null,
   ctx: null,
   scale: 1,
-  offsetX: 0,
-  offsetY: 0,
 
   init(canvas) {
     this.canvas = canvas;
@@ -22,10 +30,8 @@ export const Renderer = {
   resize() {
     const c = this.canvas;
     const parent = c.parentElement;
-    const maxW = parent.clientWidth;
-    const maxH = parent.clientHeight;
-    const scaleW = maxW / VIEW.w;
-    const scaleH = maxH / VIEW.h;
+    const scaleW = parent.clientWidth / VIEW.w;
+    const scaleH = parent.clientHeight / VIEW.h;
     this.scale = Math.min(scaleW, scaleH);
     const dpr = window.devicePixelRatio || 1;
     c.width = VIEW.w * this.scale * dpr;
@@ -38,7 +44,7 @@ export const Renderer = {
   draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, VIEW.w, VIEW.h);
-    this._drawBackground();
+    this._drawMap();
     this._drawBase();
     this._drawBuildings();
     this._drawEntities();
@@ -46,217 +52,227 @@ export const Renderer = {
     this._drawParticles();
   },
 
-  _drawBackground() {
+  /** 地图：Grass 背景 + Road 中路 + Water 装饰 + Wall 边界 */
+  _drawMap() {
     const ctx = this.ctx;
-    // 敌人刷新区
-    ctx.fillStyle = 'rgba(255,107,107,0.08)';
-    ctx.fillRect(0, 0, VIEW.w, 80);
-    // 战斗区域
-    ctx.fillStyle = 'rgba(255,255,255,0.03)';
-    ctx.fillRect(0, 80, VIEW.w, 360);
-    // 分隔线
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 1;
+    // Grass 整张底
+    ctx.fillStyle = COLOR.grass;
+    ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+    // Wall 边界（四边）
+    ctx.fillStyle = COLOR.wall;
+    ctx.fillRect(0, 0, VIEW.w, BW);
+    ctx.fillRect(0, VIEW.h - BW, VIEW.w, BW);
+    ctx.fillRect(0, 0, BW, VIEW.h);
+    ctx.fillRect(VIEW.w - BW, 0, BW, VIEW.h);
+    // Road 中路（敌人路径）
+    const roadW = 80;
+    const roadX = VIEW.w / 2 - roadW / 2;
+    ctx.fillStyle = COLOR.road;
+    ctx.fillRect(roadX, 0, roadW, LAYOUT.base.y);
+    ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW;
     ctx.beginPath();
-    ctx.moveTo(0, 80); ctx.lineTo(VIEW.w, 80);
-    ctx.moveTo(0, 440); ctx.lineTo(VIEW.w, 440);
-    ctx.moveTo(0, LAYOUT.baseLine); ctx.lineTo(VIEW.w, LAYOUT.baseLine);
+    ctx.moveTo(roadX, 0); ctx.lineTo(roadX, LAYOUT.base.y);
+    ctx.moveTo(roadX + roadW, 0); ctx.lineTo(roadX + roadW, LAYOUT.base.y);
     ctx.stroke();
-    // 路径引导线
-    ctx.strokeStyle = 'rgba(248,201,63,0.15)';
-    ctx.setLineDash([6, 6]);
+    // Water 装饰池（左右两侧）
+    ctx.fillStyle = COLOR.water;
+    roundRect(ctx, 20, 240, 60, 120, 16); ctx.fill();
+    ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW; ctx.stroke();
+    roundRect(ctx, VIEW.w - 80, 240, 60, 120, 16); ctx.fill();
+    ctx.stroke();
+    // 红色边界（英雄最远到达线）
+    ctx.strokeStyle = 'rgba(255,89,94,0.6)'; ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
     ctx.beginPath();
-    ctx.moveTo(LAYOUT.spawn.x, 60);
-    ctx.lineTo(LAYOUT.spawn.x, LAYOUT.baseLine);
+    ctx.moveTo(BW, LAYOUT.heroZone.yMin);
+    ctx.lineTo(VIEW.w - BW, LAYOUT.heroZone.yMin);
     ctx.stroke();
     ctx.setLineDash([]);
   },
 
+  /** 基地：粗边框圆角矩形 + 血量填充 */
   _drawBase() {
     const ctx = this.ctx;
     const b = LAYOUT.base;
     const st = Game.state;
-    ctx.fillStyle = 'rgba(237,117,38,0.85)';
-    this._roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 12);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🏠 主基地', b.x, b.y - 6);
-    // 血条
-    this._drawBar(b.x - b.w / 2 + 10, b.y + 10, b.w - 20, 8,
-      st.baseHp / st.baseMaxHp, '#06d6a0', '#ff6b6b');
-    ctx.fillStyle = '#fff';
-    ctx.font = '11px sans-serif';
-    ctx.fillText(`${Math.floor(st.baseHp)}/${st.baseMaxHp}`, b.x, b.y + 34);
+    const ratio = Math.max(0, Math.min(1, st.baseHp / st.baseMaxHp));
+    const x = b.x - b.w / 2, y = b.y - b.h / 2;
+    // Supercell 阴影
+    ctx.fillStyle = COLOR.shadow;
+    roundRect(ctx, x, y + 5, b.w, b.h, 16); ctx.fill();
+    // 底色（灰）
+    ctx.fillStyle = COLOR.hpBg;
+    roundRect(ctx, x, y, b.w, b.h, 16); ctx.fill();
+    // 血量前景（低血量红，否则绿）
+    if (ratio > 0) {
+      ctx.save();
+      roundRect(ctx, x, y, b.w, b.h, 16); ctx.clip();
+      ctx.fillStyle = ratio < 0.3 ? COLOR.hpBad : COLOR.hpGood;
+      ctx.fillRect(x, y, b.w * ratio, b.h);
+      ctx.restore();
+    }
+    // 粗黑描边
+    ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW;
+    roundRect(ctx, x, y, b.w, b.h, 16); ctx.stroke();
+    // 标签
+    ctx.fillStyle = COLOR.border;
+    ctx.font = `bold 14px ${FONT}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('主基地', b.x, b.y - 14);
+    ctx.font = `bold 18px ${FONT}`;
+    ctx.fillText(`${Math.floor(st.baseHp)} / ${st.baseMaxHp}`, b.x, b.y + 6);
+    ctx.textBaseline = 'alphabetic';
   },
 
+  /** 建筑：仅绘制 C 设施建造位（宝库/星妙之路由 HUD 按钮交互，不在地图上画） */
   _drawBuildings() {
     const ctx = this.ctx;
-    // A 主题季宝库
-    const v = LAYOUT.vault;
-    ctx.fillStyle = 'rgba(244,162,97,0.9)';
-    this._circle(v.x, v.y, 22);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`A Lv${Game.buildings.vault.level}`, v.x, v.y + 4);
-    // B 星妙之路
-    const sr = LAYOUT.starRoad;
-    ctx.fillStyle = 'rgba(58,134,255,0.9)';
-    this._circle(sr.x, sr.y, 22);
-    ctx.fillStyle = '#fff';
-    ctx.fillText('B', sr.x, sr.y + 4);
-    // C 建造位（Phase 2）
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     LAYOUT.facilitySlots.forEach((slot, i) => {
       const f = Game.buildings.facilities[i];
       if (f) {
-        ctx.fillStyle = f.color || 'rgba(155,93,229,0.9)';
-        this._circle(slot.x, slot.y, 20);
+        if (f.type === 'booster') {
+          ctx.strokeStyle = 'rgba(108,92,231,0.3)'; ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath(); ctx.arc(slot.x, slot.y, f.range, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        drawShape(ctx, slot.x, slot.y, f.radius, 'circle', f.color);
+        ctx.fillStyle = COLOR.white; ctx.font = `bold ${f.radius}px ${FONT}`;
+        ctx.fillText(f.name[0], slot.x, slot.y + 1);
+        drawBar(ctx, slot.x - 24, slot.y - f.radius - 14, 48, f.hp / f.maxHp, false);
       } else {
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.strokeStyle = 'rgba(34,34,34,0.3)'; ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(slot.x, slot.y, 18, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(slot.x, slot.y, 18, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(34,34,34,0.4)'; ctx.font = `bold 22px ${FONT}`;
+        ctx.fillText('+', slot.x, slot.y + 1);
       }
     });
+    ctx.textBaseline = 'alphabetic';
   },
 
   _drawEntities() {
     const e = Game.entities;
-    // 敌人
-    e.enemies.forEach(en => this._drawUnit(en, false));
-    // 英雄
-    e.heroes.forEach(h => this._drawUnit(h, true));
-    // 炮台（召唤物）
+    e.enemies.forEach(en => this._drawEnemy(en));
+    e.heroes.forEach(h => this._drawHero(h));
     e.turrets.forEach(t => this._drawTurret(t));
+    e.summons.forEach(s => this._drawSummon(s));
   },
 
-  _drawUnit(u, isHero) {
+  /** 敌人：按类型绘制几何形状 */
+  _drawEnemy(en) {
     const ctx = this.ctx;
-    // 阴影（卡通落地阴影）
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath();
-    ctx.ellipse(u.x, u.y + u.radius * 0.85, u.radius * 0.95, u.radius * 0.32, 0, 0, Math.PI * 2);
-    ctx.fill();
-    if (isHero) {
-      // 英雄：圆角矩形主体 + 粗白描边 + 超能释放高亮
-      const w = u.radius * 2.4, h = u.radius * 1.8;
-      const rx = u.x - w / 2, ry = u.y - h / 2;
-      // 超能释放高亮（光晕）
-      if (u.superFlash > 0) {
-        ctx.shadowColor = u.accent || u.color;
-        ctx.shadowBlur = 20 * u.superFlash / 0.5;
-      }
-      ctx.fillStyle = u.color;
-      this._roundRect(rx, ry, w, h, 8);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      // 描边
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      // 英雄名字（完整两字名，居中显示）
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(u.name, u.x, u.y);
-      ctx.textBaseline = 'alphabetic';
-    } else {
-      // 敌人：圆角方形（与英雄形状区分）+ 描边
-      ctx.fillStyle = u.color;
-      this._roundRect(u.x - u.radius, u.y - u.radius, u.radius * 2, u.radius * 2, 5);
-      ctx.fill();
-      ctx.strokeStyle = u.accent || '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // 眼睛
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(u.x - u.radius * 0.3, u.y - u.radius * 0.1, 2, 0, Math.PI * 2);
-      ctx.arc(u.x + u.radius * 0.3, u.y - u.radius * 0.1, 2, 0, Math.PI * 2);
-      ctx.fill();
+    const shape = this._enemyShape(en);
+    const color = en.enraged ? '#FF3030' : en.color;
+    drawShadow(ctx, en.x, en.y, en.radius);
+    drawShape(ctx, en.x, en.y, en.radius, shape, color);
+    // 盾卫减伤外圈
+    if (en.damageReduction > 0) {
+      ctx.strokeStyle = 'rgba(34,34,34,0.4)'; ctx.lineWidth = 2;
+      strokeShape(ctx, en.x, en.y, en.radius + 4, shape);
     }
-    // 血条（带描边）
-    const bw = isHero ? u.radius * 2.4 : u.radius * 2;
-    const bx = u.x - bw / 2, by = u.y - (isHero ? u.radius * 0.9 + 9 : u.radius + 9), bh = 5;
-    this._drawBar(bx, by, bw, bh, u.hp / u.maxHp, '#06d6a0', '#ff6b6b');
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bx, by, bw, bh);
-    // 英雄星级（血条上方）
-    if (isHero && u.star > 1) {
-      ctx.fillStyle = '#ffd700';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('★'.repeat(u.star), u.x, by - 3);
+    // 护盾光环
+    if (en.shieldHp > 0) {
+      ctx.strokeStyle = COLOR.shield; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(en.x, en.y, en.radius + 6, 0, Math.PI * 2); ctx.stroke();
     }
-    // 超级技能充能条（英雄，3星解锁时金色，未解锁时灰色）
-    if (isHero) {
-      const chargeW = u.radius * 2.4;
-      const chargeColor = u.star >= 3 ? '#F8C93F' : 'rgba(155,155,155,0.5)';
-      this._drawBar(u.x - chargeW / 2, u.y + (u.radius * 0.9) + 4, chargeW, 4,
-        u.superCharge, chargeColor, 'rgba(255,255,255,0.12)');
+    // 血条 8px（Boss 紫）
+    const bw = en.radius * 2 + 6;
+    drawBar(ctx, en.x - bw / 2, en.y - en.radius - 14, bw, en.hp / en.maxHp, en.isBoss);
+    // 护盾条（在血条上方，蓝色）
+    if (en.shieldHp > 0) {
+      drawShieldBar(ctx, en.x - bw / 2, en.y - en.radius - 24, bw, Math.min(1, en.shieldHp / 800));
     }
   },
 
+  /** 根据 enemy 数据返回几何形状类型（●普通 / ◆快速 / ■坦克 / ⬢Boss） */
+  _enemyShape(en) {
+    if (en.isBoss) return 'hexagon';
+    if (en.ai === 'hunter') return 'diamond';     // 快射手
+    if (en.id === 'heavy-bot' || en.id === 'shield-guard') return 'square'; // 坦克
+    return 'circle'; // 普通机器人/爆破兵
+  },
+
+  /** 英雄：圆角矩形 + 粗黑描边 + 名字 */
+  _drawHero(h) {
+    const ctx = this.ctx;
+    const w = h.radius * 2.4, hh = h.radius * 1.8;
+    const x = h.x - w / 2, y = h.y - hh / 2;
+    // Supercell 阴影
+    ctx.fillStyle = COLOR.shadow;
+    roundRect(ctx, x, y + 5, w, hh, 8); ctx.fill();
+    // 超能释放高亮
+    if (h.superFlash > 0) {
+      ctx.shadowColor = h.accent || h.color;
+      ctx.shadowBlur = 20 * h.superFlash / 0.5;
+    }
+    // 主体
+    ctx.fillStyle = h.color;
+    roundRect(ctx, x, y, w, hh, 8); ctx.fill();
+    ctx.shadowBlur = 0;
+    // 粗黑描边
+    ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW;
+    roundRect(ctx, x, y, w, hh, 8); ctx.stroke();
+    // 名字
+    ctx.fillStyle = COLOR.white;
+    ctx.font = `bold 13px ${FONT}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(h.name, h.x, h.y);
+    // 星级（金色）
+    if (h.star > 1) {
+      ctx.fillStyle = COLOR.gold;
+      ctx.font = `bold 11px ${FONT}`;
+      ctx.fillText('★'.repeat(h.star), h.x, y - 12);
+    }
+    // 血条 8px
+    const bw = w + 4;
+    drawBar(ctx, h.x - bw / 2, y - 10, bw, h.hp / h.maxHp, false);
+    // 超能充能条（3 星解锁后金色，否则灰）
+    const chargeColor = h.star >= 3 ? COLOR.gold : '#999999';
+    drawChargeBar(ctx, h.x - bw / 2, h.y + hh / 2 + 4, bw, h.superCharge, chargeColor);
+    ctx.textBaseline = 'alphabetic';
+  },
+
+  /** 炮台：SVG 化（圆形炮塔 + 矩形底座 + 粗描边） */
   _drawTurret(t) {
     const ctx = this.ctx;
-    ctx.fillStyle = 'rgba(46,196,182,0.9)';
-    this._circle(t.x, t.y, 12);
-    this._drawBar(t.x - 12, t.y - 20, 24, 3, t.hp / t.maxHp, '#06d6a0', '#ff6b6b');
+    ctx.fillStyle = '#555';
+    roundRect(ctx, t.x - 10, t.y + 4, 20, 8, 3); ctx.fill();
+    ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW; ctx.stroke();
+    drawShape(ctx, t.x, t.y - 2, 10, 'circle', '#2EC4B6');
+    drawBar(ctx, t.x - 14, t.y - 22, 28, t.hp / t.maxHp, false);
+  },
+
+  /** 召唤物：菱形 */
+  _drawSummon(s) {
+    const ctx = this.ctx;
+    drawShadow(ctx, s.x, s.y, s.radius);
+    drawShape(ctx, s.x, s.y, s.radius, 'diamond', s.color);
+    drawBar(ctx, s.x - 16, s.y - s.radius - 14, 32, s.hp / s.maxHp, false);
   },
 
   _drawProjectiles() {
     const ctx = this.ctx;
     Game.entities.projectiles.forEach(p => {
-      ctx.fillStyle = p.color || '#ffd700';
+      ctx.fillStyle = p.color || COLOR.gold;
+      ctx.strokeStyle = COLOR.border; ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.radius || 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fill(); ctx.stroke();
     });
   },
 
   _drawParticles() {
     const ctx = this.ctx;
     Game.entities.particles.forEach(p => {
-      const alpha = Math.max(0, p.life / p.maxLife);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.color || '#fff';
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      ctx.fillStyle = p.color || COLOR.white;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
-  },
-
-  // ---- 绘制辅助 ----
-  _circle(x, y, r, fill) {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-  },
-
-  _roundRect(x, y, w, h, r) {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  },
-
-  _drawBar(x, y, w, h, ratio, colorGood, colorBad) {
-    const ctx = this.ctx;
-    ratio = Math.max(0, Math.min(1, ratio));
-    ctx.fillStyle = colorBad;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = colorGood;
-    ctx.fillRect(x, y, w * ratio, h);
   }
 };

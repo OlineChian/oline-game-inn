@@ -1,0 +1,65 @@
+/* ============================================================
+   切斯特牌 - 胜利结算分数提交样式（Balatro 墨绿面板）
+   独立模块，从 style.css 拆分（保持单文件 ≤300 行铁律）
+   阶段 7：排行榜接入（墨绿面板、硬边框、扁平按钮）
+   仅使用 CSS 变量，遵守主题化铁律
+   ============================================================ */
+
+.cc-submit-hint { font-family: var(--font-body); color: var(--text-secondary); font-size: var(--fs-small); margin-bottom: 10px; }
+.cc-input {
+    width: 100%; box-sizing: border-box;
+    padding: 10px 14px; margin-bottom: 12px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 2px solid var(--bg-input-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-number); font-size: var(--fs-number-md); font-weight: 700;
+    transition: border-color 0.05s;
+}
+.cc-input:focus {
+    outline: none;
+    border-color: var(--color-gold-accent);
+}
+.cc-input::placeholder { color: var(--text-muted); }
+
+.cc-btn-submit {
+    display: block; width: 100%;
+    background: var(--color-gold-accent);
+    color: #1a2e2f;
+    border: 2px solid #0a1818;
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-family: var(--font-display); font-size: var(--fs-body); font-weight: 700; letter-spacing: 1px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: filter 0.05s;
+    box-shadow: var(--shadow-btn);
+}
+.cc-btn-submit:hover:not(:disabled) { filter: brightness(1.15); }
+.cc-btn-submit:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+}
+
+.cc-submit-status {
+    padding: 10px 14px; margin-bottom: 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body); font-size: var(--fs-small); font-weight: 600;
+    border: 2px solid var(--bg-input-border);
+    color: var(--text-primary);
+}
+.cc-submit-status.is-loading {
+    color: var(--text-secondary);
+    background: var(--bg-card-alt);
+    border-color: var(--bg-input-border);
+}
+.cc-submit-status.is-success {
+    color: #1a2e2f;
+    background: var(--color-success);
+    border-color: #0a1818;
+}
+.cc-submit-status.is-fail {
+    color: #FFFFFF;
+    background: var(--color-danger);
+    border-color: #0a1818;
+}

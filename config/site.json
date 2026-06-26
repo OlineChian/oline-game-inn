@@ -100,6 +100,42 @@
         "scoreFloor": 0,
         "scoreCap": 999999
       }
+    },
+    {
+      "_说明": "乱斗前线 - 单人 Roguelike 塔防基地经营（单机）",
+      "id": "brawl-frontline",
+      "name": "乱斗前线",
+      "icon": "⚔️",
+      "description": "单人 Roguelike 塔防基地经营，招募英雄、挑战无限波次",
+      "tag": "策略塔防",
+      "tagClass": "tag-strategy",
+      "isOnline": false,
+      "showOnHome": false,
+      "leaderboard": {
+        "sort": "desc",
+        "unit": "分",
+        "label": "得分",
+        "scoreFloor": 0,
+        "scoreCap": 50000
+      }
+    },
+    {
+      "_说明": "切斯特牌 - Balatro 风格扑克牌组合游戏（单机）",
+      "id": "chester-cards",
+      "name": "切斯特牌",
+      "icon": "🎪",
+      "description": "扑克牌型组合 + 糖果增益，8 关冲刺挑战",
+      "tag": "卡牌益智",
+      "tagClass": "tag-card",
+      "isOnline": false,
+      "showOnHome": true,
+      "leaderboard": {
+        "sort": "desc",
+        "unit": "分",
+        "label": "得分",
+        "scoreFloor": 0,
+        "scoreCap": 999999
+      }
     }
   ],
   
@@ -138,6 +174,20 @@
       "name": "卡牌大师塔拉",
       "icon": "🃏",
       "desc": "完成1局卡牌游戏"
+    },
+    "brawl-frontline": {
+      "target": 500,
+      "reward": 40,
+      "name": "BRAWL FRONTLINE",
+      "icon": "⚔️",
+      "desc": "前线得分达到500分"
+    },
+    "chester-cards": {
+      "target": 1000,
+      "reward": 30,
+      "name": "切斯特牌",
+      "icon": "🎪",
+      "desc": "切斯特牌得分达到1000分"
     }
   },
   
