@@ -153,17 +153,7 @@ class PostgresStore {
   // ---------- 读操作（同步，走内存） ----------
 
   get(key) {
-    const value = this._data.has(key) ? this._data.get(key) : null;
-    // [临时调试日志] 确认 PostgresStore 返回的数据类型与 FileStore 一致
-    // 部署后查看 Railway Logs，验证 isArray 是否为 true（Array 类型）
-    console.log('[Storage Debug]', {
-      key,
-      type: typeof value,
-      constructor: value?.constructor?.name,
-      isArray: Array.isArray(value),
-      value
-    });
-    return value;
+    return this._data.has(key) ? this._data.get(key) : null;
   }
 
   has(key) {

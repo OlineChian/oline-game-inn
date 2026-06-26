@@ -45,11 +45,16 @@ class LeaderboardService {
 
   /**
    * 获取排行榜数据（自动初始化）
+   *
+   * 防御：若 storage 中的数据因历史 PostgresStore JSONB 序列化 bug 损坏为 `{}`
+   * 或其他非 Array 类型，重置为空数组并写回，避免下游 `[...board]` 抛
+   * "board is not iterable" 导致 API 500。写回会触发 dirty → UPSERT，
+   * 顺带修复 Supabase 中的损坏数据。
    */
   getBoard(gameId) {
     const key = `${gameId}:${this.boardKey}`;
     let board = this.storage.get(key);
-    if (!board) {
+    if (!Array.isArray(board)) {
       board = [];
       this.storage.set(key, board);
     }
@@ -141,14 +146,6 @@ class LeaderboardService {
     }
 
     const board = this.getBoard(gameId);
-    // [临时调试日志] 确认从 storage 读取的 board 类型
-    // 部署后查看 Railway Logs，验证 isArray 是否为 true
-    console.log('[Leaderboard Debug]', {
-      board,
-      type: typeof board,
-      constructor: board?.constructor?.name,
-      isArray: Array.isArray(board)
-    });
     let filtered = [...board];
 
     // 筛选逻辑
