@@ -243,6 +243,7 @@ class LeaderboardService {
       return { error: '昵称和分数不能为空', code: 400 };
     }
 
+    const key = `${gameId}:${this.boardKey}`;
     const board = this.getBoard(gameId);
 
     const record = {
@@ -253,6 +254,10 @@ class LeaderboardService {
     };
 
     board.push(record);
+    // 触发 dirty 标记，确保 PostgresStore 增量落盘能 flush 该 key。
+    // FileStore 全量落盘会顺带写入内存修改，但 PostgresStore 只 flush 被 set
+    // 标记过的 key；漏调 set 会导致新成绩仅存内存、不进 Supabase，重新部署后丢失。
+    this.storage.set(key, board);
 
     // 计算排名
     const sorted = this.sortBoard(board, config.sort);
