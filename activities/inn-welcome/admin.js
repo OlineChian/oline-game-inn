@@ -10,14 +10,44 @@
 
 let games = [];
 let weights = {};
+let adminToken = '';
 
 document.addEventListener('DOMContentLoaded', init);
+
+// Token 持久化（localStorage，避免每次输入；与排行榜管理页一致）
+(function initToken() {
+    const saved = localStorage.getItem('innAdminToken');
+    if (saved) {
+        adminToken = saved;
+        // DOM 可能尚未就绪，DOMContentLoaded 之后回填
+        document.addEventListener('DOMContentLoaded', () => {
+            const el = document.getElementById('adminToken');
+            if (el) el.value = saved;
+        });
+    }
+})();
+
+function authHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    if (adminToken) h['x-admin-token'] = adminToken;
+    return h;
+}
 
 async function init() {
     await loadConfig();
     await loadWeights();
     await loadSubmissions();
     await loadLotteryResult();
+    bindTokenInput();
+}
+
+function bindTokenInput() {
+    const el = document.getElementById('adminToken');
+    if (!el) return;
+    el.addEventListener('change', () => {
+        adminToken = el.value.trim();
+        localStorage.setItem('innAdminToken', adminToken);
+    });
 }
 
 async function loadConfig() {
@@ -99,11 +129,11 @@ function renderSubmissions(submissions) {
     head.innerHTML = `<tr>
         <th>昵称</th><th>标签</th>
         ${games.map(g => `<th>${g.icon || ''} ${escapeHtml(g.name)}</th>`).join('')}
-        <th>权重分</th><th>提交时间</th>
+        <th>权重分</th><th>提交时间</th><th>操作</th>
     </tr>`;
 
     if (submissions.length === 0) {
-        body.innerHTML = `<tr><td colspan="${games.length + 5}" class="no-record">暂无提交</td></tr>`;
+        body.innerHTML = `<tr><td colspan="${games.length + 6}" class="no-record">暂无提交</td></tr>`;
         return;
     }
 
@@ -114,14 +144,37 @@ function renderSubmissions(submissions) {
             return `<td class="score-cell">${sc.score}<span class="unit">${escapeHtml(sc.unit || '')}</span></td>`;
         }).join('');
         const ws = s.weightScore != null ? s.weightScore : '—';
+        const nick = escapeHtml(s.nickname);
+        const nickAttr = escapeAttr(s.nickname);
         return `<tr>
-            <td>${escapeHtml(s.nickname)}</td>
+            <td>${nick}</td>
             <td>${escapeHtml(s.tag)}</td>
             ${scoreCells}
             <td class="weight-score">${ws}</td>
             <td class="note-cell">${formatTime(s.submittedAt)}</td>
+            <td class="ops-cell"><button class="danger-btn sm" onclick="deleteSubmission('${nickAttr}')">删除</button></td>
         </tr>`;
     }).join('');
+}
+
+async function deleteSubmission(nickname) {
+    if (!nickname) { showToast('昵称为空'); return; }
+    if (!confirm(`确认删除「${nickname}」的提交记录？此操作不可恢复。`)) return;
+    try {
+        const res = await fetch('/api/inn-welcome/submission?nickname=' + encodeURIComponent(nickname), {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`已删除「${nickname}」的提交`);
+            await loadSubmissions();
+        } else {
+            showToast(data.error || '删除失败');
+        }
+    } catch (e) {
+        showToast('网络错误');
+    }
 }
 
 async function runLottery() {
@@ -198,4 +251,8 @@ function escapeHtml(s) {
     const d = document.createElement('div');
     d.textContent = String(s);
     return d.innerHTML;
+}
+
+function escapeAttr(s) {
+    return String(s == null ? '' : s).replace(/'/g, "\\'");
 }

@@ -110,6 +110,24 @@ class InnWelcomeService {
     return items;
   }
 
+  /**
+   * 删除一条提交记录（管理员清理篡改数据用）
+   * @param {string} nickname 玩家昵称（与提交时一致）
+   */
+  deleteSubmission(nickname) {
+    if (!nickname || typeof nickname !== 'string' || !nickname.trim()) {
+      return { error: '昵称不能为空', code: 400 };
+    }
+    const cleanNick = nickname.trim().slice(0, 20);
+    const key = 'submission:' + cleanNick;
+    if (!this.storage.has(key)) {
+      return { error: '该昵称无提交记录', code: 404 };
+    }
+    this.storage.delete(key);
+    this.logger.info('[inn-welcome] 删除提交: ' + cleanNick);
+    return { success: true, nickname: cleanNick };
+  }
+
   /** 读取当前权重（无则用配置默认值） */
   getWeights() {
     const stored = this.storage.get('weights');

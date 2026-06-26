@@ -172,6 +172,40 @@ body {
 
 /* ===== 管理员页专用 ===== */
 .admin-actions { display: flex; gap: 10px; margin-top: 14px; }
+.admin-token-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(11px, 2vw, 13px);
+    color: var(--text-secondary, rgba(255,255,255,0.65));
+}
+.admin-token-wrap input {
+    width: 180px;
+    padding: 6px 10px;
+    background: var(--bg-input, #1a1a1a);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-primary, rgba(255,255,255,0.9));
+    font-size: 13px;
+}
+.admin-token-wrap input:focus { outline: none; border-color: var(--color-orange-main, #ED7526); }
+
+.ops-cell { white-space: nowrap; }
+.danger-btn {
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--color-danger, #e5484d);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-sm, 6px);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all var(--transition-normal, 0.25s ease);
+}
+.danger-btn:hover { border-color: var(--color-danger, #e5484d); background: rgba(229,72,77,0.1); }
+.danger-btn:active { transform: scale(0.95); }
+.danger-btn.sm { padding: 4px 10px; font-size: 12px; }
+
 .secondary-btn {
     padding: 12px 18px;
     background: var(--bg-card-alt, #1a1a1a);

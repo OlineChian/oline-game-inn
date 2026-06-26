@@ -4,10 +4,11 @@
  * 客栈迎新活动插件入口
  * =====================
  * 注册路由：
- *   - GET  /activities/inn-welcome/adminoline  隐藏管理员入口（无入口按钮，仅URL可达）
- *   - POST /api/inn-welcome/submit             玩家提交成绩
- *   - GET  /api/inn-welcome/submissions        管理员查看全部提交
- *   - GET  /api/inn-welcome/weights            读取游戏权重
+ *   - GET    /activities/inn-welcome/adminoline  隐藏管理员入口（无入口按钮，仅URL可达）
+ *   - POST   /api/inn-welcome/submit             玩家提交成绩
+ *   - GET    /api/inn-welcome/submissions        管理员查看全部提交
+ *   - DELETE /api/inn-welcome/submission         管理员删除一条提交（按昵称，可选 ADMIN_TOKEN）
+ *   - GET    /api/inn-welcome/weights            读取游戏权重
  *   - POST /api/inn-welcome/weights            设置权重并重算权重分
  *   - POST /api/inn-welcome/lottery            按权重分加权抽奖
  *   - GET  /api/inn-welcome/lottery/result     读取抽奖结果
@@ -18,6 +19,7 @@
 const path = require('path');
 const fs = require('fs');
 const InnWelcomeService = require('./service');
+const { checkAdminAuth } = require('../../../core/server/admin-routes');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const ADMIN_PAGE = path.join(ROOT_DIR, 'activities', 'inn-welcome', 'adminoline.html');
@@ -44,6 +46,19 @@ module.exports = function(app, context) {
   // ===== 管理员：查看全部提交 =====
   app.get('/api/inn-welcome/submissions', (req, res) => {
     res.json({ success: true, submissions: service.listSubmissions() });
+  });
+
+  // ===== 管理员：删除一条提交记录（清理篡改数据用）=====
+  // 鉴权：可选 ADMIN_TOKEN（未设则仅靠 URL 隐藏，与排行榜管理端点一致）
+  app.delete('/api/inn-welcome/submission', (req, res) => {
+    const auth = checkAdminAuth(req);
+    if (!auth.ok) {
+      return res.status(401).json({ success: false, error: auth.error });
+    }
+    const nickname = req.query.nickname;
+    const r = service.deleteSubmission(nickname);
+    if (r.error) return res.status(r.code || 400).json({ success: false, error: r.error });
+    res.json(r);
   });
 
   // ===== 管理员：读取权重 =====
@@ -76,6 +91,7 @@ module.exports = function(app, context) {
     service,
     submit: (d) => service.submit(d),
     listSubmissions: () => service.listSubmissions(),
+    deleteSubmission: (n) => service.deleteSubmission(n),
     computeWeights: (w) => service.computeWeights(w),
     runLottery: (c) => service.runLottery(c)
   };

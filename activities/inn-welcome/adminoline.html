@@ -6,8 +6,9 @@
   访问方式：活动URL + /adminoline  →  /activities/inn-welcome/adminoline
   无入口按钮，仅 URL 可达。功能：
     1. 查看全部玩家提交（昵称、标签、5游戏成绩、权重分、提交时间）
-    2. 设置每款游戏权重，计算权重分
-    3. 按权重分加权抽奖，可设置中奖人数
+    2. 删除单条提交记录（清理篡改成绩用，按昵称定位）
+    3. 设置每款游戏权重，计算权重分
+    4. 按权重分加权抽奖，可设置中奖人数
 -->
 <head>
     <meta charset="UTF-8">
@@ -20,6 +21,10 @@
     <div class="game-actions">
         <a href="index.html" class="game-action-btn">← 活动页</a>
         <button class="game-action-btn" onclick="refreshAll()">🔄 刷新</button>
+        <div class="admin-token-wrap">
+            <label for="adminToken">管理员Token(可选)</label>
+            <input type="text" id="adminToken" placeholder="未设ADMIN_TOKEN则留空">
+        </div>
     </div>
 
     <div class="activity-container">
