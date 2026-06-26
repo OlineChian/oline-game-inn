@@ -295,11 +295,15 @@ function revealAllMines() {
 }
 
 function checkWin() {
+    // 踩雷后 gameOver=true，revealAllMines 已把所有雷格标为 revealed，
+    // 此时 revealedCount 会被雷格凑数误判为胜利，必须直接返回
+    if (gameOver) return;
     const { rows, cols, mines } = difficulties[currentDiff];
     let revealedCount = 0;
     for (let i = 0; i < rows; i++) {
         for (let j = 0; j < cols; j++) {
-            if (revealed[i][j]) revealedCount++;
+            // 双重保险：只统计已揭开的非雷格，雷格不计入胜利进度
+            if (revealed[i][j] && board[i][j] !== -1) revealedCount++;
         }
     }
     if (revealedCount === rows * cols - mines) {

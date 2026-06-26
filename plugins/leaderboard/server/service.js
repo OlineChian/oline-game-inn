@@ -220,77 +220,44 @@ class LeaderboardService {
 
   /**
    * 提交成绩
+   * 注意：排行榜只负责成绩存储与排名，不再自动结算挑战积分。
+   * 挑战积分由活动中心的挑战 Session 流程独立结算
+   * （createChallengeSession → submitChallengeScore → _settleChallengeScore），
+   * 该流程要求用户从活动中心进入并持有 challengeSessionId，避免"未参与挑战即加分"。
    */
-  submitScore(gameId, data, siteConfig, userPoints, completedChallenges) {
+  submitScore(gameId, data, siteConfig) {
     const { nickname, score, extra } = data;
     const gameConfigs = this.getGameConfigs(siteConfig);
     const config = gameConfigs[gameId];
-    
+
     if (!config) {
       return { error: '游戏不存在', code: 404 };
     }
-    
+
     if (!nickname || !score) {
       return { error: '昵称和分数不能为空', code: 400 };
     }
-    
+
     const board = this.getBoard(gameId);
-    
+
     const record = {
       nickname: String(nickname).slice(0, 20),
       score: Number(score),
       extra: extra || {},
       timestamp: Date.now()
     };
-    
+
     board.push(record);
-    
+
     // 计算排名
     const sorted = this.sortBoard(board, config.sort);
     const rank = sorted.findIndex(r => r.timestamp === record.timestamp) + 1;
-    
-    // 挑战积分结算（发布事件）
-    let challengeReward = null;
-    const challengeKey = `${nickname}_${gameId}`;
-    const challengeConfig = this.getChallengeConfig(siteConfig);
-    const challenge = challengeConfig[gameId];
-    
-    if (challenge && !completedChallenges.has(challengeKey)) {
-      const userScores = board.filter(r => r.nickname === nickname);
-      let bestScore = score;
-      
-      if (userScores.length > 0) {
-        bestScore = config.sort === 'desc'
-          ? Math.max(...userScores.map(r => r.score))
-          : Math.min(...userScores.map(r => r.score));
-      }
-      
-      const isCompleted = config.sort === 'desc'
-        ? bestScore >= challenge.target
-        : bestScore <= challenge.target;
-      
-      if (isCompleted) {
-        // 发布挑战完成事件（由 User 插件或旧系统处理）
-        this.eventBus.emit('challenge:completed', {
-          nickname,
-          gameId,
-          challenge,
-          bestScore
-        });
-        
-        challengeReward = {
-          name: challenge.name,
-          reward: challenge.reward
-        };
-      }
-    }
-    
+
     return {
       success: true,
       rank,
       total: board.length,
-      record,
-      challengeReward
+      record
     };
   }
 

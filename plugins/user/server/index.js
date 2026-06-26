@@ -62,10 +62,15 @@ module.exports = function(app, context) {
     });
 
     context.eventBus.on('challenge:completed', (data) => {
-      const { nickname, challenge } = data;
+      const { nickname, challenge, gameId } = data;
       if (challenge && challenge.reward) {
+        // 防重复结算：同一用户同一游戏只发放一次挑战奖励
+        if (service.hasCompletedChallenge(nickname, gameId)) {
+          context.logger.debug(`${nickname} 已完成 ${gameId} 挑战，跳过重复结算`);
+          return;
+        }
         service.updatePoints(nickname, 'challenge', challenge.reward, `完成挑战：${challenge.name}`);
-        service.markChallengeCompleted(nickname, data.gameId);
+        service.markChallengeCompleted(nickname, gameId);
         context.logger.info(`${nickname} 完成挑战，获得 ${challenge.reward} 积分`);
       }
     });

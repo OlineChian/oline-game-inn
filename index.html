@@ -987,6 +987,23 @@
             color: var(--color-gold-accent);
             box-shadow: 0 0 16px rgba(237,117,38,0.12);
         }
+
+        /* 全屏排行榜模式切换：全部历史 / 最佳成绩 */
+        .lb-mode-section { padding: 8px 20px 0; text-align: center; }
+        .lb-mode-tabs {
+            display: inline-flex; gap: 4px; padding: 4px;
+            background: rgba(255,255,255,0.04); border: 1px solid #333;
+            border-radius: 24px;
+        }
+        .lb-mode-tab {
+            padding: 7px 18px; border: none; background: transparent;
+            color: var(--text-secondary); border-radius: 20px;
+            cursor: pointer; font-size: 13px; font-weight: bold;
+            transition: all 0.2s;
+        }
+        .lb-mode-tab:hover { color: var(--text-on-dark); }
+        .lb-mode-tab.active { background: var(--color-orange-main); color: white; }
+        .lb-page-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
         .lb-diff-section .difficulty-tab.all-tab.active {
             border-color: var(--color-gold-accent);
             color: var(--color-gold-accent);
@@ -1236,8 +1253,15 @@
             <span class="lb-page-title">🏆 游戏排行榜</span>
             <button class="lb-page-close" onclick="closeLeaderboardPage()">×</button>
         </div>
+        <!-- 模式切换：全部历史 / 最佳成绩 -->
+        <div class="lb-mode-section">
+            <div class="lb-mode-tabs">
+                <button class="lb-mode-tab active" id="lbModeHistoryBtn" onclick="switchLbPageMode('history')">📜 全部历史</button>
+                <button class="lb-mode-tab" id="lbModeBestBtn" onclick="switchLbPageMode('best')">🏆 最佳成绩</button>
+            </div>
+        </div>
         <div class="lb-page-tabs" id="lbPageTabs"></div>
-        <div class="difficulty-section lb-diff-section" id="lbDiffSection" style="display:none;">
+        <div class="lb-diff-section" id="lbDiffSection" style="display:none;">
             <div class="difficulty-tabs" id="lbDiffTabs"></div>
         </div>
         <div class="lb-page-content">
@@ -1398,50 +1422,46 @@
         });
 
         // ========== 全屏排行榜页面 ==========
+        // history=全部历史记录(不聚合)；best=按配置聚合(dedupe取最佳/sum累计)
         let lbPageDifficulty = null;
         let lbPageAvailableDiffs = [];
         let lbPageIndex = 0;
-        let lbPageCarouselInterval = null;
+        let lbPageMode = 'history';
 
         async function openLeaderboardPage() {
             await loadGameList();
             lbPageDifficulty = null;
             lbPageIndex = 0;
+            lbPageMode = 'history';
+            syncLbPageModeTabs();
             loadLbPageData();
-            startLbPageCarousel();
             document.getElementById('leaderboardPage').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         }
         function closeLeaderboardPage() {
             document.getElementById('leaderboardPage').classList.add('hidden');
             document.body.style.overflow = '';
-            stopLbPageCarousel();
         }
-        function startLbPageCarousel() {
-            if (lbPageCarouselInterval) clearInterval(lbPageCarouselInterval);
-            const visibleGames = gameList.filter(g => g.showOnHome !== false);
-            if (visibleGames.length <= 1) return;
-            lbPageCarouselInterval = setInterval(() => {
-                const visibleGames = gameList.filter(g => g.showOnHome !== false);
-                lbPageIndex = (lbPageIndex + 1) % visibleGames.length;
-                lbPageDifficulty = null;
-                loadLbPageData();
-            }, 5000);
+        function switchLbPageMode(mode) {
+            if (mode === lbPageMode) return;
+            lbPageMode = mode;
+            syncLbPageModeTabs();
+            loadLbPageData();
         }
-        function stopLbPageCarousel() {
-            if (lbPageCarouselInterval) {
-                clearInterval(lbPageCarouselInterval);
-                lbPageCarouselInterval = null;
-            }
+        function syncLbPageModeTabs() {
+            document.getElementById('lbModeHistoryBtn').classList.toggle('active', lbPageMode === 'history');
+            document.getElementById('lbModeBestBtn').classList.toggle('active', lbPageMode === 'best');
         }
+        // 难度标签（已更新为新插件 ID）
         function getDiffLabel(gameId, diff) {
             const diffTexts = {
-                'rosa-ember-online': { easy: '简单AI', normal: '中等AI', hard: '困难AI' },
-                '8bit-arcade-oline': { easy: '简单(单机)', normal: '中等(单机)', hard: '困难(单机)' },
+                'rosa-ember': { easy: '简单AI', normal: '中等AI', hard: '困难AI', online: '联机' },
+                '8bit-arcade': { easy: '简单(单机)', normal: '中等(单机)', hard: '困难(单机)', online: '联机' },
                 'belle-challenge': { easy: '简单', normal: '中等', hard: '困难' },
-                'buster-montage': { easy: '简单', normal: '中等', hard: '困难' }
+                'buster-montage': { easy: '简单', normal: '中等', hard: '困难' },
+                'tara-cards': { easy: '简单', normal: '中等', hard: '困难' }
             };
-            return (diffTexts[gameId] && diffTexts[gameId][diff]) || { easy: '简单', normal: '中等', hard: '困难' }[diff] || diff;
+            return (diffTexts[gameId] && diffTexts[gameId][diff]) || { easy: '简单', normal: '中等', hard: '困难', online: '联机' }[diff] || diff;
         }
         function renderLbPageTabs() {
             const tabsContainer = document.getElementById('lbPageTabs');
@@ -1453,7 +1473,23 @@
         function switchLbPageGame(index) {
             lbPageIndex = index;
             lbPageDifficulty = null;
-            stopLbPageCarousel();
+            loadLbPageData();
+        }
+        function renderLbPageDiffTabs() {
+            const container = document.getElementById('lbDiffTabs');
+            const section = document.getElementById('lbDiffSection');
+            if (lbPageAvailableDiffs.length === 0) { section.style.display = 'none'; return; }
+            section.style.display = '';
+            const diffLabels = { easy: '😊 简单', normal: '😐 中等', hard: '😈 困难', online: '🌐 联机' };
+            let html = `<button class="difficulty-tab all-tab ${lbPageDifficulty === null ? 'active' : ''}" onclick="switchLbPageDifficulty(null)">📊 全部</button>`;
+            html += lbPageAvailableDiffs.map(d =>
+                `<button class="difficulty-tab ${lbPageDifficulty === d ? 'active' : ''}" onclick="switchLbPageDifficulty('${d}')">${diffLabels[d] || d}</button>`
+            ).join('');
+            container.innerHTML = html;
+        }
+        function switchLbPageDifficulty(diff) {
+            lbPageDifficulty = diff;
+            renderLbPageDiffTabs();
             loadLbPageData();
         }
         async function loadLbPageData() {
@@ -1464,17 +1500,31 @@
                 const visibleGames = gameList.filter(g => g.showOnHome !== false);
                 const currentGame = visibleGames[lbPageIndex];
                 if (!currentGame) return;
-                let url = `/api/leaderboard/${currentGame.id}?limit=50`;
+                // mode=history 返回全部不聚合；mode=best 按配置聚合
+                let url = `/api/leaderboard/${currentGame.id}?limit=50&mode=${lbPageMode}`;
                 if (lbPageDifficulty) url += `&difficulty=${encodeURIComponent(lbPageDifficulty)}`;
                 const response = await fetch(url);
                 const data = await response.json();
+                lbPageAvailableDiffs = data.availableDifficulties || [];
+                renderLbPageDiffTabs();
                 if (data.success && data.leaderboard.length > 0) {
                     listContainer.innerHTML = data.leaderboard.map((item, index) => {
                         const diff = item.extra && item.extra.difficulty;
                         const diffTag = diff ? `<span class="leaderboard-diff-tag diff-${diff}">${getDiffLabel(currentGame.id, diff)}</span>` : '';
+                        // history 模式显示日期+时间；best 模式只显示日期
+                        let timeStr = '';
+                        if (item.timestamp) {
+                            const d = new Date(item.timestamp);
+                            timeStr = lbPageMode === 'history'
+                                ? d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : d.toLocaleDateString('zh-CN');
+                        }
                         return `<div class="leaderboard-item">
                             <div class="leaderboard-rank ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">${index + 1}</div>
-                            <div class="leaderboard-name">${escapeHtml(item.nickname)}${diffTag}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="leaderboard-name">${escapeHtml(item.nickname)}${diffTag}</div>
+                                <div class="lb-page-meta">${timeStr}</div>
+                            </div>
                             <div class="leaderboard-score">${item.score}<span class="leaderboard-unit">${data.config.unit}</span></div>
                         </div>`;
                     }).join('');

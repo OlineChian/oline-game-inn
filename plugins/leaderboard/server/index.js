@@ -120,29 +120,16 @@ module.exports = function(app, context) {
       const gameId = req.params.game;
       const { nickname, score, extra } = req.body;
 
-      const completedChallenges = new Set();
-      
-      const userPlugin = context.eventBus;
-      const result = service.submitScore(gameId, { nickname, score, extra }, siteConfig, null, completedChallenges);
-      
+      // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算
+      const result = service.submitScore(gameId, { nickname, score, extra }, siteConfig);
+
       if (result.code === 404) {
         return res.status(404).json({ success: false, error: result.error });
       }
       if (result.code === 400) {
         return res.status(400).json({ success: false, error: result.error });
       }
-      
-      if (result.challengeReward) {
-        context.eventBus.emit('challenge:completed', {
-          nickname,
-          gameId,
-          challenge: {
-            name: result.challengeReward.name,
-            reward: result.challengeReward.reward
-          }
-        });
-      }
-      
+
       res.json(result);
     });
   }
