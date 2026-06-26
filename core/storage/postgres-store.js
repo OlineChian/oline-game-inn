@@ -153,7 +153,17 @@ class PostgresStore {
   // ---------- 读操作（同步，走内存） ----------
 
   get(key) {
-    return this._data.has(key) ? this._data.get(key) : null;
+    const value = this._data.has(key) ? this._data.get(key) : null;
+    // [临时调试日志] 确认 PostgresStore 返回的数据类型与 FileStore 一致
+    // 部署后查看 Railway Logs，验证 isArray 是否为 true（Array 类型）
+    console.log('[Storage Debug]', {
+      key,
+      type: typeof value,
+      constructor: value?.constructor?.name,
+      isArray: Array.isArray(value),
+      value
+    });
+    return value;
   }
 
   has(key) {
@@ -292,8 +302,8 @@ class PostgresStore {
         let idx = 1;
         for (const [key] of upserts) {
           const value = this._data.get(key);
-          // value 可能是任意 JSON 可序列化值；pg 的 JSONB 接受对象/原始值
-          // 为兼容与 FileStore 一致的序列化，统一转为 JS 对象传给 pg
+          // _normalizeForPgJsonb 返回 JSON 字符串（而非 JS 对象），
+          // 避免 pg prepareValue 对 Array 调用 arrayString 转为 PG 数组字面量
           const jsValue = this._normalizeForPgJsonb(value);
           valuesClauses.push(`($${idx}, $${idx + 1})`);
           params.push(key, jsValue);
@@ -329,23 +339,35 @@ class PostgresStore {
   }
 
   _normalizeForPgJsonb(value) {
-    // pg 驱动对 JSONB 字段：直接传 JS 对象/数组/原始值均可
-    // 但若上层存了非标准 JSON 值（如 Map/Set/Date），先 JSON round-trip 标准化
-    // 以保持与 FileStore 的 JSON.stringify 行为一致
+    // ⚠️ 关键修复：必须返回 JSON 字符串，而非 JS 对象/数组。
+    //
+    // 原因：pg 驱动的 prepareValue()（node_modules/pg/lib/utils.js）对 JS Array
+    // 会调用 arrayString() 转为 PostgreSQL 数组字面量，而非 JSON 数组：
+    //   [] → arrayString([]) → '{}' → JSONB 列存为空对象 {}（而非空数组 []）
+    //   [{...}] → arrayString → '{"{...}"}' → 非法 JSON，INSERT 失败
+    // 而非 Array 的对象才走 prepareObject() → JSON.stringify，行为正确。
+    //
+    // 这导致 FileStore（JSON.stringify 全量序列化，Array→'[...]'）与
+    // PostgresStore（pg arrayString，Array→'{...}'）数据类型不一致：
+    //   FileStore 读回 []（Array，iterable）✓
+    //   PostgresStore 读回 {}（Object，非 iterable）✗ → "board is not iterable"
+    //
+    // 修复：统一返回 JSON.stringify(value) 字符串。pg 对 string 参数直接
+    // 发送给 JSONB 列，由 PostgreSQL 解析为正确的 JSONB 类型：
+    //   '[]' → JSONB 数组 [] → 读回 []（Array）✓
+    //   '{}' → JSONB 对象 {} → 读回 {}（Object）✓
+    //   '[1,2]' → JSONB 数组 → 读回 [1,2]（Array）✓
+    // 与 FileStore 的 JSON.stringify → JSON.parse 行为完全一致。
     if (value === null || value === undefined) {
       return null;
     }
-    if (typeof value === 'object') {
-      try {
-        // 标准化：序列化后再解析，剔除 Map/Set 等不可 JSON 化的形态
-        return JSON.parse(JSON.stringify(value));
-      } catch (e) {
-        // 序列化失败则存 null，避免阻塞
-        console.warn('[PostgresStore] value 序列化失败，存为 null:', e.message);
-        return null;
-      }
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      // 序列化失败（如循环引用）则存 null，避免阻塞
+      console.warn('[PostgresStore] value 序列化失败，存为 null:', e.message);
+      return null;
     }
-    return value;
   }
 
   // 异步等待所有 dirty 落库完成（pg 不支持同步查询，故退出时用 async drain）

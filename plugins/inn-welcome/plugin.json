@@ -1,0 +1,16 @@
+{
+  "id": "inn-welcome",
+  "name": "客栈迎新活动",
+  "version": "1.0.0",
+  "description": "客栈迎新试玩领宝石：成绩提交、权重计算、加权抽奖",
+  "type": "feature",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js"
+  },
+  "dependencies": [],
+  "provides": ["inn-welcome-api"],
+  "config": {
+    "activitiesDir": "activities"
+  }
+}

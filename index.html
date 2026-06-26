@@ -1177,8 +1177,8 @@
             <div class="art-glow-ring" id="activityBadge"></div>
             <div class="art-text">
                 <span class="art-label">OLINE GAME INN</span>
-                <h2 class="art-title" id="activityTitle">初夏挑战季活动正在进行</h2>
-                <p class="art-desc" id="activityDesc">游玩下方游戏 · 参与赛事预测 · 有机会赢宝石</p>
+                <h2 class="art-title" id="activityTitle">客栈迎新，试玩领宝石</h2>
+                <p class="art-desc" id="activityDesc">试玩五款游戏 · 提交成绩 · 参与抽奖领宝石</p>
                 <span class="art-hint" id="activityHint">🎁 点击进入活动页面</span>
             </div>
         </a>
@@ -1555,7 +1555,8 @@
                 const response = await fetch('/api/activities');
                 const data = await response.json();
                 if (data.success && data.activities && data.activities.length > 0) {
-                    const activity = data.activities[0];
+                    // 优先展示 featured 活动回退到第一个
+                    const activity = data.activities.find(a => a.featured) || data.activities[0];
                     const titleEl = document.getElementById('activityTitle');
                     const descEl = document.getElementById('activityDesc');
                     const hintEl = document.getElementById('activityHint');

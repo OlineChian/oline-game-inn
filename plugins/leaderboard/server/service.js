@@ -141,6 +141,14 @@ class LeaderboardService {
     }
 
     const board = this.getBoard(gameId);
+    // [临时调试日志] 确认从 storage 读取的 board 类型
+    // 部署后查看 Railway Logs，验证 isArray 是否为 true
+    console.log('[Leaderboard Debug]', {
+      board,
+      type: typeof board,
+      constructor: board?.constructor?.name,
+      isArray: Array.isArray(board)
+    });
     let filtered = [...board];
 
     // 筛选逻辑

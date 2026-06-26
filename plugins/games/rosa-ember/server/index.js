@@ -89,14 +89,33 @@ module.exports = function(app, context) {
   
   const gameIO = io.of('/rosa-ember');
   const roomsKey = 'rooms';
-  let rooms = storage.get(roomsKey) || new Map();
+
+  // 加载房间 Map（兼容 Map / [k,v]数组 / 普通对象 / 空）
+  // 修复：storage 底层用 JSON 序列化，Map 经 JSON.stringify 会变成 {}，
+  // 重启后读回的是普通对象，.has/.set/.get/for...of 全部失效。
+  // 改为以 [k,v] 数组形式持久化，加载时还原为 Map。
+  function loadRooms() {
+    const stored = storage.get(roomsKey);
+    if (!stored) return new Map();
+    if (stored instanceof Map) return stored;
+    if (Array.isArray(stored)) return new Map(stored);
+    if (typeof stored === 'object') return new Map(Object.entries(stored));
+    return new Map();
+  }
+
+  // 保存房间 Map（转为 [k,v] 数组，确保 JSON 序列化后可还原）
+  function saveRooms(map) {
+    storage.set(roomsKey, Array.from(map.entries()));
+  }
+
+  let rooms = loadRooms();
   
   function createRoom() {
     let code;
     do { code = generateCode(); } while (rooms.has(code));
     const room = { code, players: [], gameState: initState(), createdAt: Date.now(), lastActivity: Date.now(), isStarted: false };
     rooms.set(code, room);
-    storage.set(roomsKey, rooms);
+    saveRooms(rooms);
     return room;
   }
   
@@ -109,7 +128,7 @@ module.exports = function(app, context) {
         logger.info(`房间 ${c} 超时清理`);
       }
     }
-    storage.set(roomsKey, rooms);
+    saveRooms(rooms);
   }
   
   setInterval(cleanup, 5 * 60 * 1000);
