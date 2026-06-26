@@ -16,7 +16,7 @@ body {
   color: var(--text-white);
   font-family: var(--font-body);
 }
-.game-header { flex-shrink: 0; }
+.game-header { flex-shrink: 0; position: relative; z-index: 30; }
 
 /* ============ 顶部 HUD（精简，彩色背景区分） ============ */
 .bf-hud {
@@ -29,6 +29,8 @@ body {
   flex-shrink: 0;
   font-size: 14px;
   font-weight: bold;
+  position: relative;
+  z-index: 25;
 }
 .bf-hud-item {
   display: flex; align-items: center; gap: 4px;
@@ -82,6 +84,7 @@ body {
   justify-content: center;
   background: #0a0a0a;
   position: relative;
+  z-index: 1;
 }
 #bf-canvas { display: block; background: #0a0a0a; }
 
@@ -95,6 +98,8 @@ body {
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  position: relative;
+  z-index: 25;
 }
 .bf-cards {
   display: flex;
@@ -103,16 +108,44 @@ body {
 }
 .bf-card {
   flex-shrink: 0;
-  width: 110px;
+  width: 116px;
+  min-height: 132px;
   border-radius: var(--radius-md);
-  padding: 6px 8px;
+  padding: 8px 8px 7px;
   cursor: pointer;
   position: relative;
   background: var(--bg-card-alt);
+  background-blend-mode: overlay;
   border: 2px solid transparent;
   transition: transform 0.12s, border-color 0.12s;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+/* 定位装饰背景（半透明图案，不干扰文字阅读） */
+.bf-card.role-melee {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(237,117,38,0.16) 0 6px, transparent 6px 14px),
+    var(--bg-card-alt);
+}
+.bf-card.role-ranged {
+  background-image:
+    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.22) 4px, transparent 5px),
+    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.14) 9px, transparent 10px),
+    radial-gradient(circle at 85% 15%, rgba(58,134,255,0.08) 14px, transparent 15px),
+    var(--bg-card-alt);
+}
+.bf-card.role-tank {
+  background-image:
+    linear-gradient(135deg, rgba(244,162,97,0.18) 0%, transparent 45%),
+    linear-gradient(225deg, rgba(244,162,97,0.18) 0%, transparent 45%),
+    var(--bg-card-alt);
+}
+.bf-card.role-summon {
+  background-image:
+    radial-gradient(circle at 15% 85%, rgba(46,196,182,0.20) 3px, transparent 4px),
+    radial-gradient(circle at 15% 85%, rgba(46,196,182,0.12) 8px, transparent 9px),
+    var(--bg-card-alt);
 }
 .bf-card:active { transform: scale(0.96); }
 .bf-card.selected { border-color: var(--color-gold-accent); }
@@ -136,6 +169,12 @@ body {
 .bf-card-name {
   font-size: 20px; font-weight: bold; text-align: center;
   margin: 4px 0 2px 0; color: #fff;
+}
+.bf-card-role-tag {
+  font-size: 10px; text-align: center;
+  color: var(--card-color, #fff); font-weight: bold;
+  padding: 1px 0; opacity: 0.85;
+  letter-spacing: 1px;
 }
 .bf-card-stats {
   font-size: 10px; color: var(--text-secondary);
@@ -165,14 +204,14 @@ body {
 /* ============ 卡片操作弹层（招募/升星） ============ */
 .bf-card-popup {
   position: fixed;
-  z-index: 35;
+  z-index: 45;
   background: var(--bg-card);
   border: 2px solid var(--color-gold-accent);
   border-radius: var(--radius-md);
   padding: 8px;
   box-shadow: var(--shadow-modal);
   display: flex; flex-direction: column; gap: 6px;
-  min-width: 120px;
+  min-width: 200px;
 }
 .bf-card-popup.hidden { display: none; }
 .bf-card-popup-arrow {
@@ -183,18 +222,34 @@ body {
   border-right: 8px solid transparent;
   border-top: 8px solid var(--color-gold-accent);
 }
+/* 按钮并排容器：招募+升星各占一半 */
+.bf-card-popup-btns {
+  display: flex; flex-direction: row; gap: 6px;
+}
 .bf-popup-btn {
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column; align-items: center;
-  padding: 6px 10px; border: none; border-radius: var(--radius-sm);
+  padding: 7px 6px; border: none; border-radius: var(--radius-sm);
   font-size: 13px; font-weight: bold; cursor: pointer;
   background: var(--color-orange-main); color: #fff;
-  gap: 2px;
+  gap: 2px; transition: transform 0.1s, opacity 0.15s;
 }
 .bf-popup-btn:active { transform: scale(0.96); }
 .bf-popup-btn:disabled {
   background: var(--bg-input-border); color: var(--text-muted);
   cursor: not-allowed;
 }
+/* 冷却状态：半透明 + 脉冲提示 */
+.bf-popup-btn.cooldown {
+  opacity: 0.55; cursor: wait;
+  animation: bf-cooldown-pulse 0.35s ease-out;
+}
+@keyframes bf-cooldown-pulse {
+  0%   { transform: scale(1); opacity: 0.3; }
+  50%  { transform: scale(0.94); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.55; }
+}
+.bf-popup-btn-label { line-height: 1.1; }
 .bf-popup-btn-cost { font-size: 10px; opacity: 0.9; }
 .bf-popup-btn.gold { background: var(--color-gold-accent); color: #000; }
 .bf-popup-btn.gold:disabled { background: var(--bg-input-border); color: var(--text-muted); }
@@ -332,8 +387,11 @@ body {
   .bf-hud-icon { font-size: 13px; }
   .bf-hud-buff { min-width: 70px; }
   #bf-buff-text { font-size: 10px; min-width: 30px; }
-  .bf-card { width: 96px; padding: 5px 6px; }
+  .bf-card { width: 100px; min-height: 120px; padding: 6px 6px 5px; }
   .bf-card-name { font-size: 17px; }
+  .bf-card-role-tag { font-size: 9px; }
   .bf-card-stats { font-size: 9px; }
   .bf-card-super { font-size: 9px; }
+  .bf-card-popup { min-width: 170px; }
+  .bf-popup-btn { font-size: 12px; padding: 6px 4px; }
 }

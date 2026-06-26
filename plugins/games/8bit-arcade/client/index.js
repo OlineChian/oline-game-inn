@@ -90,6 +90,11 @@ function recordGameInput() {
 let soloInput = createInputTracker();
 let onlineInput = createInputTracker();
 
+// 客户端监测器阈值（AFK 检测；时长-分数/输入频率由服务端 verifyDefaultAntiCheat 校验）
+const acMonitor = (window.AntiCheatMonitor ? window.AntiCheatMonitor.create('8bit-arcade', {
+  maxNoInputMs: { max: 10000 }
+}) : null);
+
 // ==================== DOM 引用 ====================
 const $ = (id) => document.getElementById(id);
 const screens = {
@@ -276,6 +281,8 @@ function initOnlineState() {
   lastTime = 0;
   lastScoreSync = Date.now();
   startInputTracker(onlineInput);
+  if (acMonitor) acMonitor.reset();
+  if (window.SessionGuard) window.SessionGuard.start('8bit-arcade');
   if (localScoreEl) localScoreEl.textContent = '0';
   if (opponentScoreEl) opponentScoreEl.textContent = '0';
 }
@@ -422,6 +429,8 @@ function initSoloState() {
   soloScore = 0;
   lastTime = 0;
   startInputTracker(soloInput);
+  if (acMonitor) acMonitor.reset();
+  if (window.SessionGuard) window.SessionGuard.start('8bit-arcade');
   if (soloScoreEl) soloScoreEl.textContent = '0';
   if (soloBestEl) soloBestEl.textContent = soloBest;
 }
@@ -749,11 +758,36 @@ async function submitScoreToLeaderboard(score, mode, telemetry) {
     console.warn('[8bit] ScoreSigner 未加载，跳过成绩提交');
     return;
   }
+
+  // 会话完整性校验（History API）
+  if (window.SessionGuard) {
+    const sess = window.SessionGuard.verify();
+    if (!sess.ok) {
+      if (acMonitor) acMonitor.alert('会话校验失败：' + sess.reason);
+      console.warn('[8bit] 会话校验失败，跳过提交:', sess.reason);
+      return;
+    }
+    if (window.SessionGuard.detectInjection()) {
+      if (acMonitor) acMonitor.alert('检测到 History API 被恶意注入，已阻止成绩提交');
+      return;
+    }
+  }
+
+  // 客户端监测器预警（AFK 检测）
+  if (acMonitor && telemetry) {
+    const result = acMonitor.check(telemetry);
+    if (!result.ok) {
+      acMonitor.alert(result.violations.join('\n'));
+      console.warn('[8bit] 客户端监测器检测到异常，跳过提交:', result.violations);
+      return;
+    }
+  }
+
   try {
     const sig = await window.ScoreSigner.sign({ gameId: '8bit-arcade', nickname, score });
     const extra = { difficulty: currentDifficulty, mode };
     if (telemetry) extra.antiCheat = telemetry;
-    await fetch('/api/leaderboard/8bit-arcade', {
+    const response = await fetch('/api/leaderboard/8bit-arcade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -765,8 +799,12 @@ async function submitScoreToLeaderboard(score, mode, telemetry) {
         signature: sig.signature
       })
     });
+    const data = await response.json();
+    if (!data.success) console.warn('[8bit] 成绩提交失败:', data.error);
   } catch (e) {
     console.warn('[8bit] 排行榜提交失败:', e);
+  } finally {
+    if (window.SessionGuard) window.SessionGuard.end();
   }
 }
 

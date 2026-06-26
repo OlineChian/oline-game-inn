@@ -267,6 +267,7 @@ class LeaderboardService {
       nickname: String(nickname).slice(0, 20),
       score: scoreNum,
       extra: extra || {},
+      ip: data.ip || '', // 记录提交者 IP，用于封禁后清除成绩
       timestamp: Date.now()
     };
 
@@ -286,6 +287,28 @@ class LeaderboardService {
       total: board.length,
       record
     };
+  }
+
+  /**
+   * 清除指定 IP 的所有历史成绩（作弊者封禁时调用）
+   * 遍历所有游戏排行榜，过滤掉 ip 匹配的记录
+   * @returns {number} 删除的记录数
+   */
+  purgeCheaterScores(ip, siteConfig) {
+    if (!ip) return 0;
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    let removed = 0;
+    for (const gameId of Object.keys(gameConfigs)) {
+      const key = `${gameId}:${this.boardKey}`;
+      const board = this.getBoard(gameId);
+      const filtered = board.filter(r => r.ip !== ip);
+      const diff = board.length - filtered.length;
+      if (diff > 0) {
+        this.storage.set(key, filtered);
+        removed += diff;
+      }
+    }
+    return removed;
   }
 
   /**

@@ -4,10 +4,17 @@
  */
 
 const LeaderboardService = require('./service');
-const { verifySubmission, verifyAntiCheat } = require('./security');
+const { verifySubmission, verifyAntiCheat, checkBan, flagCheater } = require('./security');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
+
+// 获取客户端 IP（兼容反向代理）
+function getClientIp(req) {
+  const xff = req.headers && req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return req.ip || (req.connection && req.connection.remoteAddress) || '';
+}
 
 module.exports = function(app, context) {
   const service = new LeaderboardService(context);
@@ -121,22 +128,32 @@ module.exports = function(app, context) {
     app.post('/api/leaderboard/:game', (req, res) => {
       const gameId = req.params.game;
       const { nickname, score, extra } = req.body;
+      const ip = getClientIp(req);
 
-      // 安全校验：HMAC 签名 + 时间窗口 + nonce 防重放
-      // 历史数据保留不动；新提交必须携带合法签名，否则拒绝
+      // L4: 封禁检查（作弊者封禁期内禁止提交）
+      const ban = checkBan(service.storage, ip);
+      if (ban.banned) {
+        return res.status(403).json({ success: false, error: '该 IP 已被封禁：' + (ban.reason || '作弊行为') });
+      }
+
+      // L1+L2: HMAC 签名 + 时间窗口 + nonce 防重放
       const verification = verifySubmission(gameId, req.body);
       if (!verification.ok) {
         return res.status(verification.code).json({ success: false, error: verification.error });
       }
 
-      // 反作弊校验：防 AFK / 障碍物删除刷分（仅当 extra.antiCheat 存在时校验，向后兼容未接入的游戏）
+      // L3: 反作弊校验（防 AFK / 状态篡改）
       const acCheck = verifyAntiCheat(gameId, req.body);
       if (!acCheck.ok) {
+        // L4: 检测到作弊 → 封禁 IP（30 天）+ 清除该 IP 全部历史成绩
+        flagCheater(service.storage, ip, acCheck.error, 'purge');
+        const removed = service.purgeCheaterScores(ip, siteConfig);
+        console.warn(`[security] 作弊检测触发清除 IP=${ip} 移除 ${removed} 条历史成绩 原因=${acCheck.error}`);
         return res.status(acCheck.code).json({ success: false, error: acCheck.error });
       }
 
       // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算
-      const result = service.submitScore(gameId, { nickname, score, extra }, siteConfig);
+      const result = service.submitScore(gameId, { nickname, score, extra, ip }, siteConfig);
 
       if (result.code === 404) {
         return res.status(404).json({ success: false, error: result.error });

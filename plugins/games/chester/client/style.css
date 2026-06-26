@@ -1,0 +1,164 @@
+/* ============================================================
+   切斯特牌 - 客户端样式
+   仅使用 CSS 变量，遵守主题化铁律
+   阶段 0：骨架占位样式
+   ============================================================ */
+
+.chester-stage {
+    min-height: calc(100vh - 60px);
+    padding: 24px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary-dark);
+    color: var(--text-white);
+}
+
+/* ---------- 骨架占位 ---------- */
+.stage-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.placeholder-icon {
+    font-size: clamp(64px, 14vw, 96px);
+    line-height: 1;
+    filter: drop-shadow(0 4px 16px var(--shadow-btn));
+}
+
+.placeholder-title {
+    font-size: clamp(28px, 6vw, 40px);
+    font-weight: 700;
+    color: var(--color-orange-main);
+    letter-spacing: 2px;
+}
+
+.placeholder-subtitle {
+    font-size: clamp(14px, 3vw, 16px);
+    color: var(--text-secondary);
+}
+
+.placeholder-tip {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border: 1px dashed var(--bg-input-border);
+    border-radius: var(--radius-md);
+}
+
+/* ---------- 排行榜弹窗（与站点一致） ---------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal {
+    position: relative;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
+    padding: 28px 24px;
+    max-width: 90vw;
+    width: 360px;
+    text-align: center;
+}
+
+.close-modal {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.modal-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+}
+
+.modal h2 {
+    color: var(--color-orange-main);
+    margin-bottom: 4px;
+}
+
+.modal p {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.leaderboard-list {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--bg-input-border);
+}
+
+.leaderboard-rank {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-round);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    background: var(--bg-card-alt);
+    color: var(--text-secondary);
+}
+
+.leaderboard-rank.rank-1 { background: var(--color-gold-accent); color: #000; }
+.leaderboard-rank.rank-2 { background: #c0c0c0; color: #000; }
+.leaderboard-rank.rank-3 { background: #cd7f32; color: #fff; }
+
+.leaderboard-name {
+    flex: 1;
+    text-align: left;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.leaderboard-score {
+    color: var(--color-gold-accent);
+    font-weight: 700;
+}
+
+.leaderboard-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+.leaderboard-empty {
+    padding: 24px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.leaderboard-empty-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}

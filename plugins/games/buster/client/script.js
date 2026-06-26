@@ -127,6 +127,14 @@ let inputTracker = createInputTracker();
 let maxPaddleWidth = 80;
 let bricksDestroyed = 0;
 
+// 客户端监测器阈值（与服务端 verifyBusterAntiCheat 一致）
+const acMonitor = (window.AntiCheatMonitor ? window.AntiCheatMonitor.create('buster-montage', {
+    score: { max: 1850 },
+    playedMs: { min: 3000 },
+    maxNoInputMs: { max: 15000 },
+    inputCount: { min: 3 }
+}) : null);
+
 function initGame() {
     const diff = difficulties[difficulty];
 
@@ -157,6 +165,9 @@ function initGame() {
     createBricks(diff.brickRows, diff.brickCols);
     bricksDestroyed = 0;
     updateBricksLeft();
+
+    if (acMonitor) acMonitor.reset();
+    if (window.SessionGuard) window.SessionGuard.start('buster-montage');
 
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
@@ -822,10 +833,39 @@ async function submitScore(score, won) {
         return;
     }
 
+    // 会话完整性校验（History API）
+    if (window.SessionGuard) {
+        const sess = window.SessionGuard.verify();
+        if (!sess.ok) {
+            if (acMonitor) acMonitor.alert('会话校验失败：' + sess.reason);
+            console.log('会话校验失败，跳过提交:', sess.reason);
+            return;
+        }
+        if (window.SessionGuard.detectInjection()) {
+            if (acMonitor) acMonitor.alert('检测到 History API 被恶意注入，已阻止成绩提交');
+            return;
+        }
+    }
+
     // 游戏状态快照 + 输入遥测（服务端 verifyBusterAntiCheat 校验）
     const diff = difficulties[difficulty];
     const totalBricks = diff.brickRows * diff.brickCols;
     const telemetry = getTelemetry(inputTracker);
+
+    // 客户端监测器预警
+    if (acMonitor) {
+        const result = acMonitor.check({
+            score: score,
+            playedMs: telemetry.playedMs,
+            maxNoInputMs: telemetry.maxNoInputMs,
+            inputCount: telemetry.inputCount
+        });
+        if (!result.ok) {
+            acMonitor.alert(result.violations.join('\n'));
+            console.log('客户端监测器检测到异常，跳过提交:', result.violations);
+            return;
+        }
+    }
 
     try {
         const sig = await window.ScoreSigner.sign({ gameId: 'buster-montage', nickname, score });
@@ -859,9 +899,13 @@ async function submitScore(score, won) {
         const data = await response.json();
         if (data.success) {
             console.log(`成绩提交成功！排名：${data.rank}/${data.total}`);
+        } else {
+            console.log('成绩提交失败:', data.error);
         }
     } catch (error) {
         console.log('提交成绩失败（服务器可能未启动）:', error);
+    } finally {
+        if (window.SessionGuard) window.SessionGuard.end();
     }
 }
 

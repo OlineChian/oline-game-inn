@@ -15,6 +15,56 @@ let firstClick = true;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 let markMode = 'normal';
 
+// ==================== 输入遥测与地雷布局哈希（防 AFK / 地雷位置篡改）====================
+function createInputTracker() {
+    return { count: 0, lastTime: 0, maxGap: 0, startMs: 0, endMs: 0, active: false };
+}
+function startInputTracker(t) {
+    t.count = 0; t.lastTime = 0; t.maxGap = 0;
+    t.startMs = Date.now(); t.endMs = 0; t.active = true;
+}
+function recordInput(t) {
+    if (!t.active) return;
+    const now = Date.now();
+    if (t.lastTime > 0) {
+        const gap = now - t.lastTime;
+        if (gap > t.maxGap) t.maxGap = gap;
+    }
+    t.lastTime = now;
+    t.count++;
+}
+function stopInputTracker(t) {
+    t.active = false;
+    t.endMs = Date.now();
+    if (t.lastTime === 0) t.maxGap = t.endMs - t.startMs;
+}
+function getTelemetry(t) {
+    return { inputCount: t.count, maxNoInputMs: t.maxGap, playedMs: t.endMs - t.startMs };
+}
+let inputTracker = createInputTracker();
+let lockedMineHash = null; // 首点生成地雷后锁定的布局哈希
+
+// 客户端监测器阈值（与服务端 verifyBelleAntiCheat 一致）
+const acMonitor = (window.AntiCheatMonitor ? window.AntiCheatMonitor.create('belle-challenge', {
+    playedMs: { min: 500 },
+    maxNoInputMs: { max: 30000 },
+    inputCount: { min: 3 }
+}) : null);
+
+// 计算地雷布局哈希（SHA-256）
+async function computeMineHash() {
+    const { rows, cols } = difficulties[currentDiff];
+    const positions = [];
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            if (board[i][j] === -1) positions.push(i + ',' + j);
+        }
+    }
+    const data = new TextEncoder().encode(positions.join('|'));
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const boardEl = document.getElementById('board');
 const trapsCountEl = document.getElementById('trapsCount');
 const timerEl = document.getElementById('timer');
@@ -86,6 +136,10 @@ function initGame() {
     gameWon = false;
     firstClick = true;
     timer = 0;
+    inputTracker = createInputTracker();
+    lockedMineHash = null;
+    if (acMonitor) acMonitor.reset();
+    if (window.SessionGuard) window.SessionGuard.start('belle-challenge');
 
     if (timerInterval) clearInterval(timerInterval);
     timerEl.textContent = '000';
@@ -216,6 +270,7 @@ function renderBoard() {
 
 function handleClick(row, col) {
     if (gameOver || gameWon || revealed[row][col]) return;
+    recordInput(inputTracker);
 
     if (markMode === 'single' || markMode === 'multi') {
         if (flagged[row][col]) {
@@ -240,6 +295,9 @@ function handleClick(row, col) {
     if (firstClick) {
         firstClick = false;
         placeMines(row, col);
+        // 异步锁定地雷布局哈希（防篡改地雷位置）
+        computeMineHash().then(h => { lockedMineHash = h; });
+        startInputTracker(inputTracker);
         startTimer();
     }
 
@@ -250,6 +308,7 @@ function handleClick(row, col) {
 
 function handleRightClick(row, col) {
     if (gameOver || gameWon || revealed[row][col]) return;
+    recordInput(inputTracker);
 
     flagged[row][col] = !flagged[row][col];
 
@@ -310,6 +369,7 @@ function checkWin() {
         gameWon = true;
         showStatus('win', '🎉 恭喜！你成功避开了所有陷阱！');
         clearInterval(timerInterval);
+        stopInputTracker(inputTracker);
         submitScore(timer);
     }
 }
@@ -393,7 +453,62 @@ async function submitScore(score) {
         return;
     }
 
+    // 1. 会话完整性校验（History API）
+    if (window.SessionGuard) {
+        const sess = window.SessionGuard.verify();
+        if (!sess.ok) {
+            if (acMonitor) acMonitor.alert('会话校验失败：' + sess.reason);
+            console.log('会话校验失败，跳过提交:', sess.reason);
+            return;
+        }
+    }
+
+    // 2. 地雷布局哈希校验（防篡改地雷位置）
+    if (lockedMineHash) {
+        const currentHash = await computeMineHash();
+        if (currentHash !== lockedMineHash) {
+            if (acMonitor) acMonitor.alert('检测到地雷布局被篡改，已阻止成绩提交');
+            console.log('地雷布局哈希不一致，跳过提交');
+            return;
+        }
+    }
+
+    // 3. 注入检测
+    if (window.SessionGuard && window.SessionGuard.detectInjection()) {
+        if (acMonitor) acMonitor.alert('检测到 History API 被恶意注入，已阻止成绩提交');
+        console.log('History API 注入检测失败，跳过提交');
+        return;
+    }
+
     const diffMap = { 'easy': 'easy', 'medium': 'normal', 'hard': 'hard' };
+    const difficulty = diffMap[currentDiff] || 'normal';
+    const { rows, cols, mines } = difficulties[currentDiff];
+
+    // 4. 计算游戏状态快照
+    let revealedCount = 0;
+    let flagCount = 0;
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            if (revealed[i][j] && board[i][j] !== -1) revealedCount++;
+            if (flagged[i][j]) flagCount++;
+        }
+    }
+    const telemetry = getTelemetry(inputTracker);
+
+    // 5. 客户端监测器预警
+    if (acMonitor) {
+        const snapshot = {
+            playedMs: telemetry.playedMs,
+            maxNoInputMs: telemetry.maxNoInputMs,
+            inputCount: telemetry.inputCount
+        };
+        const result = acMonitor.check(snapshot);
+        if (!result.ok) {
+            acMonitor.alert(result.violations.join('\n'));
+            console.log('客户端监测器检测到异常，跳过提交:', result.violations);
+            return;
+        }
+    }
 
     try {
         const sig = await window.ScoreSigner.sign({ gameId: 'belle-challenge', nickname, score });
@@ -405,7 +520,20 @@ async function submitScore(score) {
             body: JSON.stringify({
                 nickname: nickname,
                 score: score,
-                extra: { difficulty: diffMap[currentDiff] || 'normal' },
+                extra: {
+                    difficulty: difficulty,
+                    antiCheat: {
+                        mineCount: mines,
+                        totalCells: rows * cols,
+                        revealedCount: revealedCount,
+                        flagCount: flagCount,
+                        won: true,
+                        playedMs: telemetry.playedMs,
+                        inputCount: telemetry.inputCount,
+                        maxNoInputMs: telemetry.maxNoInputMs,
+                        minePositionsHash: lockedMineHash || ''
+                    }
+                },
                 timestamp: sig.timestamp,
                 nonce: sig.nonce,
                 signature: sig.signature
@@ -415,9 +543,13 @@ async function submitScore(score) {
         const data = await response.json();
         if (data.success) {
             console.log(`成绩提交成功！排名：${data.rank}/${data.total}`);
+        } else {
+            console.log('成绩提交失败:', data.error);
         }
     } catch (error) {
         console.log('提交成绩失败（服务器可能未启动）:', error);
+    } finally {
+        if (window.SessionGuard) window.SessionGuard.end();
     }
 }
 
