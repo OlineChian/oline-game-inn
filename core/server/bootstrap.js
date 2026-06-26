@@ -5,11 +5,12 @@ const path = require('path');
 const fs = require('fs');
 
 const { initCore } = require('./index');
+const { globalStore } = require('../storage');
 
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = path.join(__dirname, '..', '..');
 
-function bootstrap() {
+async function bootstrap() {
   const app = express();
   const server = http.createServer(app);
   const io = new Server(server, {
@@ -39,6 +40,15 @@ function bootstrap() {
       res.status(404).send('Not Found');
     }
   });
+
+  // 等待 Storage 数据加载完成后再初始化插件，避免排行榜/玩家数据为空。
+  // FileStore/MemoryStore 立即 resolve；PostgresStore 等 DB 全量加载完成。
+  // 加载失败时 storage/index.js 内部已回退到 MemoryStore，此处不会抛错。
+  try {
+    await globalStore.ready;
+  } catch (err) {
+    console.warn('[Bootstrap] Storage ready 等待异常（已回退，继续启动）：', err.message);
+  }
 
   const core = initCore(app, io);
 
@@ -70,7 +80,10 @@ function bootstrap() {
 }
 
 if (require.main === module) {
-  bootstrap();
+  bootstrap().catch(err => {
+    console.error('[Bootstrap] 启动失败：', err);
+    process.exit(1);
+  });
 }
 
 module.exports = { bootstrap, PORT };
