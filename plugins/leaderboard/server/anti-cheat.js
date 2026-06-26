@@ -8,6 +8,7 @@
  *   - verifyDefaultAntiCheat：跑酷类（8bit-arcade），时长-分数一致性 + AFK
  *   - verifyBusterAntiCheat：弹珠球（buster-montage），状态快照 + 砖块/挡板/生命一致性
  *   - verifyBelleAntiCheat：扫雷（belle-challenge），雷数/格数/揭开数一致性 + 布局哈希
+ *   - verifyBrawlAntiCheat：塔防（brawl-frontline），状态快照 + 分数重算一致性 + 时长/AFK
  *
  * 设计原则：
  *   1. 无 antiCheat 字段时跳过（向后兼容未接入游戏）
@@ -250,6 +251,114 @@ function verifyBelleAntiCheat(score, ac, extra) {
   return { ok: true };
 }
 
+// ==================== Brawl Frontline 校验（塔防）====================
+
+/**
+ * brawl-frontline 专用校验（单人 Roguelike 塔防）
+ *
+ * 得分公式（与客户端 game.js calcScore 完全一致）：
+ *   score = wave * 100 + kills * 2 + bossKills * 300 + floor(max(0, baseHp)) + floor(gold / 20)
+ *
+ * 攻击面：
+ *   - 篡改分数字段（无对应游戏状态）
+ *   - 篡改 wave/kills 等状态字段以匹配伪造分数
+ *   - 加速外挂（playedMs 过短）
+ *   - 自动脚本（inputCount 异常 / AFK 过长）
+ *
+ * 客户端在 extra.antiCheat 中附带：
+ *   - wave / kills / bossKills / heroCount / baseHp / gold / tickets / vaultLevel（状态快照）
+ *   - playedMs / inputCount / maxNoInputMs（输入遥测）
+ *
+ * 校验规则：
+ *   1. 字段完整性 + 数值合法性（非负、有限）
+ *   2. 状态字段范围：wave 1~100、vaultLevel 1~5、baseHp 0~1500、heroCount 0~50
+ *   3. 分数一致性：re-compute 与提交 score 误差 ≤ 5（容忍 floor 舍入）
+ *   4. 时长下限：playedMs >= wave * 15000（每波至少 15 秒，已非常宽松）
+ *   5. AFK 检测：maxNoInputMs < 60000（塔防允许较长等待，60 秒阈值）
+ *   6. 输入下限：inputCount >= 1（至少选过英雄）
+ *   7. bossKills 上限：bossKills <= floor(wave / 5) + 1（Boss 5 波一次，第 6 波起算）
+ */
+const BRAWL_BASE_MAX_HP = 1500;
+const BRAWL_MAX_WAVE = 100;          // 人类可达到的合理上限
+const BRAWL_MAX_HERO_COUNT = 50;
+const BRAWL_MAX_GOLD = 100000;
+const BRAWL_MAX_TICKETS = 100000;
+const BRAWL_AFK_THRESHOLD_MS = 60000; // 塔防节奏慢，60 秒 AFK 阈值
+const BRAWL_MS_PER_WAVE = 15000;      // 每波至少 15 秒
+const BRAWL_SCORE_TOLERANCE = 5;      // floor 舍入容忍
+const BRAWL_MIN_INPUTS = 1;
+
+function computeBrawlScore(s) {
+  return Math.floor(
+    s.wave * 100 +
+    s.kills * 2 +
+    s.bossKills * 300 +
+    Math.max(0, s.baseHp) +
+    s.gold / 20
+  );
+}
+
+function verifyBrawlAntiCheat(score, ac) {
+  if (!ac || typeof ac !== 'object') {
+    return { ok: false, error: 'antiCheat 字段缺失', code: 400 };
+  }
+  // 1. 字段完整性 + 数值化
+  const numFields = ['wave', 'kills', 'bossKills', 'heroCount', 'baseHp',
+    'gold', 'tickets', 'vaultLevel', 'playedMs', 'inputCount', 'maxNoInputMs'];
+  const v = {};
+  for (const f of numFields) {
+    v[f] = Number(ac[f]);
+    if (!Number.isFinite(v[f])) {
+      return { ok: false, error: 'antiCheat.' + f + ' 字段格式错误', code: 400 };
+    }
+    if (v[f] < 0) {
+      return { ok: false, error: 'antiCheat.' + f + ' 字段非法（负数）', code: 400 };
+    }
+  }
+  // 2. 状态字段范围
+  if (v.wave < 1 || v.wave > BRAWL_MAX_WAVE) {
+    return { ok: false, error: '波数超出合理范围', code: 400 };
+  }
+  if (v.vaultLevel < 1 || v.vaultLevel > 5) {
+    return { ok: false, error: '金库等级非法', code: 400 };
+  }
+  if (v.baseHp > BRAWL_BASE_MAX_HP) {
+    return { ok: false, error: '基地血量超过上限', code: 400 };
+  }
+  if (v.heroCount > BRAWL_MAX_HERO_COUNT) {
+    return { ok: false, error: '英雄数量异常', code: 400 };
+  }
+  if (v.gold > BRAWL_MAX_GOLD) {
+    return { ok: false, error: '金币数量异常', code: 400 };
+  }
+  if (v.tickets > BRAWL_MAX_TICKETS) {
+    return { ok: false, error: '英雄券数量异常', code: 400 };
+  }
+  // 3. 分数一致性（防孤立篡改 score 字段）
+  const expected = computeBrawlScore(v);
+  if (Math.abs(score - expected) > BRAWL_SCORE_TOLERANCE) {
+    return { ok: false, error: '分数与游戏状态不一致', code: 400 };
+  }
+  // 4. bossKills 上限（Boss 每 5 波出现一次，第 6 波起）
+  const maxBoss = Math.floor(v.wave / 5) + 1;
+  if (v.bossKills > maxBoss) {
+    return { ok: false, error: 'Boss 击杀数异常', code: 400 };
+  }
+  // 5. 时长下限
+  if (v.playedMs < v.wave * BRAWL_MS_PER_WAVE) {
+    return { ok: false, error: '游戏时长与波数不匹配', code: 400 };
+  }
+  // 6. AFK 检测
+  if (v.maxNoInputMs >= BRAWL_AFK_THRESHOLD_MS) {
+    return { ok: false, error: '检测到长时间无操作', code: 400 };
+  }
+  // 7. 输入下限
+  if (v.inputCount < BRAWL_MIN_INPUTS) {
+    return { ok: false, error: '输入次数异常', code: 400 };
+  }
+  return { ok: true };
+}
+
 // ==================== 统一分发器 ====================
 
 /**
@@ -267,6 +376,9 @@ function verifyGameAntiCheat(gameId, score, ac, extra) {
   if (gameId === 'belle-challenge') {
     return verifyBelleAntiCheat(score, ac, extra);
   }
+  if (gameId === 'brawl-frontline') {
+    return verifyBrawlAntiCheat(score, ac);
+  }
   return verifyDefaultAntiCheat(score, ac);
 }
 
@@ -275,7 +387,9 @@ module.exports = {
   verifyDefaultAntiCheat,
   verifyBusterAntiCheat,
   verifyBelleAntiCheat,
+  verifyBrawlAntiCheat,
   computeBusterMaxScore,
+  computeBrawlScore,
   BUSTER_CONFIGS,
   BELLE_CONFIGS
 };

@@ -138,9 +138,10 @@ function verifyAntiCheat(gameId, body) {
 // ==================== L4: 作弊者封禁系统 ====================
 //
 // 存储结构：
-//   ban:ip:{ip} → { until, reason, at, action }
+//   ban:ip:{ip} → { until, reason, at, action, nickname }
 //     until：封禁到期时间戳；过期自动失效（不主动清理，checkBan 判定即可）
 //     action：'ban'（仅封禁 7 天）| 'purge'（清除成绩 + 封禁 30 天）
+//     nickname：作弊者昵称（来自 POST body.nickname，可选，便于管理后台展示）
 //   purge:ip:{ip} → true（标记需要清除该 IP 的历史成绩，service.getBoard 时消费）
 //
 // 惩罚措施：
@@ -158,7 +159,7 @@ const PURGE_DURATION_MS = 30 * 24 * 60 * 60 * 1000;    // 30 天
  * 检查 IP 是否被封禁
  * @param {object} storage - leaderboard 的 partitioned store
  * @param {string} ip
- * @returns {{banned:boolean, until?:number, reason?:string, action?:string}}
+ * @returns {{banned:boolean, until?:number, reason?:string, action?:string, nickname?:string}}
  */
 function checkBan(storage, ip) {
   if (!storage || !ip) return { banned: false };
@@ -166,7 +167,14 @@ function checkBan(storage, ip) {
   if (!rec) return { banned: false };
   const now = Date.now();
   if (rec.until <= now) return { banned: false }; // 已过期
-  return { banned: true, until: rec.until, reason: rec.reason, action: rec.action };
+  return {
+    banned: true,
+    until: rec.until,
+    reason: rec.reason,
+    action: rec.action,
+    nickname: rec.nickname || '',
+    at: rec.at
+  };
 }
 
 /**
@@ -175,18 +183,63 @@ function checkBan(storage, ip) {
  * @param {string} ip
  * @param {string} reason - 封禁原因
  * @param {string} action - 'ban'（默认）或 'purge'
+ * @param {string} [nickname] - 作弊者昵称（用于管理后台展示）
  */
-function flagCheater(storage, ip, reason, action) {
+function flagCheater(storage, ip, reason, action, nickname) {
   if (!storage || !ip) return;
   action = action || 'ban';
   const now = Date.now();
   const until = now + (action === 'purge' ? PURGE_DURATION_MS : BAN_DURATION_MS);
-  storage.set(BAN_KEY_PREFIX + ip, { until: until, reason: reason, at: now, action: action });
+  storage.set(BAN_KEY_PREFIX + ip, {
+    until: until,
+    reason: reason,
+    at: now,
+    action: action,
+    nickname: nickname || ''
+  });
   if (action === 'purge') {
     // 标记需要清除历史成绩（service.getBoard 时消费）
     storage.set(PURGE_KEY_PREFIX + ip, true);
   }
-  console.warn('[security] 作弊者已封禁 IP=' + ip + ' reason=' + reason + ' action=' + action + ' until=' + new Date(until).toISOString());
+  console.warn('[security] 作弊者已封禁 IP=' + ip + ' nickname=' + (nickname || '-') +
+    ' reason=' + reason + ' action=' + action + ' until=' + new Date(until).toISOString());
+}
+
+/**
+ * 列出所有封禁记录（含已过期，管理后台用）
+ * 按 at 倒序返回
+ */
+function listBans(storage) {
+  if (!storage) return [];
+  const items = storage.list(BAN_KEY_PREFIX);
+  const now = Date.now();
+  return items.map(item => {
+    const ip = item.key.slice(BAN_KEY_PREFIX.length);
+    const rec = item.value || {};
+    return {
+      ip,
+      nickname: rec.nickname || '',
+      reason: rec.reason || '',
+      action: rec.action || 'ban',
+      at: rec.at || 0,
+      until: rec.until || 0,
+      expired: rec.until <= now
+    };
+  }).sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+
+/**
+ * 解除封禁（同时清除 purge 标记）
+ */
+function unban(storage, ip) {
+  if (!storage || !ip) return false;
+  const existed = storage.has(BAN_KEY_PREFIX + ip);
+  storage.delete(BAN_KEY_PREFIX + ip);
+  storage.delete(PURGE_KEY_PREFIX + ip);
+  if (existed) {
+    console.warn('[security] 已解封 IP=' + ip);
+  }
+  return existed;
 }
 
 /**
@@ -212,6 +265,8 @@ module.exports = {
   computeSignature,
   checkBan,
   flagCheater,
+  listBans,
+  unban,
   shouldPurge,
   clearPurgeFlag,
   BAN_KEY_PREFIX,

@@ -4,7 +4,7 @@
  */
 
 const LeaderboardService = require('./service');
-const { verifySubmission, verifyAntiCheat, checkBan, flagCheater } = require('./security');
+const { verifySubmission, verifyAntiCheat, checkBan, flagCheater, listBans, unban } = require('./security');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
@@ -133,7 +133,16 @@ module.exports = function(app, context) {
       // L4: 封禁检查（作弊者封禁期内禁止提交）
       const ban = checkBan(service.storage, ip);
       if (ban.banned) {
-        return res.status(403).json({ success: false, error: '该 IP 已被封禁：' + (ban.reason || '作弊行为') });
+        // 返回 ban 详情供客户端弹窗展示（提示玩家联系管理员，而非误以为是 bug）
+        return res.status(403).json({
+          success: false,
+          error: '该 IP 已被封禁：' + (ban.reason || '作弊行为'),
+          banned: true,
+          banReason: ban.reason || '作弊行为',
+          banUntil: ban.until,
+          banAt: ban.at,
+          nickname: ban.nickname
+        });
       }
 
       // L1+L2: HMAC 签名 + 时间窗口 + nonce 防重放
@@ -146,10 +155,18 @@ module.exports = function(app, context) {
       const acCheck = verifyAntiCheat(gameId, req.body);
       if (!acCheck.ok) {
         // L4: 检测到作弊 → 封禁 IP（30 天）+ 清除该 IP 全部历史成绩
-        flagCheater(service.storage, ip, acCheck.error, 'purge');
+        flagCheater(service.storage, ip, acCheck.error, 'purge', nickname);
         const removed = service.purgeCheaterScores(ip, siteConfig);
-        console.warn(`[security] 作弊检测触发清除 IP=${ip} 移除 ${removed} 条历史成绩 原因=${acCheck.error}`);
-        return res.status(acCheck.code).json({ success: false, error: acCheck.error });
+        console.warn(`[security] 作弊检测触发清除 IP=${ip} nickname=${nickname || '-'} 移除 ${removed} 条历史成绩 原因=${acCheck.error}`);
+        // 返回 banned=true 触发客户端封禁弹窗
+        return res.status(acCheck.code).json({
+          success: false,
+          error: acCheck.error,
+          banned: true,
+          banReason: acCheck.error,
+          banUntil: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          nickname: nickname
+        });
       }
 
       // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算
@@ -203,6 +220,38 @@ module.exports = function(app, context) {
         return res.status(400).json({ success: false, error: result.error });
       }
       res.json(result);
+    });
+
+    // ===== 作弊与安全管理 API（管理后台 /securityoline 使用）=====
+    // 鉴权：可选 ADMIN_TOKEN（未设则仅靠 URL 隐藏，与 /adminoline 一致）
+
+    // 列出所有封禁记录
+    // GET /api/security/bans
+    app.get('/api/security/bans', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const bans = listBans(service.storage);
+      res.json({ success: true, bans, total: bans.length });
+    });
+
+    // 解除封禁
+    // DELETE /api/security/bans/:ip
+    app.delete('/api/security/bans/:ip', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const ip = decodeURIComponent(req.params.ip || '');
+      if (!ip) {
+        return res.status(400).json({ success: false, error: 'IP 不能为空' });
+      }
+      const existed = unban(service.storage, ip);
+      if (!existed) {
+        return res.status(404).json({ success: false, error: '未找到该 IP 的封禁记录' });
+      }
+      res.json({ success: true, ip });
     });
   }
   

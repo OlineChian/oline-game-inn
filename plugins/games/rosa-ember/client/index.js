@@ -295,7 +295,7 @@ async function submitWinToLeaderboard(mode, difficulty) {
 
   try {
     const sig = await window.ScoreSigner.sign({ gameId: 'rosa-ember', nickname, score: 1 });
-    await fetch('/api/leaderboard/rosa-ember', {
+    const response = await fetch('/api/leaderboard/rosa-ember', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -307,6 +307,8 @@ async function submitWinToLeaderboard(mode, difficulty) {
         signature: sig.signature
       })
     });
+    // 403 = IP 被封禁：弹窗提示玩家联系管理员
+    if (window.BanNotice && await window.BanNotice.handleIfBanned(response)) return;
   } catch (e) {
     console.warn('排行榜提交失败:', e);
   }

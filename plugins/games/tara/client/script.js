@@ -812,7 +812,7 @@ async function submitScore(score) {
 
     try {
         const sig = await window.ScoreSigner.sign({ gameId: 'tara-cards', nickname, score });
-        await fetch('/api/leaderboard/tara-cards', {
+        const response = await fetch('/api/leaderboard/tara-cards', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -828,6 +828,8 @@ async function submitScore(score) {
                 signature: sig.signature
             })
         });
+        // 403 = IP 被封禁：弹窗提示玩家联系管理员
+        if (window.BanNotice && await window.BanNotice.handleIfBanned(response)) return;
     } catch (error) {
         console.log('提交成绩失败:', error);
     }
