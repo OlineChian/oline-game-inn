@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BRAWL FRONTLINE - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/game-header.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="has-game-header">
+    <!-- 顶部栏（复用 game-header.css 样式类，避免全局污染） -->
+    <div id="site-game-header" class="game-header">
+        <a href="/#games" class="game-header-back">← 返回</a>
+        <div class="game-header-title">BRAWL FRONTLINE</div>
+        <div class="game-header-actions">
+            <button class="game-header-btn" id="bf-lb-btn">🏆 排行榜</button>
+        </div>
+    </div>
+
+    <!-- 顶部 HUD（精简：金币/券/波数/击杀/强化进度，无基地长条） -->
+    <div class="bf-hud">
+        <div class="bf-hud-item bf-hud-gold"><span class="bf-hud-icon">💰</span><span id="bf-gold">0</span></div>
+        <div class="bf-hud-item bf-hud-tickets"><span class="bf-hud-icon">🎫</span><span id="bf-tickets">0</span></div>
+        <div class="bf-hud-item bf-hud-wave"><span class="bf-hud-icon">🌊</span>第<span id="bf-wave">0</span>波</div>
+        <div class="bf-hud-item bf-hud-kills"><span class="bf-hud-icon">💀</span><span id="bf-kills">0</span></div>
+        <div class="bf-hud-buff">
+            <span class="bf-hud-buff-icon">⚡</span>
+            <div class="bf-buff-bar-wrap"><div class="bf-buff-bar" id="bf-buff-bar"></div></div>
+            <span id="bf-buff-text">0/40</span>
+        </div>
+        <button class="bf-hud-vault" id="bf-vault-btn" title="主题季宝库">🏦<span id="bf-vault-lv">1</span></button>
+    </div>
+
+    <!-- 主区域：全宽战场 -->
+    <div class="bf-main">
+        <div class="bf-canvas-wrap">
+            <canvas id="bf-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- 底部英雄卡片区（横向滑动） -->
+    <div class="bf-cards-scroll" id="bf-cards-scroll">
+        <div class="bf-cards" id="bf-cards"></div>
+    </div>
+
+    <!-- 卡片操作弹层（招募/升星，点击卡片时弹出） -->
+    <div class="bf-card-popup hidden" id="bf-card-popup">
+        <div class="bf-card-popup-arrow"></div>
+        <div class="bf-card-popup-btns" id="bf-card-popup-btns"></div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="bf-toast" class="bf-toast"></div>
+
+    <!-- 通用弹窗（英雄选择/强化/游戏结束） -->
+    <div id="bf-modal" class="bf-modal hidden">
+        <div class="bf-modal-content">
+            <div id="bf-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- 排行榜弹窗 -->
+    <div id="bf-lb-modal" class="bf-modal hidden">
+        <div class="bf-modal-content bf-lb-content">
+            <button class="bf-modal-close" id="bf-lb-close">×</button>
+            <div class="bf-modal-title">🏆 排行榜</div>
+            <div id="bf-lb-list" class="bf-lb-list"></div>
+        </div>
+    </div>
+
+    <script src="/score-signer.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

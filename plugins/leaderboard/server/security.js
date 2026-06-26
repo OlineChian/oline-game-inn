@@ -162,22 +162,12 @@ function verifySubmission(gameId, body) {
 }
 
 /**
- * 反作弊遥测校验（防 AFK / 障碍物删除刷分）
- *
- * 客户端在 extra.antiCheat 中附带：
- *   - inputCount：游戏中总输入次数（按键/触屏均计 1 次）
- *   - maxNoInputMs：最长无操作间隔（毫秒）
- *   - playedMs：游戏时长（毫秒）
- *
- * 校验规则：
- *   1. 时长-分数一致性：playedMs >= score * 60
- *      score = frameCount/10，60fps 下 6 分/秒，阈值允许最高 ~16 分/秒（兼容 120/144Hz）
- *   2. 输入频率：inputCount >= floor(score / 30)
- *      正常约每 3-5 秒需输入一次（避障），阈值放宽到每 5 秒 1 次
- *   3. AFK 检测：maxNoInputMs < 10000
- *      超过 10 秒无操作视为挂机（easy 难度首障约 7 秒到达，留足余量）
+ * 反作弊遥测校验分发器（防 AFK / 障碍物删除刷分 / 状态篡改）
  *
  * 无 extra.antiCheat 字段时跳过校验（向后兼容未接入的游戏）。
+ * 有 antiCheat 时按 gameId 分发到专用校验（不同游戏得分节奏不同，阈值独立）：
+ *   - buster-montage → verifyBusterAntiCheat（状态快照 + AFK）
+ *   - 其他（8bit-arcade 等）→ verifyDefaultAntiCheat（时长-分数一致性 + AFK）
  *
  * @param {string} gameId
  * @param {object} body - req.body，需含 score + extra.antiCheat
@@ -193,6 +183,30 @@ function verifyAntiCheat(gameId, body) {
     return { ok: false, error: 'score 格式错误', code: 400 };
   }
 
+  // 按游戏分发到专用校验
+  if (gameId === 'buster-montage') {
+    return verifyBusterAntiCheat(score, ac, extra);
+  }
+  return verifyDefaultAntiCheat(score, ac);
+}
+
+/**
+ * 跑酷类反作弊校验（8bit-arcade 等）
+ *
+ * 客户端在 extra.antiCheat 中附带：
+ *   - inputCount：游戏中总输入次数（按键/触屏均计 1 次）
+ *   - maxNoInputMs：最长无操作间隔（毫秒）
+ *   - playedMs：游戏时长（毫秒）
+ *
+ * 校验规则：
+ *   1. 时长-分数一致性：playedMs >= score * 60
+ *      score = frameCount/10，60fps 下 6 分/秒，阈值允许最高 ~16 分/秒（兼容 120/144Hz）
+ *   2. 输入频率：inputCount >= floor(score / 30)
+ *      正常约每 3-5 秒需输入一次（避障），阈值放宽到每 5 秒 1 次
+ *   3. AFK 检测：maxNoInputMs < 10000
+ *      超过 10 秒无操作视为挂机（easy 难度首障约 7 秒到达，留足余量）
+ */
+function verifyDefaultAntiCheat(score, ac) {
   const inputCount = Number(ac.inputCount);
   const maxNoInputMs = Number(ac.maxNoInputMs);
   const playedMs = Number(ac.playedMs);
@@ -221,6 +235,129 @@ function verifyAntiCheat(gameId, body) {
   return { ok: true };
 }
 
+/**
+ * buster-montage 专用反作弊校验（弹弹珠游戏）
+ *
+ * 得分来源：击碎砖块（10/20/30/40/50/100 分）+ 通关奖励（lives * 100）
+ * 攻击面：篡改砖块数量/挡板宽度/生命数/砖块分值
+ *
+ * 客户端在 extra.antiCheat 中附带游戏状态快照：
+ *   - bricksDestroyed：击碎砖块数
+ *   - totalBricks：该难度标准总砖块数
+ *   - finalLives：结束时生命数
+ *   - won：是否通关（布尔）
+ *   - maxPaddleWidth：游戏中挡板最大宽度（含 wide 道具加宽）
+ *   - playedMs：游戏时长（毫秒）
+ *   - inputCount：输入次数
+ *   - maxNoInputMs：最长无操作间隔（毫秒）
+ *
+ * 校验规则：
+ *   1. 难度合法性：difficulty 必须是 easy/normal/hard
+ *   2. 总砖块数一致性：totalBricks 必须匹配服务端配置（防篡改砖块总数）
+ *   3. 击碎数上限：bricksDestroyed <= totalBricks（防恶意添加砖块）
+ *   4. 通关一致性：won ⟺ bricksDestroyed === totalBricks
+ *   5. 生命数范围：0 <= finalLives <= 5（life 道具上限 5）
+ *   6. 挡板宽度上限：maxPaddleWidth <= paddleWidth * 2.5（wide 道具可叠加加宽，留余量）
+ *   7. 分数上限：score <= 理论最高分（防篡改砖块分值/生命数）
+ *   8. 时长下限：playedMs >= 3000（防秒通关脚本）
+ *   9. AFK 检测：maxNoInputMs < 15000（弹珠球节奏比跑酷慢，15 秒阈值）
+ *   10. 输入下限：inputCount >= 3（至少几次操作）
+ */
+const BUSTER_CONFIGS = {
+  easy:   { brickRows: 3, brickCols: 7, totalBricks: 21, paddleWidth: 120 },
+  normal: { brickRows: 4, brickCols: 8, totalBricks: 32, paddleWidth: 100 },
+  hard:   { brickRows: 5, brickCols: 9, totalBricks: 45, paddleWidth: 80 }
+};
+const BUSTER_BRICK_POINTS = [10, 20, 30, 40, 50, 100];
+const BUSTER_MAX_LIVES = 5;
+const BUSTER_WIDE_TOLERANCE = 2.5; // wide 道具可叠加，留 2.5 倍余量
+
+function computeBusterMaxScore(difficulty, won) {
+  const config = BUSTER_CONFIGS[difficulty];
+  if (!config) return -1;
+  const { brickRows, brickCols } = config;
+  let maxBrickScore = 0;
+  for (let row = 0; row < brickRows; row++) {
+    const points = BUSTER_BRICK_POINTS[Math.min(row, BUSTER_BRICK_POINTS.length - 1)];
+    maxBrickScore += brickCols * points;
+  }
+  const maxBonus = won ? BUSTER_MAX_LIVES * 100 : 0;
+  return maxBrickScore + maxBonus;
+}
+
+function verifyBusterAntiCheat(score, ac, extra) {
+  const difficulty = extra && extra.difficulty;
+  if (!difficulty || !BUSTER_CONFIGS[difficulty]) {
+    return { ok: false, error: '难度非法或缺失', code: 400 };
+  }
+  const config = BUSTER_CONFIGS[difficulty];
+
+  // won 字段（布尔类型，单独校验）
+  if (typeof ac.won !== 'boolean') {
+    return { ok: false, error: 'antiCheat.won 字段格式错误', code: 400 };
+  }
+  const won = ac.won;
+
+  // 数值字段提取与格式校验
+  const numFields = ['bricksDestroyed', 'totalBricks', 'finalLives', 'maxPaddleWidth', 'playedMs', 'inputCount', 'maxNoInputMs'];
+  const v = {};
+  for (const f of numFields) {
+    v[f] = Number(ac[f]);
+    if (!Number.isFinite(v[f])) {
+      return { ok: false, error: `antiCheat.${f} 字段格式错误`, code: 400 };
+    }
+    if (v[f] < 0) {
+      return { ok: false, error: `antiCheat.${f} 字段非法（负数）`, code: 400 };
+    }
+  }
+
+  // 1. 总砖块数一致性：客户端上报的 totalBricks 必须匹配服务端配置
+  if (v.totalBricks !== config.totalBricks) {
+    return { ok: false, error: '砖块总数与难度配置不符', code: 400 };
+  }
+  // 2. 击碎砖块数上限：bricksDestroyed <= totalBricks（防恶意添加砖块）
+  if (v.bricksDestroyed > v.totalBricks) {
+    return { ok: false, error: '击碎砖块数超过总数', code: 400 };
+  }
+  // 3. 通关一致性：won=true ⟺ bricksDestroyed === totalBricks
+  if (won && v.bricksDestroyed !== v.totalBricks) {
+    return { ok: false, error: '通关状态与击碎砖块数不一致', code: 400 };
+  }
+  if (!won && v.bricksDestroyed === v.totalBricks) {
+    return { ok: false, error: '击碎所有砖块但未通关（状态异常）', code: 400 };
+  }
+  // 4. 通关时生命数至少 1（winGame 时 lives >= 1，否则会先触发 gameOver）
+  if (won && v.finalLives < 1) {
+    return { ok: false, error: '通关时生命数异常', code: 400 };
+  }
+  // 5. 生命数上限：life 道具上限 5
+  if (v.finalLives > BUSTER_MAX_LIVES) {
+    return { ok: false, error: '生命数超过上限', code: 400 };
+  }
+  // 6. 挡板宽度上限：防恶意扩大挡板（wide 道具可叠加，留 2.5 倍余量）
+  if (v.maxPaddleWidth > config.paddleWidth * BUSTER_WIDE_TOLERANCE) {
+    return { ok: false, error: '挡板宽度异常', code: 400 };
+  }
+  // 7. 分数上限：score <= 理论最高分（防篡改砖块分值/生命数）
+  const maxScore = computeBusterMaxScore(difficulty, won);
+  if (score > maxScore) {
+    return { ok: false, error: '分数超过理论上限', code: 400 };
+  }
+  // 8. 时长下限：至少 3 秒（防秒通关脚本）
+  if (v.playedMs < 3000) {
+    return { ok: false, error: '游戏时长过短', code: 400 };
+  }
+  // 9. AFK 检测：弹珠球节奏比跑酷慢，15 秒阈值
+  if (v.maxNoInputMs >= 15000) {
+    return { ok: false, error: '检测到长时间无操作', code: 400 };
+  }
+  // 10. 输入下限：至少 3 次操作
+  if (v.inputCount < 3) {
+    return { ok: false, error: '输入次数异常', code: 400 };
+  }
+  return { ok: true };
+}
+
 module.exports = {
   verifySubmission,
   verifyAntiCheat,
@@ -232,5 +369,7 @@ module.exports = {
       clearInterval(cleanupTimer);
       cleanupTimer = null;
     }
-  }
+  },
+  // 暴露供测试：计算 buster 理论最高分
+  _computeBusterMaxScore: computeBusterMaxScore
 };

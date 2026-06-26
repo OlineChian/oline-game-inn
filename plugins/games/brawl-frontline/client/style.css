@@ -1,0 +1,339 @@
+/* BRAWL FRONTLINE 样式
+   主题色全部使用 /common.css 的 CSS 变量（橙金黑），不硬编码 hex
+   布局：顶部 HUD + 全宽 Canvas + 底部英雄卡片区（手机端友好） */
+
+/* 通用隐藏类 */
+.hidden { display: none !important; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-dark-bg);
+  color: var(--text-white);
+  font-family: var(--font-body);
+}
+.game-header { flex-shrink: 0; }
+
+/* ============ 顶部 HUD（精简，彩色背景区分） ============ */
+.bf-hud {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--color-orange-main);
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+.bf-hud-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--radius-md);
+  white-space: nowrap;
+}
+.bf-hud-icon { font-size: 15px; }
+.bf-hud-gold { background: rgba(248,201,63,0.2); color: var(--color-gold-accent); }
+.bf-hud-tickets { background: rgba(58,134,255,0.2); color: #6fb0ff; }
+.bf-hud-wave { background: rgba(237,117,38,0.2); color: var(--color-orange-main); }
+.bf-hud-kills { background: rgba(255,107,107,0.2); color: #ff8a8a; }
+
+/* 强化进度条 */
+.bf-hud-buff {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--radius-md);
+  background: rgba(155,93,229,0.2); color: #c8a8ff;
+  flex: 1; min-width: 100px; max-width: 200px;
+}
+.bf-hud-buff-icon { font-size: 14px; }
+.bf-buff-bar-wrap {
+  flex: 1; height: 8px; background: var(--bg-input-border);
+  border-radius: var(--radius-sm); overflow: hidden; min-width: 40px;
+}
+.bf-buff-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #9b5de5, #c8a8ff);
+  transition: width 0.2s ease;
+}
+#bf-buff-text { font-size: 11px; min-width: 36px; text-align: right; }
+
+/* 宝库按钮 */
+.bf-hud-vault {
+  padding: 4px 8px; border: none; border-radius: var(--radius-md);
+  background: rgba(244,162,97,0.2); color: #f4a261;
+  font-size: 13px; font-weight: bold; cursor: pointer; white-space: nowrap;
+}
+.bf-hud-vault:active { transform: scale(0.95); }
+
+/* ============ 主区域：全宽战场 ============ */
+.bf-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.bf-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  position: relative;
+}
+#bf-canvas { display: block; background: #0a0a0a; }
+
+/* ============ 底部英雄卡片区（横向滑动） ============ */
+.bf-cards-scroll {
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-top: 2px solid var(--color-orange-main);
+  padding: 8px 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.bf-cards {
+  display: flex;
+  gap: 8px;
+  min-width: min-content;
+}
+.bf-card {
+  flex-shrink: 0;
+  width: 110px;
+  border-radius: var(--radius-md);
+  padding: 6px 8px;
+  cursor: pointer;
+  position: relative;
+  background: var(--bg-card-alt);
+  border: 2px solid transparent;
+  transition: transform 0.12s, border-color 0.12s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.bf-card:active { transform: scale(0.96); }
+.bf-card.selected { border-color: var(--color-gold-accent); }
+/* 卡片顶部色条（英雄专属色） */
+.bf-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--card-color, #888);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+/* 卡片内容 */
+.bf-card-top {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; margin-top: 2px;
+}
+.bf-card-stars { color: var(--color-gold-accent); font-weight: bold; }
+.bf-card-hp { color: #4fe0b0; font-weight: bold; }
+.bf-card-name {
+  font-size: 20px; font-weight: bold; text-align: center;
+  margin: 4px 0 2px 0; color: #fff;
+}
+.bf-card-stats {
+  font-size: 10px; color: var(--text-secondary);
+  text-align: center; line-height: 1.3;
+}
+.bf-card-super {
+  font-size: 10px; text-align: center; margin-top: 3px;
+  padding: 2px 4px; border-radius: var(--radius-sm);
+  font-weight: bold;
+}
+.bf-card-super.locked {
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.05);
+}
+.bf-card-super.unlocked {
+  color: var(--color-gold-accent);
+  background: rgba(248,201,63,0.15);
+}
+.bf-card-count {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--color-orange-main); color: #fff;
+  font-size: 10px; font-weight: bold;
+  padding: 1px 6px; border-radius: var(--radius-xl);
+  min-width: 18px; text-align: center;
+}
+
+/* ============ 卡片操作弹层（招募/升星） ============ */
+.bf-card-popup {
+  position: fixed;
+  z-index: 35;
+  background: var(--bg-card);
+  border: 2px solid var(--color-gold-accent);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  box-shadow: var(--shadow-modal);
+  display: flex; flex-direction: column; gap: 6px;
+  min-width: 120px;
+}
+.bf-card-popup.hidden { display: none; }
+.bf-card-popup-arrow {
+  position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid var(--color-gold-accent);
+}
+.bf-popup-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 10px; border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: bold; cursor: pointer;
+  background: var(--color-orange-main); color: #fff;
+  gap: 2px;
+}
+.bf-popup-btn:active { transform: scale(0.96); }
+.bf-popup-btn:disabled {
+  background: var(--bg-input-border); color: var(--text-muted);
+  cursor: not-allowed;
+}
+.bf-popup-btn-cost { font-size: 10px; opacity: 0.9; }
+.bf-popup-btn.gold { background: var(--color-gold-accent); color: #000; }
+.bf-popup-btn.gold:disabled { background: var(--bg-input-border); color: var(--text-muted); }
+
+/* ============ Toast ============ */
+.bf-toast {
+  position: fixed; left: 50%; bottom: 160px;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-overlay); color: var(--text-white);
+  padding: 8px 18px; border-radius: var(--radius-md);
+  font-size: 13px; opacity: 0; pointer-events: none;
+  transition: all 0.25s ease; z-index: 40;
+}
+.bf-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============ 弹窗 ============ */
+.bf-modal {
+  position: fixed; inset: 0; background: var(--bg-overlay);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; padding: 16px;
+}
+.bf-modal.hidden { display: none; }
+.bf-modal-content {
+  background: var(--bg-card); border: 2px solid var(--color-orange-main);
+  border-radius: var(--radius-lg); padding: 20px;
+  max-width: 460px; width: 100%; max-height: 85vh; overflow-y: auto;
+  box-shadow: var(--shadow-modal); position: relative;
+}
+.bf-modal-close {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: none; color: var(--text-secondary);
+  font-size: 24px; cursor: pointer;
+}
+.bf-modal-title {
+  text-align: center; font-size: 20px; font-weight: bold;
+  color: var(--color-gold-accent); margin-bottom: 16px;
+}
+
+/* ---- 英雄选择卡片 ---- */
+.bf-hero-choices { display: flex; flex-direction: column; gap: 10px; }
+.bf-hero-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px; border: 2px solid var(--bg-input-border);
+  border-radius: var(--radius-md); cursor: pointer;
+  transition: border-color 0.2s, transform 0.1s;
+}
+.bf-hero-card:hover { border-color: var(--color-orange-main); }
+.bf-hero-card:active { transform: scale(0.98); }
+.bf-hero-card-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 20px; color: #fff; margin-bottom: 6px;
+  border: 3px solid #fff;
+}
+.bf-hero-card-name { font-size: 16px; font-weight: bold; }
+.bf-hero-card-role { font-size: 12px; color: var(--text-muted); }
+.bf-hero-card-stat { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.bf-hero-card-super { font-size: 11px; color: var(--color-gold-accent); margin-top: 2px; font-weight: bold; }
+
+/* ---- 强化卡片 ---- */
+.bf-buff-choices { display: flex; flex-direction: column; gap: 10px; }
+.bf-buff-card {
+  padding: 14px; border: 2px solid; border-radius: var(--radius-md);
+  cursor: pointer; transition: transform 0.1s;
+}
+.bf-buff-card:active { transform: scale(0.98); }
+.bf-buff-quality { font-size: 11px; font-weight: bold; }
+.bf-buff-name { font-size: 15px; font-weight: bold; margin: 4px 0; }
+.bf-buff-desc { font-size: 12px; color: var(--text-secondary); }
+
+/* ---- 游戏结束 ---- */
+.bf-gameover-score {
+  text-align: center; font-size: 40px; font-weight: bold;
+  color: var(--color-gold-accent); margin: 8px 0;
+}
+.bf-gameover-score span { font-size: 16px; color: var(--text-secondary); }
+.bf-gameover-rank { text-align: center; color: var(--color-success); margin-bottom: 12px; font-weight: bold; }
+.bf-gameover-detail {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px;
+  font-size: 12px; color: var(--text-secondary);
+  padding: 10px; background: var(--bg-card-alt);
+  border-radius: var(--radius-md); margin-bottom: 14px;
+}
+.bf-gameover-btns { display: flex; gap: 10px; }
+.bf-btn-primary, .bf-btn-secondary {
+  flex: 1; padding: 10px; border: none; border-radius: var(--radius-md);
+  font-weight: bold; cursor: pointer; font-size: 14px;
+}
+.bf-btn-primary { background: var(--color-orange-main); color: var(--text-white); }
+.bf-btn-secondary { background: var(--bg-input-border); color: var(--text-white); }
+
+/* ---- 排行榜 ---- */
+.bf-lb-content { min-height: 300px; }
+.bf-lb-list { max-height: 50vh; overflow-y: auto; }
+.bf-lb-loading { text-align: center; padding: 30px; color: var(--text-muted); }
+.bf-lb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-bottom: 1px solid var(--bg-input-border);
+}
+.bf-lb-rank {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 13px; flex-shrink: 0;
+  background: var(--bg-input-border); color: var(--text-white);
+}
+.bf-lb-rank.rank-1 { background: var(--color-gold-accent); color: #000; }
+.bf-lb-rank.rank-2 { background: #b8b8b8; color: #000; }
+.bf-lb-rank.rank-3 { background: #cd7f32; color: #fff; }
+.bf-lb-name { flex: 1; font-size: 14px; }
+.bf-lb-score { font-size: 14px; font-weight: bold; color: var(--color-gold-accent); }
+.bf-lb-unit { font-size: 11px; color: var(--text-muted); margin-left: 2px; }
+.bf-lb-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.bf-lb-empty-icon { font-size: 32px; margin-bottom: 8px; }
+.bf-lb-empty-tip { font-size: 12px; margin-top: 4px; }
+
+/* ============ 宝库升级弹窗 ============ */
+.bf-vault-modal {
+  position: fixed; inset: 0; background: var(--bg-overlay);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; padding: 16px;
+}
+.bf-vault-modal.hidden { display: none; }
+.bf-vault-content {
+  background: var(--bg-card); border: 2px solid var(--color-gold-accent);
+  border-radius: var(--radius-lg); padding: 20px;
+  max-width: 320px; width: 100%; text-align: center;
+}
+.bf-vault-title { font-size: 18px; font-weight: bold; color: var(--color-gold-accent); margin-bottom: 10px; }
+.bf-vault-info { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+
+/* ============ 手机端适配 ============ */
+@media (max-width: 640px) {
+  .bf-hud { font-size: 12px; gap: 4px; padding: 5px 6px; }
+  .bf-hud-item { padding: 3px 7px; }
+  .bf-hud-icon { font-size: 13px; }
+  .bf-hud-buff { min-width: 70px; }
+  #bf-buff-text { font-size: 10px; min-width: 30px; }
+  .bf-card { width: 96px; padding: 5px 6px; }
+  .bf-card-name { font-size: 17px; }
+  .bf-card-stats { font-size: 9px; }
+  .bf-card-super { font-size: 9px; }
+}

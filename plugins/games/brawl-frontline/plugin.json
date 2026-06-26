@@ -1,0 +1,21 @@
+{
+  "id": "brawl-frontline",
+  "name": "BRAWL FRONTLINE",
+  "version": "1.0.0",
+  "description": "单人 Roguelike 塔防基地经营，招募英雄、激活羁绊、挑战无限波次",
+  "type": "game",
+  "icon": "⚔️",
+  "author": "Oline Team",
+  "entry": {
+    "client": "client/index.html"
+  },
+  "dependencies": ["leaderboard"],
+  "provides": ["brawl-frontline-game"],
+  "config": {
+    "leaderboard": {
+      "sort": "desc",
+      "unit": "分",
+      "label": "得分"
+    }
+  }
+}

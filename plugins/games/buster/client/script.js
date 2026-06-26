@@ -90,6 +90,43 @@ let keys = {
     right: false
 };
 
+// ==================== 输入遥测与游戏状态快照（防 AFK / 状态篡改）====================
+// 追踪游戏中玩家的按键/触屏事件，提交时附带至服务端校验：
+//   - inputCount：总输入次数（任何按键/触屏均计 1 次）
+//   - maxNoInputMs：最长无操作间隔（用于检测 AFK）
+//   - playedMs：游戏时长（用于时长-分数一致性校验）
+//   - bricksDestroyed/totalBricks：击碎砖块数与总数（防恶意添加砖块）
+//   - maxPaddleWidth：挡板最大宽度（防恶意修改地板长度）
+function createInputTracker() {
+    return { count: 0, lastTime: 0, maxGap: 0, startMs: 0, endMs: 0, active: false };
+}
+function startInputTracker(t) {
+    t.count = 0; t.lastTime = 0; t.maxGap = 0;
+    t.startMs = Date.now(); t.endMs = 0; t.active = true;
+}
+function recordInput(t) {
+    if (!t.active) return;
+    const now = Date.now();
+    if (t.lastTime > 0) {
+        const gap = now - t.lastTime;
+        if (gap > t.maxGap) t.maxGap = gap;
+    }
+    t.lastTime = now;
+    t.count++;
+}
+function stopInputTracker(t) {
+    t.active = false;
+    t.endMs = Date.now();
+    // 整局无任何输入：maxGap 记为总时长
+    if (t.lastTime === 0) t.maxGap = t.endMs - t.startMs;
+}
+function getTelemetry(t) {
+    return { inputCount: t.count, maxNoInputMs: t.maxGap, playedMs: t.endMs - t.startMs };
+}
+let inputTracker = createInputTracker();
+let maxPaddleWidth = 80;
+let bricksDestroyed = 0;
+
 function initGame() {
     const diff = difficulties[difficulty];
 
@@ -112,11 +149,13 @@ function initGame() {
     paddle.x = canvas.width / 2 - paddle.width / 2;
     paddle.y = canvas.height - 30;
     paddle.dx = 0;
+    maxPaddleWidth = diff.paddleWidth;
 
     ball.speed = diff.ballSpeed;
     resetBall();
 
     createBricks(diff.brickRows, diff.brickCols);
+    bricksDestroyed = 0;
     updateBricksLeft();
 
     lastTime = performance.now();
@@ -164,6 +203,10 @@ function updateBricksLeft() {
 
 function launchBall() {
     if (gameState !== 'ready') return;
+
+    // 首次发射时启动输入追踪（失球重发不重置，保持整局连续性）
+    if (!inputTracker.active) startInputTracker(inputTracker);
+    recordInput(inputTracker);
 
     gameState = 'playing';
     startHint.style.display = 'none';
@@ -282,6 +325,7 @@ function updateBall(b, deltaTime) {
             if (brick.hits <= 0) {
                 brick.visible = false;
                 score += brick.points;
+                bricksDestroyed++;
                 scoreEl.textContent = score;
                 updateBricksLeft();
 
@@ -386,6 +430,7 @@ function applyPowerUp(powerUp) {
         case 'wide':
             activePowerUps.wide = powerUp.duration;
             paddle.width *= 1.5;
+            if (paddle.width > maxPaddleWidth) maxPaddleWidth = paddle.width;
             break;
         case 'slow':
             activePowerUps.slow = powerUp.duration;
@@ -459,6 +504,7 @@ function loseLife() {
 
 function gameOver() {
     gameState = 'gameover';
+    stopInputTracker(inputTracker);
 
     if (score > bestScore) {
         bestScore = score;
@@ -466,7 +512,7 @@ function gameOver() {
         bestScoreEl.textContent = bestScore;
     }
 
-    submitScore(score);
+    submitScore(score, false);
 
     gameStatusEl.className = 'game-status show lose';
     gameStatusEl.innerHTML = `
@@ -477,6 +523,7 @@ function gameOver() {
 
 function winGame() {
     gameState = 'win';
+    stopInputTracker(inputTracker);
 
     const bonus = lives * 100;
     score += bonus;
@@ -488,7 +535,7 @@ function winGame() {
         bestScoreEl.textContent = bestScore;
     }
 
-    submitScore(score);
+    submitScore(score, true);
 
     gameStatusEl.className = 'game-status show win';
     gameStatusEl.innerHTML = `
@@ -625,6 +672,7 @@ function drawParticles() {
 }
 
 document.addEventListener('keydown', (e) => {
+    if (!e.repeat) recordInput(inputTracker);
     if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         keys.left = true;
     }
@@ -648,6 +696,7 @@ document.addEventListener('keyup', (e) => {
 
 leftBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    recordInput(inputTracker);
     keys.left = true;
 });
 leftBtn.addEventListener('touchend', (e) => {
@@ -655,6 +704,7 @@ leftBtn.addEventListener('touchend', (e) => {
     keys.left = false;
 });
 leftBtn.addEventListener('mousedown', () => {
+    recordInput(inputTracker);
     keys.left = true;
 });
 leftBtn.addEventListener('mouseup', () => {
@@ -666,6 +716,7 @@ leftBtn.addEventListener('mouseleave', () => {
 
 rightBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    recordInput(inputTracker);
     keys.right = true;
 });
 rightBtn.addEventListener('touchend', (e) => {
@@ -673,6 +724,7 @@ rightBtn.addEventListener('touchend', (e) => {
     keys.right = false;
 });
 rightBtn.addEventListener('mousedown', () => {
+    recordInput(inputTracker);
     keys.right = true;
 });
 rightBtn.addEventListener('mouseup', () => {
@@ -683,10 +735,12 @@ rightBtn.addEventListener('mouseleave', () => {
 });
 
 launchBtn.addEventListener('click', () => {
+    recordInput(inputTracker);
     launchBall();
 });
 
 canvas.addEventListener('click', () => {
+    recordInput(inputTracker);
     launchBall();
 });
 
@@ -757,7 +811,7 @@ async function loadLeaderboard() {
     }
 }
 
-async function submitScore(score) {
+async function submitScore(score, won) {
     const nickname = localStorage.getItem('gameNickname');
     if (!nickname || !nickname.trim()) {
         console.log('未设置昵称，跳过成绩提交');
@@ -767,6 +821,11 @@ async function submitScore(score) {
         console.log('ScoreSigner 未加载，跳过成绩提交');
         return;
     }
+
+    // 游戏状态快照 + 输入遥测（服务端 verifyBusterAntiCheat 校验）
+    const diff = difficulties[difficulty];
+    const totalBricks = diff.brickRows * diff.brickCols;
+    const telemetry = getTelemetry(inputTracker);
 
     try {
         const sig = await window.ScoreSigner.sign({ gameId: 'buster-montage', nickname, score });
@@ -778,7 +837,19 @@ async function submitScore(score) {
             body: JSON.stringify({
                 nickname: nickname,
                 score: score,
-                extra: { difficulty: difficulty },
+                extra: {
+                    difficulty: difficulty,
+                    antiCheat: {
+                        bricksDestroyed: bricksDestroyed,
+                        totalBricks: totalBricks,
+                        finalLives: lives,
+                        won: won,
+                        maxPaddleWidth: maxPaddleWidth,
+                        playedMs: telemetry.playedMs,
+                        inputCount: telemetry.inputCount,
+                        maxNoInputMs: telemetry.maxNoInputMs
+                    }
+                },
                 timestamp: sig.timestamp,
                 nonce: sig.nonce,
                 signature: sig.signature
