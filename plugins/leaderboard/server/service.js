@@ -181,11 +181,14 @@ class LeaderboardService {
   /**
    * 根据 config.aggregate 选择聚合策略
    * - 'sum'：按昵称合并并求和 score（用于累计计数场景，如胜场）
-   * - 默认：按昵称去重，保留排序后的首条（最佳）记录
+   *   求和后分数为累计值，必须按 sortType 重新排序，
+   *   否则保留的是首条记录在原数组中的位置（按单局分数排序），胜场数多者不会排在前面。
+   * - 默认：按昵称去重，保留排序后的首条（最佳）记录（已按单局分数排序，无需重排）
    */
   aggregateByConfig(sortedRecords, config) {
     if (config && config.aggregate === 'sum') {
-      return this.sumByNickname(sortedRecords);
+      const summed = this.sumByNickname(sortedRecords);
+      return this.sortBoard(summed, config.sort);
     }
     return this.dedupeByNickname(sortedRecords);
   }
