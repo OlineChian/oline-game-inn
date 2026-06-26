@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { initCore } = require('./index');
+const { registerAdminRoutes } = require('./admin-routes');
 const { globalStore } = require('../storage');
 
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,9 @@ async function bootstrap() {
   if (!core) {
     console.warn('[Bootstrap] Core initialization failed, running minimal server');
   }
+
+  // 注册管理员运维路由（隐藏 URL，可选 ADMIN_TOKEN 校验）
+  registerAdminRoutes(app);
 
   server.listen(PORT, () => {
     console.log('========================================');

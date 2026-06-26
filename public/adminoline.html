@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>排行榜管理</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e2e5ea;
+    --text: #1f2329;
+    --text-muted: #8a9099;
+    --primary: #4f7cff;
+    --primary-hover: #3a63d8;
+    --danger: #e5484d;
+    --danger-hover: #c73641;
+    --success: #30a46c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 24px 0 0;
+    font-weight: 600;
+  }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  select, input[type="text"], input[type="number"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+  }
+  select:focus, input:focus { border-color: var(--primary); }
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: var(--bg); }
+  button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  button.primary:hover { background: var(--primary-hover); }
+  button.danger { color: var(--danger); border-color: var(--border); }
+  button.danger:hover { background: #fef0f0; }
+  button.sm { padding: 3px 10px; font-size: 13px; }
+  .token-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  th {
+    background: #fafbfc;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+  td.editable input { width: 100%; padding: 3px 6px; }
+  .extra-cell {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .time-cell { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+  .rank-cell { color: var(--text-muted); width: 50px; }
+  .ops { display: flex; gap: 6px; white-space: nowrap; }
+  .status {
+    margin-top: 16px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok { background: #eaf6ef; color: var(--success); }
+  .status.err { background: #fdeeee; color: var(--danger); }
+  .empty { text-align: center; color: var(--text-muted); padding: 40px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>排行榜管理</h1>
+    <div class="toolbar">
+      <select id="gameSelect"><option value="">加载中...</option></select>
+      <button class="primary" onclick="loadBoard()">刷新</button>
+    </div>
+    <div class="token-wrap">
+      <label for="adminToken">管理员Token(可选)</label>
+      <input type="text" id="adminToken" placeholder="未设ADMIN_TOKEN则留空" style="width:200px">
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="rank-cell">#</th>
+        <th>昵称</th>
+        <th>分数</th>
+        <th>附加信息</th>
+        <th>时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="boardBody">
+      <tr><td colspan="6" class="empty">请选择游戏</td></tr>
+    </tbody>
+  </table>
+
+  <div class="status" id="status"></div>
+
+<script>
+var currentGame = '';
+var adminToken = '';
+
+// Token 持久化（localStorage，避免每次输入）
+(function initToken() {
+  var saved = localStorage.getItem('adminToken');
+  if (saved) {
+    document.getElementById('adminToken').value = saved;
+    adminToken = saved;
+  }
+})();
+document.getElementById('adminToken').addEventListener('change', function() {
+  adminToken = this.value.trim();
+  localStorage.setItem('adminToken', adminToken);
+});
+
+function authHeaders() {
+  var h = { 'Content-Type': 'application/json' };
+  if (adminToken) h['x-admin-token'] = adminToken;
+  return h;
+}
+
+function showStatus(msg, isOk) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status show ' + (isOk ? 'ok' : 'err');
+  if (isOk) setTimeout(function() { el.className = 'status'; }, 2500);
+}
+
+// 加载游戏列表
+function loadGames() {
+  fetch('/api/games?all=true')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) return;
+      var sel = document.getElementById('gameSelect');
+      sel.innerHTML = '';
+      var hasLeaderboard = (data.games || []).filter(function(g) { return g.leaderboard; });
+      if (hasLeaderboard.length === 0) {
+        sel.innerHTML = '<option value="">无可用游戏</option>';
+        return;
+      }
+      hasLeaderboard.forEach(function(g) {
+        var opt = document.createElement('option');
+        opt.value = g.id;
+        opt.textContent = g.name + ' (' + g.id + ')';
+        sel.appendChild(opt);
+      });
+      currentGame = sel.value;
+      loadBoard();
+    })
+    .catch(function(err) { showStatus('加载游戏列表失败: ' + err.message, false); });
+}
+
+// 加载排行榜
+function loadBoard() {
+  currentGame = document.getElementById('gameSelect').value;
+  if (!currentGame) return;
+  fetch('/api/leaderboard/' + encodeURIComponent(currentGame) + '?mode=history&limit=9999')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) {
+        showStatus(data.error || '加载失败', false);
+        return;
+      }
+      renderBoard(data.leaderboard || [], data.config || {});
+    })
+    .catch(function(err) { showStatus('加载失败: ' + err.message, false); });
+}
+
+function fmtTime(ts) {
+  if (!ts) return '-';
+  var d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleString('zh-CN', { hour12: false });
+}
+
+function fmtExtra(extra) {
+  if (!extra || Object.keys(extra).length === 0) return '-';
+  return JSON.stringify(extra);
+}
+
+function renderBoard(records, config) {
+  var body = document.getElementById('boardBody');
+  if (!records || records.length === 0) {
+    body.innerHTML = '<tr><td colspan="6" class="empty">暂无记录</td></tr>';
+    return;
+  }
+  body.innerHTML = '';
+  // 已按 config.sort 排序，这里直接显示
+  records.forEach(function(r, idx) {
+    var tr = document.createElement('tr');
+    tr.dataset.timestamp = r.timestamp;
+    tr.innerHTML =
+      '<td class="rank-cell">' + (idx + 1) + '</td>' +
+      '<td class="nickname" data-val="' + escapeAttr(r.nickname) + '">' + escapeHtml(r.nickname) + '</td>' +
+      '<td class="score" data-val="' + r.score + '">' + r.score + '</td>' +
+      '<td class="extra-cell" title="' + escapeAttr(fmtExtra(r.extra)) + '">' + escapeHtml(fmtExtra(r.extra)) + '</td>' +
+      '<td class="time-cell">' + fmtTime(r.timestamp) + '</td>' +
+      '<td class="ops">' +
+        '<button class="sm" onclick="editRow(this)">编辑</button>' +
+        '<button class="sm danger" onclick="deleteRow(' + r.timestamp + ',\'' + escapeAttr(r.nickname) + '\')">删除</button>' +
+      '</td>';
+    body.appendChild(tr);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+  });
+}
+function escapeAttr(s) {
+  return String(s).replace(/'/g, "\\'");
+}
+
+// 行内编辑
+function editRow(btn) {
+  var tr = btn.closest('tr');
+  if (tr.classList.contains('editing')) return;
+  tr.classList.add('editing');
+
+  var nickCell = tr.querySelector('.nickname');
+  var scoreCell = tr.querySelector('.score');
+  var origNick = nickCell.getAttribute('data-val');
+  var origScore = scoreCell.getAttribute('data-val');
+
+  nickCell.innerHTML = '<input type="text" class="nick-input" value="' + escapeHtml(origNick) + '" maxlength="20">';
+  scoreCell.innerHTML = '<input type="number" class="score-input" value="' + origScore + '">';
+
+  var ops = tr.querySelector('.ops');
+  ops.innerHTML =
+    '<button class="sm primary" onclick="saveRow(this)">保存</button>' +
+    '<button class="sm" onclick="cancelEdit(this)">取消</button>';
+}
+
+function cancelEdit(btn) {
+  loadBoard(); // 重新渲染恢复原值
+}
+
+function saveRow(btn) {
+  var tr = btn.closest('tr');
+  var timestamp = tr.dataset.timestamp;
+  var nick = tr.querySelector('.nick-input').value.trim();
+  var score = tr.querySelector('.score-input').value;
+
+  if (!nick) { showStatus('昵称不能为空', false); return; }
+  if (score === '' || isNaN(Number(score))) { showStatus('分数格式错误', false); return; }
+
+  fetch('/api/leaderboard/' + encodeURIComponent(currentGame) + '/record', {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify({ timestamp: Number(timestamp), nickname: nick, score: Number(score) })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showStatus('修改成功', true);
+        loadBoard();
+      } else {
+        showStatus(data.error || '修改失败', false);
+      }
+    })
+    .catch(function(err) { showStatus('修改失败: ' + err.message, false); });
+}
+
+function deleteRow(timestamp, nickname) {
+  if (!confirm('确认删除 ' + nickname + ' 的这条记录？')) return;
+  fetch('/api/leaderboard/' + encodeURIComponent(currentGame) + '/record?timestamp=' + timestamp, {
+    method: 'DELETE',
+    headers: authHeaders()
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        showStatus('删除成功，剩余 ' + data.remaining + ' 条', true);
+        loadBoard();
+      } else {
+        showStatus(data.error || '删除失败', false);
+      }
+    })
+    .catch(function(err) { showStatus('删除失败: ' + err.message, false); });
+}
+
+// 游戏切换
+document.getElementById('gameSelect').addEventListener('change', loadBoard);
+
+// 启动
+loadGames();
+</script>
+</body>
+</html>

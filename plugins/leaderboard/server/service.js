@@ -295,6 +295,73 @@ class LeaderboardService {
   }
 
   /**
+   * 删除一条记录（管理员操作，按 timestamp 定位）
+   */
+  deleteRecord(gameId, timestamp, siteConfig) {
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    if (!gameConfigs[gameId]) {
+      return { error: '游戏不存在', code: 404 };
+    }
+
+    const ts = Number(timestamp);
+    if (!Number.isFinite(ts)) {
+      return { error: 'timestamp 格式错误', code: 400 };
+    }
+
+    const key = `${gameId}:${this.boardKey}`;
+    const board = this.getBoard(gameId);
+    const before = board.length;
+    const filtered = board.filter(r => Number(r.timestamp) !== ts);
+
+    if (filtered.length === before) {
+      return { error: '未找到该记录', code: 404 };
+    }
+
+    this.storage.set(key, filtered);
+    return { success: true, remaining: filtered.length };
+  }
+
+  /**
+   * 修改一条记录（管理员操作，按 timestamp 定位）
+   * 仅更新传入的字段（nickname/score/extra）
+   */
+  updateRecord(gameId, timestamp, updates, siteConfig) {
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    if (!gameConfigs[gameId]) {
+      return { error: '游戏不存在', code: 404 };
+    }
+
+    const ts = Number(timestamp);
+    if (!Number.isFinite(ts)) {
+      return { error: 'timestamp 格式错误', code: 400 };
+    }
+
+    const key = `${gameId}:${this.boardKey}`;
+    const board = this.getBoard(gameId);
+    const record = board.find(r => Number(r.timestamp) === ts);
+    if (!record) {
+      return { error: '未找到该记录', code: 404 };
+    }
+
+    if (updates.nickname !== undefined) {
+      record.nickname = String(updates.nickname).slice(0, 20);
+    }
+    if (updates.score !== undefined) {
+      const scoreNum = Number(updates.score);
+      if (!Number.isFinite(scoreNum)) {
+        return { error: '分数格式错误', code: 400 };
+      }
+      record.score = scoreNum;
+    }
+    if (updates.extra !== undefined) {
+      record.extra = updates.extra || {};
+    }
+
+    this.storage.set(key, board);
+    return { success: true, record };
+  }
+
+  /**
    * 筛选最难难度
    */
   filterHardest(board, config) {

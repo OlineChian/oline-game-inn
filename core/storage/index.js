@@ -130,7 +130,20 @@ function createPartitionedStore(namespace) {
   };
 }
 
+/**
+ * 获取当前生效的 globalStore 实例。
+ *
+ * 用于管理员接口等需要运行时访问底层 store 的场景。
+ * 注意：module.exports.globalStore 是模块加载时的引用快照，
+ * 当 PostgresStore 加载失败回退到 MemoryStore 时（globalStore 被 reassign），
+ * 解构拿到的旧引用会悬空；getGlobalStore() 始终返回 reassign 后的最新实例。
+ */
+function getGlobalStore() {
+  return globalStore;
+}
+
 module.exports = {
   globalStore,
+  getGlobalStore,
   createPartitionedStore
 };

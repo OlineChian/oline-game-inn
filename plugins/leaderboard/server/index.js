@@ -5,6 +5,7 @@
 
 const LeaderboardService = require('./service');
 const { verifySubmission } = require('./security');
+const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
 
@@ -138,6 +139,46 @@ module.exports = function(app, context) {
         return res.status(400).json({ success: false, error: result.error });
       }
 
+      res.json(result);
+    });
+
+    // ===== 管理员操作路由（删除/修改记录）=====
+    // 鉴权：可选 ADMIN_TOKEN（未设则仅靠 URL 隐藏）
+
+    // 删除一条记录 DELETE /api/leaderboard/:game/record?timestamp=xxx
+    app.delete('/api/leaderboard/:game/record', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const gameId = req.params.game;
+      const timestamp = req.query.timestamp;
+      const result = service.deleteRecord(gameId, timestamp, siteConfig);
+      if (result.code === 404) {
+        return res.status(404).json({ success: false, error: result.error });
+      }
+      if (result.code === 400) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      res.json(result);
+    });
+
+    // 修改一条记录 PUT /api/leaderboard/:game/record
+    // body: { timestamp, nickname?, score?, extra? }
+    app.put('/api/leaderboard/:game/record', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const gameId = req.params.game;
+      const { timestamp, nickname, score, extra } = req.body;
+      const result = service.updateRecord(gameId, timestamp, { nickname, score, extra }, siteConfig);
+      if (result.code === 404) {
+        return res.status(404).json({ success: false, error: result.error });
+      }
+      if (result.code === 400) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
       res.json(result);
     });
   }

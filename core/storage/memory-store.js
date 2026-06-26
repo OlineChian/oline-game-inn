@@ -58,6 +58,16 @@ class MemoryStore {
   size() {
     return this._data.size;
   }
+
+  /**
+   * MemoryStore 无外部持久化源，reload 无数据可重载。
+   * 返回当前内存 key 数，保持接口与 FileStore/PostgresStore 一致。
+   *
+   * @returns {Promise<{driver:string, keys:number}>}
+   */
+  async reload() {
+    return { driver: 'memory', keys: this._data.size };
+  }
 }
 
 module.exports = MemoryStore;

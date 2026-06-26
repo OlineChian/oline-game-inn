@@ -175,6 +175,32 @@ class FileStore {
   size() {
     return this._data.size;
   }
+
+  /**
+   * 重新从数据文件全量加载到内存 Map（管理员手动触发）。
+   *
+   * 用于直接修改 store.json 后让运行中进程同步更新，无需重启。
+   * 流程：先同步落盘当前 dirty → 备份 → 清空 → 重新 _load → 失败回滚。
+   *
+   * @returns {Promise<{driver:string, keys:number}>}
+   */
+  async reload() {
+    // 先同步落盘未持久化的修改，避免 reload 后丢失
+    this._flushSync();
+
+    const backup = new Map(this._data);
+    this._data.clear();
+    try {
+      this._load();
+      console.log(`[FileStore] Reloaded ${this._data.size} keys from ${this.filePath}`);
+      return { driver: 'file', keys: this._data.size };
+    } catch (err) {
+      // 加载失败，恢复旧数据，保证服务可用
+      this._data = backup;
+      console.error('[FileStore] reload 失败，已恢复旧数据:', err.message);
+      throw err;
+    }
+  }
 }
 
 module.exports = FileStore;

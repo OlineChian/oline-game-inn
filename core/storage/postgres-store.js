@@ -396,6 +396,42 @@ class PostgresStore {
 
   // ---------- 关闭 ----------
 
+  /**
+   * 重新从数据库全量加载到内存 Map（管理员手动触发）。
+   *
+   * 用于外部直接修改 kv_store 表后，让运行中的进程内存镜像同步更新，
+   * 无需重启服务。流程：
+   *   1. 先 drainPending 落盘当前 dirty，避免未持久化写丢失
+   *   2. 备份当前 _data，加载失败时回滚保证服务可用
+   *   3. 清空 _data 与 _dirty，重新 _load
+   *   4. 失败则恢复备份
+   *
+   * 注意：reload 期间并发的读会读到部分加载的数据，属预期（管理员手动操作）。
+   *
+   * @returns {Promise<{driver:string, keys:number}>}
+   */
+  async reload() {
+    // 1. 先落盘未持久化的修改
+    await this._drainPending();
+
+    // 2. 备份当前数据
+    const backup = new Map(this._data);
+
+    // 3. 清空内存镜像与 dirty，重新加载
+    this._data.clear();
+    this._dirty.clear();
+    try {
+      const count = await this._load();
+      console.log(`[PostgresStore] Reloaded ${count} keys`);
+      return { driver: 'postgres', keys: count };
+    } catch (err) {
+      // 加载失败，恢复旧数据，保证服务可用
+      this._data = backup;
+      console.error('[PostgresStore] reload 失败，已恢复旧数据:', err.message);
+      throw err;
+    }
+  }
+
   async close() {
     if (this._closed) return;
     this._closed = true;
