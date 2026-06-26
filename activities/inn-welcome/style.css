@@ -1,0 +1,249 @@
+/* ============================================================
+   客栈迎新活动 - 玩家页样式
+   颜色全部使用 CSS 变量（/common.css 定义），不硬编码
+   ============================================================ */
+
+body {
+    min-height: 100vh;
+    padding: 60px 3vw 4vh 3vw;
+    color: var(--text-primary, rgba(255,255,255,0.9));
+}
+
+/* 顶部操作栏 */
+.game-actions {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--bg-glass, rgba(0,0,0,0.6));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 100;
+    border-bottom: 1px solid var(--bg-input-border, #333);
+}
+.game-action-btn {
+    background: transparent;
+    border: 2px solid var(--color-orange-main, #ED7526);
+    color: var(--text-on-dark, #fff);
+    padding: 8px 20px;
+    border-radius: var(--radius-md, 10px);
+    font-size: clamp(12px, 2.5vw, 14px);
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition-normal, 0.25s ease);
+    display: inline-flex;
+    align-items: center;
+}
+.game-action-btn:hover { background: var(--color-orange-main, #ED7526); color: var(--color-dark-bg, #000); }
+.game-action-btn:active { transform: scale(0.95); }
+
+/* 主体容器 */
+.activity-container {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+/* 活动头部 */
+.activity-header { text-align: center; margin-bottom: 3vh; }
+.activity-icon {
+    font-size: 60px;
+    width: 100px; height: 100px;
+    margin: 0 auto 1vh;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card-alt, #1a1a1a);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-xl, 20px);
+}
+.activity-title { font-size: clamp(22px, 5vw, 34px); margin-bottom: 0.5vh; }
+.activity-subtitle { font-size: clamp(12px, 2.5vw, 15px); color: var(--text-secondary, rgba(255,255,255,0.65)); margin-bottom: 1vh; }
+.activity-countdown {
+    display: inline-block;
+    padding: 6px 16px;
+    background: var(--bg-glass-hover, rgba(237,117,38,0.15));
+    border: 1px solid var(--color-orange-main, #ED7526);
+    border-radius: var(--radius-round, 50px);
+    color: var(--color-orange-main, #ED7526);
+    font-size: clamp(12px, 2vw, 14px);
+    font-weight: bold;
+}
+
+/* 规则提示 */
+.rules-tip {
+    background: var(--bg-card, #111);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-lg, 14px);
+    padding: 16px 20px;
+    margin-bottom: 3vh;
+}
+.rules-tip-title { font-weight: bold; margin-bottom: 8px; color: var(--text-primary, rgba(255,255,255,0.9)); }
+.rules-tip ol { padding-left: 20px; color: var(--text-secondary, rgba(255,255,255,0.65)); line-height: 1.8; font-size: clamp(12px, 2vw, 14px); }
+.rules-tip b { color: var(--color-orange-main, #ED7526); }
+
+/* 表单区块 */
+.form-section {
+    background: var(--bg-card, #111);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-lg, 14px);
+    padding: 20px 24px;
+    margin-bottom: 2.5vh;
+}
+.section-title { font-size: clamp(16px, 3vw, 20px); margin-bottom: 16px; }
+.form-row { margin-bottom: 14px; }
+.form-label { display: block; font-size: clamp(12px, 2vw, 14px); color: var(--text-secondary, rgba(255,255,255,0.65)); margin-bottom: 6px; }
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-input, #1a1a1a);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-md, 10px);
+    color: var(--text-primary, rgba(255,255,255,0.9));
+    font-size: clamp(13px, 2.5vw, 15px);
+    box-sizing: border-box;
+    transition: border-color var(--transition-normal, 0.25s ease);
+}
+.form-input:focus { outline: none; border-color: var(--color-orange-main, #ED7526); }
+.form-hint { font-size: 11px; color: var(--text-muted, rgba(255,255,255,0.45)); margin-top: 4px; }
+
+/* 主按钮 */
+.primary-btn {
+    width: 100%;
+    padding: 12px 20px;
+    background: var(--color-orange-main, #ED7526);
+    color: var(--color-dark-bg, #000);
+    border: none;
+    border-radius: var(--radius-md, 10px);
+    font-size: clamp(14px, 3vw, 16px);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all var(--transition-normal, 0.25s ease);
+    margin-top: 6px;
+}
+.primary-btn:hover { filter: brightness(1.1); }
+.primary-btn:active { transform: scale(0.98); }
+.primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.submit-btn { margin-top: 16px; }
+
+/* 成绩表格 */
+.scores-table-wrap { overflow-x: auto; }
+.scores-table { width: 100%; border-collapse: collapse; font-size: clamp(12px, 2vw, 14px); }
+.scores-table th, .scores-table td {
+    padding: 10px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--bg-input-border, #333);
+}
+.scores-table th { color: var(--text-secondary, rgba(255,255,255,0.65)); font-weight: bold; }
+.game-cell { text-align: left; white-space: nowrap; }
+.score-cell { font-weight: bold; color: var(--color-gold-accent, #F8C93F); }
+.score-cell .unit { font-size: 11px; color: var(--text-muted, rgba(255,255,255,0.45)); margin-left: 2px; font-weight: normal; }
+.no-record { color: var(--text-muted, rgba(255,255,255,0.45)); font-style: italic; }
+.note-cell { font-size: 11px; color: var(--text-muted, rgba(255,255,255,0.45)); }
+.play-link { color: var(--color-orange-main, #ED7526); text-decoration: none; }
+
+/* 提交结果卡片 */
+.result-card {
+    text-align: center;
+    padding: 24px 16px;
+}
+.result-icon { font-size: 50px; margin-bottom: 10px; }
+.result-card h2 { color: var(--color-success, #00b894); margin-bottom: 10px; }
+.result-card p { color: var(--text-secondary, rgba(255,255,255,0.65)); font-size: clamp(12px, 2.5vw, 14px); line-height: 1.8; }
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-overlay, rgba(0,0,0,0.75));
+    color: var(--text-on-dark, #fff);
+    padding: 12px 24px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--color-orange-main, #ED7526);
+    font-size: clamp(12px, 2.5vw, 14px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all var(--transition-normal, 0.25s ease);
+    z-index: 1000;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== 管理员页专用 ===== */
+.admin-actions { display: flex; gap: 10px; margin-top: 14px; }
+.secondary-btn {
+    padding: 12px 18px;
+    background: var(--bg-card-alt, #1a1a1a);
+    color: var(--text-primary, rgba(255,255,255,0.9));
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-md, 10px);
+    font-size: clamp(13px, 2.5vw, 15px);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all var(--transition-normal, 0.25s ease);
+    white-space: nowrap;
+}
+.secondary-btn:hover { border-color: var(--color-orange-main, #ED7526); color: var(--color-orange-main, #ED7526); }
+.secondary-btn:active { transform: scale(0.98); }
+
+.weight-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--bg-input-border, #333);
+    font-size: clamp(12px, 2vw, 14px);
+}
+.weight-name { color: var(--text-primary, rgba(255,255,255,0.9)); }
+.weight-input {
+    width: 80px;
+    padding: 6px 10px;
+    background: var(--bg-input, #1a1a1a);
+    border: 1px solid var(--bg-input-border, #333);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-primary, rgba(255,255,255,0.9));
+    font-size: 14px;
+    text-align: right;
+}
+.weight-input:focus { outline: none; border-color: var(--color-orange-main, #ED7526); }
+.weight-score { font-weight: bold; color: var(--color-orange-main, #ED7526); }
+
+.winner-head {
+    font-size: clamp(14px, 2.5vw, 16px);
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--color-gold-accent, #F8C93F);
+}
+.winner-item {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: var(--bg-card-alt, #1a1a1a);
+    border: 1px solid var(--bg-input-border, #333);
+    border-left: 3px solid var(--color-orange-main, #ED7526);
+    border-radius: var(--radius-sm, 6px);
+    font-size: clamp(12px, 2vw, 14px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.winner-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    background: var(--color-orange-main, #ED7526);
+    color: var(--color-dark-bg, #000);
+    border-radius: var(--radius-round, 50%);
+    font-weight: bold;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.winner-tag { color: var(--text-secondary, rgba(255,255,255,0.65)); font-family: var(--font-mono, monospace); }
+.winner-ws { margin-left: auto; color: var(--color-orange-main, #ED7526); font-weight: bold; }
+
+@media (max-width: 600px) {
+    .scores-table th, .scores-table td { padding: 8px 4px; }
+    .admin-actions { flex-direction: column; }
+}

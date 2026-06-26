@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--
+  客栈迎新 - 管理员工具页（隐藏入口）
+  ====================================
+  访问方式：活动URL + /adminoline  →  /activities/inn-welcome/adminoline
+  无入口按钮，仅 URL 可达。功能：
+    1. 查看全部玩家提交（昵称、标签、5游戏成绩、权重分、提交时间）
+    2. 设置每款游戏权重，计算权重分
+    3. 按权重分加权抽奖，可设置中奖人数
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员工具 - 客栈迎新</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-actions">
+        <a href="index.html" class="game-action-btn">← 活动页</a>
+        <button class="game-action-btn" onclick="refreshAll()">🔄 刷新</button>
+    </div>
+
+    <div class="activity-container">
+        <div class="activity-header">
+            <div class="activity-icon">🛠️</div>
+            <h1 class="activity-title">客栈迎新 - 管理员工具</h1>
+            <p class="activity-subtitle">查看提交 · 计算权重 · 加权抽奖</p>
+        </div>
+
+        <!-- 权重设置 -->
+        <div class="form-section">
+            <h2 class="section-title">⚖️ 游戏权重设置</h2>
+            <p class="form-hint" style="margin-bottom:12px;">每游戏权重 0-1，归一化后乘以成绩占比求和得权重分。</p>
+            <div id="weightsBox"></div>
+            <div class="admin-actions">
+                <button class="primary-btn" style="flex:1;" onclick="computeWeights()">📊 计算权重分</button>
+                <button class="secondary-btn" onclick="loadWeights()">↩ 重置</button>
+            </div>
+        </div>
+
+        <!-- 提交列表 -->
+        <div class="form-section">
+            <h2 class="section-title">📋 玩家提交（<span id="submissionCount">0</span>）</h2>
+            <div class="scores-table-wrap">
+                <table class="scores-table" id="submissionsTable">
+                    <thead id="submissionsHead"></thead>
+                    <tbody id="submissionsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 抽奖 -->
+        <div class="form-section">
+            <h2 class="section-title">🎰 加权抽奖</h2>
+            <div class="form-row">
+                <label class="form-label" for="lotteryCount">中奖人数</label>
+                <input type="number" id="lotteryCount" class="form-input" min="1" value="3">
+            </div>
+            <div class="admin-actions">
+                <button class="primary-btn" style="flex:1;" onclick="runLottery()">🎲 开始抽奖</button>
+                <button class="secondary-btn" onclick="loadLotteryResult()">查看上次结果</button>
+            </div>
+            <div id="lotteryResult" style="display:none; margin-top:16px;"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="admin.js"></script>
+</body>
+</html>

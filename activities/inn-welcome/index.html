@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--
+  客栈迎新，试玩领宝石 - 玩家页面
+  =================================
+  流程：
+    1. 输入昵称（自动回填 localStorage.gameNickname）+ 游戏标签（#大写字母数字）
+    2. 查询 5 款游戏的排行榜成绩（GET /api/leaderboard/:game/user/:nickname）
+    3. 提交成绩到后端（POST /api/inn-welcome/submit），管理员即可看到
+  数据：昵称/标签来自用户输入，成绩来自排行榜 API。
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客栈迎新，试玩领宝石 - Oline荒野游戏客栈</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 顶部操作栏 -->
+    <div class="game-actions">
+        <a href="../../activity.html" class="game-action-btn">← 返回活动中心</a>
+    </div>
+
+    <div class="activity-container">
+        <!-- 活动头部 -->
+        <div class="activity-header">
+            <div class="activity-icon" id="activityIcon">🏨</div>
+            <h1 class="activity-title" id="activityTitle">客栈迎新，试玩领宝石</h1>
+            <p class="activity-subtitle" id="activitySubtitle">试玩五款游戏，提交成绩参与抽奖领宝石</p>
+            <div class="activity-countdown" id="activityCountdown">加载中...</div>
+        </div>
+
+        <!-- 活动规则提示 -->
+        <div class="rules-tip" id="rulesTip">
+            <div class="rules-tip-title">📋 参与规则</div>
+            <ol id="rulesList"></ol>
+        </div>
+
+        <!-- 信息录入 -->
+        <div class="form-section">
+            <h2 class="section-title">📝 填写信息</h2>
+            <div class="form-row">
+                <label class="form-label" for="nicknameInput">游戏昵称</label>
+                <input type="text" id="nicknameInput" class="form-input" placeholder="请输入你的游戏昵称" maxlength="20">
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="tagInput">游戏标签</label>
+                <input type="text" id="tagInput" class="form-input" placeholder="#AB12CD" maxlength="11">
+                <p class="form-hint" id="tagHint">以 # 开头，仅含大写字母和数字，3-10 位</p>
+            </div>
+            <button class="primary-btn" id="queryBtn" onclick="queryScores()">🔍 查询我的成绩</button>
+        </div>
+
+        <!-- 成绩展示 -->
+        <div class="form-section" id="scoresSection" style="display:none;">
+            <h2 class="section-title">🏆 我的试玩成绩</h2>
+            <div class="scores-table-wrap">
+                <table class="scores-table">
+                    <thead>
+                        <tr>
+                            <th>游戏</th>
+                            <th>最佳成绩</th>
+                            <th>排名</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scoresBody"></tbody>
+                </table>
+            </div>
+            <button class="primary-btn submit-btn" id="submitBtn" onclick="submitScores()">📤 提交成绩参与抽奖</button>
+        </div>
+
+        <!-- 提交结果 -->
+        <div class="form-section" id="resultSection" style="display:none;">
+            <div class="result-card">
+                <div class="result-icon">✅</div>
+                <h2>提交成功！</h2>
+                <p id="resultText"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
