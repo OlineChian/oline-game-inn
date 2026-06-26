@@ -39,7 +39,8 @@
       "leaderboard": {
         "sort": "desc",
         "unit": "胜",
-        "label": "胜场"
+        "label": "胜场",
+        "aggregate": "sum"
       }
     },
     {

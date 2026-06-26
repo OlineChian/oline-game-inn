@@ -62,18 +62,19 @@ class LeaderboardService {
   getLeaderboardOverview(gameId, siteConfig) {
     const gameConfigs = this.getGameConfigs(siteConfig);
     const config = gameConfigs[gameId];
-    
+
     if (!config) {
       return null;
     }
-    
+
     const board = this.getBoard(gameId);
     const sorted = this.sortBoard(board, config.sort);
-    
+    const aggregated = this.aggregateByConfig(sorted, config);
+
     return {
       config,
-      top3: sorted.slice(0, 3),
-      total: board.length
+      top3: aggregated.slice(0, 3),
+      total: aggregated.length
     };
   }
 
@@ -88,6 +89,23 @@ class LeaderboardService {
     const board = this.getBoard(gameId);
     const userRecords = board.filter(r => r.nickname === nickname);
     if (userRecords.length === 0) return { error: '暂无记录', bestScore: null, rank: null, total: board.length };
+
+    // sum 聚合模式：bestScore 为该玩家所有记录的求和
+    if (config.aggregate === 'sum') {
+      const totalScore = userRecords.reduce((s, r) => s + (Number(r.score) || 0), 0);
+      const aggregated = this.aggregateByConfig(this.sortBoard(board, config.sort), config);
+      const rank = aggregated.findIndex(r => r.nickname === nickname) + 1;
+      return {
+        gameId,
+        nickname,
+        bestScore: totalScore,
+        rank: rank || null,
+        total: aggregated.length,
+        config,
+        extra: userRecords[userRecords.length - 1].extra || {},
+        playedCount: userRecords.length
+      };
+    }
 
     const sorted = this.sortBoard(board, config.sort);
     const best = config.sort === 'asc'
@@ -109,42 +127,95 @@ class LeaderboardService {
 
   /**
    * 获取排行榜详情
+   * mode:
+   *   - 'history'：返回全部历史记录（不按昵称聚合），用于“查看全部历史成绩”
+   *   - 默认：按 config.aggregate 聚合（dedupe 保留最佳 / sum 累加求和）
    */
   getLeaderboard(gameId, options, siteConfig) {
-    const { limit = 10, difficulty, hardestOnly } = options;
+    const { limit = 10, difficulty, hardestOnly, mode } = options;
     const gameConfigs = this.getGameConfigs(siteConfig);
     const config = gameConfigs[gameId];
-    
+
     if (!config) {
       return { error: '游戏不存在', code: 404 };
     }
-    
+
     const board = this.getBoard(gameId);
     let filtered = [...board];
-    
+
     // 筛选逻辑
     if (hardestOnly) {
       filtered = this.filterHardest(board, config);
     } else if (difficulty) {
       filtered = board.filter(r => r.extra?.difficulty === difficulty);
     }
-    
+
     // 排序
     const sorted = this.sortBoard(filtered, config.sort);
-    
+
     // 收集可用难度列表
     const availableDifficulties = this.collectDifficulties(board);
-    
+
+    // history 模式：跳过聚合，保留每一条历史记录
+    // 默认模式：按配置聚合（dedupe 保留最佳 / sum 累加求和）
+    const aggregated = mode === 'history' ? sorted : this.aggregateByConfig(sorted, config);
+
     return {
       success: true,
       game: gameId,
       config,
-      leaderboard: sorted.slice(0, limit),
-      total: filtered.length,
+      mode: mode === 'history' ? 'history' : (config.aggregate === 'sum' ? 'sum' : 'best'),
+      leaderboard: aggregated.slice(0, limit),
+      total: aggregated.length,
       allTotal: board.length,
       difficulty: difficulty || (hardestOnly ? 'hardest' : null),
       availableDifficulties
     };
+  }
+
+  /**
+   * 根据 config.aggregate 选择聚合策略
+   * - 'sum'：按昵称合并并求和 score（用于累计计数场景，如胜场）
+   * - 默认：按昵称去重，保留排序后的首条（最佳）记录
+   */
+  aggregateByConfig(sortedRecords, config) {
+    if (config && config.aggregate === 'sum') {
+      return this.sumByNickname(sortedRecords);
+    }
+    return this.dedupeByNickname(sortedRecords);
+  }
+
+  /**
+   * 按昵称合并记录并求和 score（保留最新 extra 用于展示难度等元信息）
+   */
+  sumByNickname(sortedRecords) {
+    const map = new Map();
+    for (const r of sortedRecords) {
+      const existing = map.get(r.nickname);
+      if (existing) {
+        existing.score = (Number(existing.score) || 0) + (Number(r.score) || 0);
+        if (r.extra) existing.extra = { ...r.extra };
+        existing.timestamp = r.timestamp;
+      } else {
+        map.set(r.nickname, { ...r });
+      }
+    }
+    return Array.from(map.values());
+  }
+
+  /**
+   * 按昵称去重，保留每个玩家排序后的首条（最佳）记录
+   */
+  dedupeByNickname(sortedRecords) {
+    const seen = new Set();
+    const result = [];
+    for (const record of sortedRecords) {
+      if (!seen.has(record.nickname)) {
+        seen.add(record.nickname);
+        result.push(record);
+      }
+    }
+    return result;
   }
 
   /**

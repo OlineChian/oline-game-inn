@@ -20,7 +20,6 @@
           as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></noscript>
     <link rel="stylesheet" href="/common.css">
-    <link rel="stylesheet" href="/navbar.css">
     <style>
         body {
             display: flex;
@@ -1034,8 +1033,6 @@
         }
         @media (max-width: 768px) {
             .games-row { grid-template-columns: 1fr !important; }
-            .lb-page-tabs { padding: 10px; }
-            .lb-page-tab { padding: 6px 12px; font-size: 12px; }
             .hero { min-height: 90vh; }
             .section { padding: 1.5rem 0 3rem; }
             /* 最佳纪录手机端双行优化 */
@@ -1103,8 +1100,6 @@
     </style>
 </head>
 <body>
-    <div id="site-navbar" data-page="home"></div>
-    <script src="/navbar.js"></script>
     <!-- 滚动进度条 -->
     <div class="scroll-progress" id="scrollProgress"></div>
 
@@ -1262,7 +1257,6 @@
             document.getElementById('heroTitle').classList.add('no-anim');
             document.getElementById('heroSubtitle').classList.add('no-anim');
             document.getElementById('heroActions').classList.add('no-anim');
-            // 艺术展示区也跳过动画
             document.getElementById('artShowcase').classList.add('art-visible');
         } else {
             // 首次进入：标记已访问，展示完整 Hero 动画
@@ -1275,6 +1269,9 @@
             document.getElementById('heroSubtitle').style.setProperty('--delay', '0.2s');
             document.getElementById('heroActions').classList.add('fade-in-up');
             document.getElementById('heroActions').style.setProperty('--delay', '0.3s');
+            setTimeout(() => {
+                document.getElementById('artShowcase').classList.add('art-visible');
+            }, 500);
         }
 
         // ========== 滚动进度条 ==========
@@ -1403,53 +1400,40 @@
         // ========== 全屏排行榜页面 ==========
         let lbPageDifficulty = null;
         let lbPageAvailableDiffs = [];
+        let lbPageIndex = 0;
+        let lbPageCarouselInterval = null;
 
         async function openLeaderboardPage() {
             await loadGameList();
-            if (!lbPageGameTab && gameList.length > 0) {
-                lbPageGameTab = gameList.filter(g => g.showOnHome !== false)[0]?.id || gameList[0].id;
-            }
             lbPageDifficulty = null;
-            renderLbPageTabs();
+            lbPageIndex = 0;
             loadLbPageData();
+            startLbPageCarousel();
             document.getElementById('leaderboardPage').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         }
         function closeLeaderboardPage() {
             document.getElementById('leaderboardPage').classList.add('hidden');
             document.body.style.overflow = '';
+            stopLbPageCarousel();
         }
-        function renderLbPageTabs() {
-            const container = document.getElementById('lbPageTabs');
+        function startLbPageCarousel() {
+            if (lbPageCarouselInterval) clearInterval(lbPageCarouselInterval);
             const visibleGames = gameList.filter(g => g.showOnHome !== false);
-            container.innerHTML = visibleGames.map(game => `
-                <button class="lb-page-tab ${game.id === lbPageGameTab ? 'active' : ''}"
-                        onclick="switchLbPageTab('${game.id}')">
-                    ${game.icon} ${game.name}
-                </button>
-            `).join('');
+            if (visibleGames.length <= 1) return;
+            lbPageCarouselInterval = setInterval(() => {
+                const visibleGames = gameList.filter(g => g.showOnHome !== false);
+                lbPageIndex = (lbPageIndex + 1) % visibleGames.length;
+                lbPageDifficulty = null;
+                loadLbPageData();
+            }, 5000);
         }
-        function switchLbPageTab(gameId) {
-            lbPageGameTab = gameId;
-            lbPageDifficulty = null;
-            renderLbPageTabs();
-            loadLbPageData();
+        function stopLbPageCarousel() {
+            if (lbPageCarouselInterval) {
+                clearInterval(lbPageCarouselInterval);
+                lbPageCarouselInterval = null;
+            }
         }
-        function renderLbDiffTabs(diffs) {
-            lbPageAvailableDiffs = diffs || [];
-            const section = document.getElementById('lbDiffSection');
-            const container = document.getElementById('lbDiffTabs');
-            if (lbPageAvailableDiffs.length === 0) { section.style.display = 'none'; return; }
-            section.style.display = 'block';
-            const diffLabels = { 'easy': '😊 简单', 'normal': '😐 中等', 'hard': '😈 困难' };
-            let html = `<button class="difficulty-tab all-tab ${lbPageDifficulty === null ? 'active' : ''}" onclick="switchLbDiff(null)">📊 全部</button>`;
-            html += lbPageAvailableDiffs.map(d => `
-                <button class="difficulty-tab ${lbPageDifficulty === d ? 'active' : ''}" onclick="switchLbDiff('${d}')">${diffLabels[d] || d}</button>
-            `).join('');
-            container.innerHTML = html;
-        }
-        function switchLbDiff(diff) { lbPageDifficulty = diff; renderLbDiffTabs(lbPageAvailableDiffs); loadLbPageData(); }
-        // 根据游戏返回对应的难度标签文字
         function getDiffLabel(gameId, diff) {
             const diffTexts = {
                 'rosa-ember-online': { easy: '简单AI', normal: '中等AI', hard: '困难AI' },
@@ -1459,21 +1443,35 @@
             };
             return (diffTexts[gameId] && diffTexts[gameId][diff]) || { easy: '简单', normal: '中等', hard: '困难' }[diff] || diff;
         }
+        function renderLbPageTabs() {
+            const tabsContainer = document.getElementById('lbPageTabs');
+            const visibleGames = gameList.filter(g => g.showOnHome !== false);
+            tabsContainer.innerHTML = visibleGames.map((g, i) =>
+                `<button class="lb-page-tab ${i === lbPageIndex ? 'active' : ''}" onclick="switchLbPageGame(${i})">${g.icon || '🎮'} ${g.name}</button>`
+            ).join('');
+        }
+        function switchLbPageGame(index) {
+            lbPageIndex = index;
+            lbPageDifficulty = null;
+            stopLbPageCarousel();
+            loadLbPageData();
+        }
         async function loadLbPageData() {
+            renderLbPageTabs();
             const listContainer = document.getElementById('lbPageList');
             listContainer.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">加载中...</div>';
             try {
-                let url = `/api/leaderboard/${lbPageGameTab}?limit=50`;
+                const visibleGames = gameList.filter(g => g.showOnHome !== false);
+                const currentGame = visibleGames[lbPageIndex];
+                if (!currentGame) return;
+                let url = `/api/leaderboard/${currentGame.id}?limit=50`;
                 if (lbPageDifficulty) url += `&difficulty=${encodeURIComponent(lbPageDifficulty)}`;
                 const response = await fetch(url);
                 const data = await response.json();
-                if (!lbPageDifficulty || lbPageAvailableDiffs.length === 0) {
-                    renderLbDiffTabs(data.availableDifficulties || []);
-                }
                 if (data.success && data.leaderboard.length > 0) {
                     listContainer.innerHTML = data.leaderboard.map((item, index) => {
                         const diff = item.extra && item.extra.difficulty;
-                        const diffTag = diff ? `<span class="leaderboard-diff-tag diff-${diff}">${getDiffLabel(lbPageGameTab, diff)}</span>` : '';
+                        const diffTag = diff ? `<span class="leaderboard-diff-tag diff-${diff}">${getDiffLabel(currentGame.id, diff)}</span>` : '';
                         return `<div class="leaderboard-item">
                             <div class="leaderboard-rank ${index < 3 ? 'rank-' + (index + 1) : 'rank-other'}">${index + 1}</div>
                             <div class="leaderboard-name">${escapeHtml(item.nickname)}${diffTag}</div>

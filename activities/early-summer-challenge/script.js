@@ -348,7 +348,6 @@ function renderChallengeGames() {
         const bestScore = state.bestScore;
         const isCompleted = state.completed || false;
 
-        // 如果有进行中的 Session，用 Session 的进度
         const activeSession = activeSessionMap[game.id];
         let currentProgress = 0;
         let inProgress = false;
@@ -358,20 +357,26 @@ function renderChallengeGames() {
             inProgress = true;
         }
 
-        const canReset = false; // Session 模式下暂不支持重置
+        const challengeData = userData.challenges[game.id];
+        const resetsUsed = challengeData ? challengeData.resetsUsed || 0 : 0;
+        const canReset = isCompleted && !inProgress && resetsUsed < activityConfig.challenge.resetChance;
 
         const bestScoreText = inProgress
             ? `挑战进行中...（${currentProgress}/${maxRounds}局）`
             : (bestScore !== null && bestScore !== undefined
-                ? `最佳成绩：${bestScore}分`
+                ? `最佳成绩：${bestScore}${getScoreUnit(game.id)}`
                 : '暂无成绩');
+
+        const earnedPoints = bestScore !== null && bestScore !== undefined
+            ? calculateChallengePoints(game.id, bestScore)
+            : 0;
 
         const progressText = inProgress
             ? `进行中：${currentProgress}/${maxRounds} 局`
             : (isCompleted ? `已完成（${maxRounds}/${maxRounds}）` : `进度：0/${maxRounds} 局`);
 
         const btnText = inProgress ? '继续挑战' : '再次挑战';
-        
+
         return `
             <div class="challenge-game-card ${isCompleted && !inProgress ? 'completed' : ''}" data-game-id="${game.id}">
                 <div class="game-icon-large">${game.icon || '🎮'}</div>
@@ -380,13 +385,14 @@ function renderChallengeGames() {
                     <span class="game-difficulty">${game.difficulty}</span>
                     <div class="game-progress">${progressText}</div>
                     <div class="game-best-score">${bestScoreText}</div>
+                    ${earnedPoints > 0 ? `<div class="game-earned-points">已获得 ${earnedPoints} 积分</div>` : ''}
                 </div>
                 <div class="game-actions-challenge">
-                    <button class="challenge-btn start" onclick="startChallenge('${game.id}')">
+                    <button class="challenge-btn start" onclick="startChallenge('${game.id}')" ${isCompleted && !inProgress && !canReset ? 'disabled' : ''}>
                         ${btnText}
                     </button>
                     <button class="challenge-btn reset" onclick="resetChallenge('${game.id}')" ${!canReset ? 'disabled' : ''}>
-                        重置挑战 (${canReset ? '1' : '0'}次)
+                        重置挑战 (${activityConfig.challenge.resetChance - resetsUsed}次)
                     </button>
                 </div>
             </div>
@@ -905,8 +911,9 @@ async function handlePredictionAction() {
     const isFirstSubmit = !wasPreviouslyLocked;
 
     const participateReward = activityConfig.prediction.participateReward || 5;
+    const totalReward = picked * participateReward;
     const confirmMsg = isFirstSubmit
-        ? `你已选择了 ${picked}/${total} 场对阵的胜者，提交后将获得 ${participateReward} 参与积分，确定提交吗？`
+        ? `你已选择了 ${picked}/${total} 场对阵的胜者，提交后将获得 ${totalReward} 参与积分（每场5积分），确定提交吗？`
         : `你已更新了 ${picked}/${total} 场对阵的预测，确定提交吗？`;
 
     if (!confirm(confirmMsg)) return;
@@ -923,17 +930,19 @@ async function handlePredictionAction() {
         });
 
         if (response.ok) {
+            const data = await response.json();
             // 成功提交后重新加载服务端积分（服务端已自动发放奖励）
             await loadUserData();
+            showToast(isFirstSubmit ? `预测提交成功！获得 ${data.pointsAwarded || totalReward} 参与积分` : '预测已更新！');
         } else {
             throw new Error('提交失败');
         }
     } catch (error) {
         console.error('提交预测失败，使用本地模拟:', error);
-        // 服务端不可用时本地模拟：首次提交给参与积分
+        // 服务端不可用时本地模拟：首次提交给参与积分（每场5积分）
         if (isFirstSubmit) {
             const participateReward = activityConfig.prediction.participateReward || 5;
-            userData.predictionPoints = (userData.predictionPoints || 0) + participateReward;
+            userData.predictionPoints = (userData.predictionPoints || 0) + totalReward;
             userData.totalPoints = userData.challengePoints + userData.predictionPoints;
         }
         // 尝试同步本地积分到服务端（使用正确的 API 格式）
@@ -943,7 +952,7 @@ async function handlePredictionAction() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type: 'prediction',
-                    amount: isFirstSubmit ? (activityConfig.prediction.participateReward || 5) : 0,
+                    amount: isFirstSubmit ? totalReward : 0,
                     reason: '预测提交（本地离线模式）'
                 })
             });
@@ -960,8 +969,9 @@ async function handlePredictionAction() {
     renderPredictionSchedule();
     updateWeightedPoints();
 
-    const rewardPoints = activityConfig.prediction.participateReward || 5;
-    showToast(isFirstSubmit ? `预测提交成功！获得 ${rewardPoints} 参与积分` : '预测已更新！');
+    if (!isFirstSubmit) {
+        showToast('预测已更新！');
+    }
 }
 
 /**
@@ -1491,6 +1501,52 @@ function renderLeaderboardList(data, gameId) {
     }).join('');
 }
 
+// ==================== 积分规则弹窗 ====================
+
+/** 打开积分规则弹窗 */
+function showRules() {
+    const modal = document.getElementById('rulesModal');
+    modal.classList.remove('hidden');
+    renderRules();
+}
+
+/** 关闭积分规则弹窗 */
+function closeRules() {
+    document.getElementById('rulesModal').classList.add('hidden');
+}
+
+/** 渲染积分规则 */
+function renderRules() {
+    const container = document.getElementById('rulesContainer');
+    if (!activityConfig || !activityConfig.challenge) return;
+    
+    const games = activityConfig.challenge.games;
+    
+    container.innerHTML = games.map(game => {
+        const ruleDesc = game.sort === 'asc' 
+            ? `用时越短积分越高，最高${game.maxScore}积分`
+            : `分数越高积分越高，最高${game.maxScore}积分`;
+
+        const formulaDesc = game.sort === 'asc'
+            ? `积分 = (${game.maxScore}/用时) × 50`
+            : `积分 = (得分/${game.maxScore}) × 100`;
+
+        return `
+            <div class="rules-item">
+                <div class="rules-item-header">
+                    <span class="rules-game-icon">${game.icon}</span>
+                    <span class="rules-game-name">${game.name}</span>
+                    <span class="rules-game-difficulty">${game.difficulty}</span>
+                </div>
+                <div class="rules-item-body">
+                    <div class="rules-desc">${ruleDesc}</div>
+                    <div class="rules-formula">${formulaDesc}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 // ==================== 通用工具 ====================
 
 /**
@@ -1522,5 +1578,11 @@ document.addEventListener('click', function(e) {
     const lotteryModal = document.getElementById('lotteryResultModal');
     if (e.target === lotteryModal) {
         closeLotteryResult();
+    }
+    
+    // 积分规则弹窗
+    const rulesModal = document.getElementById('rulesModal');
+    if (e.target === rulesModal) {
+        closeRules();
     }
 });

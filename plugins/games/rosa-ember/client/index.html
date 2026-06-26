@@ -145,15 +145,21 @@
         .global-board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
             gap: 10px;
             padding: 15px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 15px;
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
         }
         .mini-board {
             aspect-ratio: 1;
+            min-width: 0;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
             gap: 3px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
@@ -164,12 +170,17 @@
         .mini-board.winner-rosa { background: rgba(46, 204, 113, 0.3); }
         .mini-board.winner-amber { background: rgba(231, 76, 60, 0.3); }
         .cell {
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            aspect-ratio: 1;
+            line-height: 1;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: clamp(20px, 6vw, 36px);
+            font-size: clamp(16px, 4.5vw, 28px);
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -195,13 +206,173 @@
             text-decoration: none;
         }
         .back-link:hover { color: #2ecc71; }
+
+        /* 单人模式：难度选择 */
+        .solo-diff-group { margin: 20px 0; }
+        .solo-diff-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        .solo-diff-btns {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .solo-diff-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 8px !important;
+            font-size: 14px !important;
+            margin: 0 !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .solo-diff-btn.active {
+            border-color: #2ecc71 !important;
+            background: rgba(46, 204, 113, 0.2) !important;
+            color: #2ecc71 !important;
+            box-shadow: 0 0 12px rgba(46, 204, 113, 0.4);
+        }
+        .solo-start-group { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+
+        /* 排行榜弹窗 */
+        .lb-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .lb-modal-overlay.hidden { display: none; }
+        .lb-modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid #2ecc71;
+            border-radius: 15px;
+            padding: 30px 24px 24px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(46, 204, 113, 0.4);
+            position: relative;
+        }
+        .lb-modal-close {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: transparent;
+            border: 1px solid #2ecc71;
+            color: #2ecc71;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lb-modal-close:hover { background: rgba(46, 204, 113, 0.15); }
+        .lb-modal-title {
+            text-align: center;
+            color: #2ecc71;
+            font-size: 22px;
+            margin-bottom: 4px;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+        }
+        .lb-modal-subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            margin-bottom: 14px;
+        }
+        .lb-diff-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .lb-diff-tab {
+            padding: 6px 14px;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            background: transparent;
+            color: rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lb-diff-tab:hover { background: rgba(46, 204, 113, 0.1); }
+        .lb-diff-tab.active {
+            background: rgba(46, 204, 113, 0.25);
+            color: #2ecc71;
+            border-color: #2ecc71;
+        }
+        .lb-list { display: flex; flex-direction: column; gap: 8px; }
+        .lb-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(46, 204, 113, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(46, 204, 113, 0.15);
+        }
+        .lb-rank {
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        .lb-item.rank-1 .lb-rank { background: #f1c40f; color: #1a1a2e; }
+        .lb-item.rank-2 .lb-rank { background: #bdc3c7; color: #1a1a2e; }
+        .lb-item.rank-3 .lb-rank { background: #cd7f32; color: #1a1a2e; }
+        .lb-name {
+            flex: 1;
+            color: white;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .lb-score {
+            color: #2ecc71;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .lb-score .lb-unit {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            font-weight: normal;
+            margin-left: 3px;
+        }
+        .lb-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .lb-empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .lb-empty p { margin-top: 4px; font-size: 13px; }
     </style>
 </head>
 <body class="has-game-header">
     <div id="site-game-header"></div>
     <script src="/game-header.js"></script>
     <script>
-        renderGameHeader({ title: '罗莎琥珀好姐妹', backUrl: '/#games', showLeaderboard: false });
+        renderGameHeader({ title: '罗莎琥珀好姐妹', backUrl: '/#games', showLeaderboard: true });
     </script>
     <div class="header">
         <h1>🌿 罗莎琥珀好姐妹</h1>
@@ -230,12 +401,25 @@
             </button>
         </div>
 
-        <!-- 单人模式：选择先后手 -->
+        <!-- 单人模式：选择难度与执棋 -->
         <div id="soloMenuScreen" style="display: none; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 30px; text-align: center;">
-            <h3 style="margin-bottom: 15px;">🎯 选择执棋</h3>
+            <h3 style="margin-bottom: 15px;">🎯 单人对战</h3>
             <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px;">你执 <span style="color:#2ecc71;font-weight:bold;">罗莎(绿)</span>，电脑执 <span style="color:#e74c3c;font-weight:bold;">琥珀(红)</span></p>
-            <button class="btn btn-rosa" id="soloStartRosaBtn">🌿 执绿棋（先手）</button>
-            <button class="btn btn-amber" id="soloStartAmberBtn" style="margin-top: 10px;">🔴 执红棋（后手）</button>
+
+            <div class="solo-diff-group">
+                <label>选择 AI 难度</label>
+                <div class="solo-diff-btns">
+                    <button class="btn btn-secondary solo-diff-btn active" data-diff="easy">😊 简单</button>
+                    <button class="btn btn-secondary solo-diff-btn" data-diff="normal">😐 中等</button>
+                    <button class="btn btn-secondary solo-diff-btn" data-diff="hard">😈 困难</button>
+                </div>
+            </div>
+
+            <div class="solo-start-group">
+                <button class="btn btn-rosa" id="soloStartRosaBtn">🌿 执绿棋（先手）开始</button>
+                <button class="btn btn-amber" id="soloStartAmberBtn">🔴 执红棋（后手）开始</button>
+            </div>
+
             <div style="margin-top: 20px;">
                 <button class="btn btn-secondary" id="soloBackBtn">← 返回</button>
             </div>
@@ -286,7 +470,25 @@
             <a href="/#games" class="back-link">← 返回游戏大厅</a>
         </div>
     </div>
-    
+
+    <!-- 排行榜弹窗（带难度切换） -->
+    <div class="lb-modal-overlay hidden" id="leaderboardModal">
+        <div class="lb-modal">
+            <button class="lb-modal-close" onclick="closeLeaderboard()">×</button>
+            <div class="lb-modal-title">🏆 罗莎琥珀排行榜</div>
+            <div class="lb-modal-subtitle">累计胜场越多，排名越高</div>
+            <div class="lb-diff-tabs" id="lbDiffTabs">
+                <button class="lb-diff-tab active" data-diff="">全部</button>
+                <button class="lb-diff-tab" data-diff="easy">😊 简单</button>
+                <button class="lb-diff-tab" data-diff="normal">😐 中等</button>
+                <button class="lb-diff-tab" data-diff="hard">😈 困难</button>
+            </div>
+            <div class="lb-list" id="lbList">
+                <div class="lb-empty"><div class="lb-empty-icon">🌿</div><p>加载中...</p></div>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="index.js"></script>
 </body>

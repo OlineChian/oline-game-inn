@@ -87,9 +87,10 @@ module.exports = function(app, context) {
       const limit = parseInt(req.query.limit) || 10;
       const difficulty = req.query.difficulty;
       const hardestOnly = req.query.hardestOnly === 'true';
+      const mode = req.query.mode;
 
-      const result = service.getLeaderboard(gameId, { limit, difficulty, hardestOnly }, siteConfig);
-      
+      const result = service.getLeaderboard(gameId, { limit, difficulty, hardestOnly, mode }, siteConfig);
+
       if (result.code === 404) {
         return res.status(404).json({ success: false, error: result.error });
       }

@@ -155,13 +155,14 @@ class ActivityService {
   /**
    * 提交预测
    */
-  submitPrediction(activityId, nickname, data) {
+  async submitPrediction(activityId, nickname, data) {
     const key = `prediction:${activityId}:${nickname}`;
     const existing = this.storage.get(key);
     
     // 多场对阵预测格式
     if (data.predictions && typeof data.predictions === 'object') {
       const isUpdate = !!existing;
+      const predictionCount = Object.keys(data.predictions).length;
       
       this.storage.set(key, {
         nickname,
@@ -169,11 +170,30 @@ class ActivityService {
         champion: data.champion || '',
         score: data.score || '',
         mvp: data.mvp || '',
-        submittedAt: Date.now()
+        submittedAt: Date.now(),
+        predictionCount: predictionCount,
+        participated: true
       });
       
-      // 不再立即发放积分，等活动结束后结算
-      return { success: true, message: isUpdate ? '预测已更新' : '预测提交成功！活动结束后将根据预测结果发放积分。' };
+      // 获取活动配置
+      const basePath = path.join(__dirname, '..', '..', '..');
+      const config = this.loadActivitiesConfig(basePath);
+      const activity = config.activities.find(a => a.id === activityId);
+      const participateReward = activity && activity.prediction ? activity.prediction.participateReward || 5 : 5;
+      
+      // 首次提交时发放参与积分（每场5积分）
+      if (!isUpdate && predictionCount > 0) {
+        const pointsToAward = predictionCount * participateReward;
+        await this.updateUserPoints(nickname, 'prediction', pointsToAward, `预测参与奖励（${predictionCount}场）`);
+        return { 
+          success: true, 
+          message: `预测提交成功！获得 ${pointsToAward} 参与积分`,
+          pointsAwarded: pointsToAward
+        };
+      }
+      
+      // 更新时不重复发放积分
+      return { success: true, message: '预测已更新', pointsAwarded: 0 };
     }
     
     // 单个冠军预测格式
@@ -190,11 +210,22 @@ class ActivityService {
       champion: data.champion,
       score: data.score || '',
       mvp: data.mvp || '',
-      submittedAt: Date.now()
+      submittedAt: Date.now(),
+      participated: true
     });
     
-    // 不再立即发放积分
-    return { success: true, message: '预测提交成功！活动结束后将根据预测结果发放积分。' };
+    // 首次提交时发放参与积分
+    const basePath = path.join(__dirname, '..', '..', '..');
+    const config = this.loadActivitiesConfig(basePath);
+    const activity = config.activities.find(a => a.id === activityId);
+    const participateReward = activity && activity.prediction ? activity.prediction.participateReward || 5 : 5;
+    
+    await this.updateUserPoints(nickname, 'prediction', participateReward, '预测参与奖励');
+    return { 
+      success: true, 
+      message: `预测提交成功！获得 ${participateReward} 参与积分`,
+      pointsAwarded: participateReward
+    };
   }
 
   /**

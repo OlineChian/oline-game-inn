@@ -232,10 +232,33 @@ body {
     border: 1px solid rgba(249, 223, 149, 0.15);
     border-radius: 0.42857143em;
     padding: 12px 15px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     font-size: 0.85em;
     color: var(--color-warm-gold, #F9DF95);
     text-align: center;
+}
+
+/* 积分规则按钮 */
+.challenge-rules-btn-wrap {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.challenge-rules-btn {
+    background: rgba(0, 255, 209, 0.12);
+    border: 1px solid rgba(0, 255, 209, 0.2);
+    color: var(--color-brand, #00FFD1);
+    padding: 10px 25px;
+    border-radius: 0.71428571em;
+    font-size: 0.85em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.challenge-rules-btn:hover {
+    background: rgba(0, 255, 209, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 209, 0.12);
 }
 
 /* 挑战游戏列表 */
@@ -309,6 +332,13 @@ body {
 .game-best-score {
     font-size: 0.8em;
     color: var(--color-brand, #00FFD1);
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+.game-earned-points {
+    font-size: 0.75em;
+    color: var(--color-warm-gold, #F9DF95);
     font-weight: bold;
     margin-top: 4px;
 }
@@ -1183,6 +1213,110 @@ body {
     color: #000;
 }
 
+/* ==================== 积分规则弹窗 ==================== */
+.rules-modal {
+    max-width: 560px;
+    text-align: left;
+}
+
+.rules-modal .modal-icon {
+    font-size: 50px;
+    margin-bottom: 10px;
+}
+
+.rules-modal h2 {
+    text-align: center;
+    margin-bottom: 6px;
+}
+
+.rules-modal p {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.rules-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rules-item {
+    background: var(--bg-tertiary, #25262E);
+    border: 1px solid rgba(0, 255, 209, 0.08);
+    border-radius: 0.57142857em;
+    padding: 14px 16px;
+    transition: all 0.25s;
+}
+
+.rules-item:hover {
+    border-color: rgba(0, 255, 209, 0.18);
+    background: var(--bg-hover, #2C2D36);
+}
+
+.rules-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed rgba(0, 255, 209, 0.1);
+}
+
+.rules-game-icon {
+    font-size: 1.6em;
+    line-height: 1;
+}
+
+.rules-game-name {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--text-light-gray, #DDDEDF);
+    flex: 1;
+}
+
+.rules-game-difficulty {
+    font-size: 0.7em;
+    color: var(--color-sky-blue, #90B9F3);
+    background: rgba(144, 185, 243, 0.12);
+    padding: 3px 10px;
+    border-radius: 0.28571429em;
+    white-space: nowrap;
+}
+
+.rules-item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rules-desc {
+    font-size: 0.82em;
+    color: var(--text-primary, rgba(255,255,255,0.85));
+}
+
+.rules-formula {
+    font-size: 0.78em;
+    color: var(--color-brand, #00FFD1);
+    font-family: 'Courier New', monospace;
+    background: rgba(0, 255, 209, 0.06);
+    padding: 6px 10px;
+    border-radius: 0.28571429em;
+    border: 1px solid rgba(0, 255, 209, 0.08);
+    word-break: break-all;
+}
+
+.rules-footer-note {
+    font-size: 0.75em;
+    color: var(--text-placeholder, rgba(255,255,255,0.45));
+    text-align: center;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: rgba(249, 223, 149, 0.06);
+    border-radius: 0.28571429em;
+    border: 1px solid rgba(249, 223, 149, 0.1);
+}
+
 /* ==================== Toast提示 ==================== */
 .toast {
     position: fixed;
@@ -1330,6 +1464,33 @@ body {
         font-size: 1.1em;
         letter-spacing: 2px;
     }
+
+    /* 积分规则弹窗移动端适配 */
+    .rules-item-header {
+        gap: 8px;
+    }
+
+    .rules-game-icon {
+        font-size: 1.4em;
+    }
+
+    .rules-game-name {
+        font-size: 0.9em;
+    }
+
+    .rules-game-difficulty {
+        font-size: 0.65em;
+        padding: 2px 8px;
+    }
+
+    .rules-desc {
+        font-size: 0.75em;
+    }
+
+    .rules-formula {
+        font-size: 0.7em;
+        padding: 5px 8px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1343,5 +1504,14 @@ body {
 
     .modal {
         padding: 20px;
+    }
+
+    .rules-item {
+        padding: 12px;
+    }
+
+    .rules-item-header {
+        flex-wrap: wrap;
+        gap: 6px;
     }
 }

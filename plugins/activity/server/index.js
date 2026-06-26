@@ -52,19 +52,21 @@ module.exports = function(app, context) {
       });
     });
 
-    app.post('/api/activity/:id/prediction', (req, res) => {
+    app.post('/api/activity/:id/prediction', async (req, res) => {
       const activityId = req.params.id;
       const { nickname, champion, score, mvp, predictions } = req.body;
       if (!nickname) return res.status(400).json({ success: false, error: '昵称不能为空' });
-      const result = service.submitPrediction(activityId, nickname, { champion, score, mvp, predictions });
+      const result = await service.submitPrediction(activityId, nickname, { champion, score, mvp, predictions });
+      if (result.error) return res.status(result.code || 400).json(result);
       res.json(result);
     });
 
-    app.post('/api/activity/:id/predictions', (req, res) => {
+    app.post('/api/activity/:id/predictions', async (req, res) => {
       const activityId = req.params.id;
       const { nickname, champion, score, mvp, predictions } = req.body;
       if (!nickname) return res.status(400).json({ success: false, error: '昵称不能为空' });
-      const result = service.submitPrediction(activityId, nickname, { champion, score, mvp, predictions });
+      const result = await service.submitPrediction(activityId, nickname, { champion, score, mvp, predictions });
+      if (result.error) return res.status(result.code || 400).json(result);
       res.json(result);
     });
 

@@ -278,25 +278,78 @@ function showResult() {
 }
 
 async function submitToLeaderboard(winner) {
+  // 排行榜记录累计胜场：只有胜利才计入，平局和负局不计
+  if (winner !== currentSymbol) return;
+  await submitWinToLeaderboard('online', 'online');
+}
+
+// 提交胜利记录（sum 聚合模型：每次胜利提交 score=1，service 按昵称求和）
+// difficulty: 'online' | 'easy' | 'normal' | 'hard'
+async function submitWinToLeaderboard(mode, difficulty) {
   const nickname = localStorage.getItem('gameNickname');
   if (!nickname || !nickname.trim()) return;
-  let score = 0;
-  if (winner === 'draw') score = 50;
-  else if (winner === currentSymbol) score = 100;
-  else score = 0;
+
   try {
     await fetch('/api/leaderboard/rosa-ember', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nickname,
-        score,
-        extra: { mode: 'online', result: winner }
+        score: 1,
+        extra: { mode, difficulty: difficulty || mode, result: 'win' }
       })
     });
   } catch (e) {
     console.warn('排行榜提交失败:', e);
   }
+}
+
+// ==================== 排行榜弹窗（顶部按钮触发）====================
+function showLeaderboard() {
+  const modal = document.getElementById('leaderboardModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  // 读取当前激活的难度 tab
+  const activeTab = modal.querySelector('.lb-diff-tab.active');
+  loadLeaderboard(activeTab ? activeTab.dataset.diff : '');
+}
+
+function closeLeaderboard() {
+  const modal = document.getElementById('leaderboardModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function loadLeaderboard(difficulty) {
+  const listEl = document.getElementById('lbList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">⏳</div><p>加载中...</p></div>';
+  try {
+    const url = '/api/leaderboard/rosa-ember' + (difficulty ? `?difficulty=${difficulty}` : '');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success && data.leaderboard && data.leaderboard.length > 0) {
+      listEl.innerHTML = data.leaderboard.map((item, idx) => {
+        const rankCls = idx < 3 ? `rank-${idx + 1}` : '';
+        return `
+          <div class="lb-item ${rankCls}">
+            <div class="lb-rank">${idx + 1}</div>
+            <div class="lb-name">${escapeHtmlText(item.nickname)}</div>
+            <div class="lb-score">${item.score}<span class="lb-unit">${data.config.unit}</span></div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      listEl.innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">🌿</div><p>暂无排行记录</p><p style="font-size:12px;margin-top:5px;">快去挑战成为第一名吧！</p></div>';
+    }
+  } catch (e) {
+    listEl.innerHTML = '<div class="lb-empty"><div class="lb-empty-icon">❌</div><p>加载失败</p><p style="font-size:12px;margin-top:5px;">请确保服务器已启动</p></div>';
+  }
+}
+
+function escapeHtmlText(text) {
+  const div = document.createElement('div');
+  div.textContent = text == null ? '' : String(text);
+  return div.innerHTML;
 }
 
 // 启动
@@ -309,6 +362,7 @@ let soloRound = 1;
 let soloScores = [];
 let soloBotTimeout = null;
 let soloPlayerSymbol = null; // 'rosa' = 先手, 'amber' = 后手
+let soloDifficulty = 'easy'; // 'easy' | 'normal' | 'hard'，单人 AI 难度
 
 const winPatterns = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -336,8 +390,9 @@ function startSoloMode() {
   showSoloScreen('soloMenu');
 }
 
-function enterSoloGame(playerFirst) {
+function enterSoloGame(playerFirst, difficulty) {
   soloPlayerSymbol = playerFirst;
+  soloDifficulty = difficulty || 'easy';
   soloState = initSoloState();
   soloState.currentPlayer = 'rosa'; // rosa 永远先手
   showSoloScreen('soloGame');
@@ -438,7 +493,7 @@ function botMove() {
   if (!soloActive || !soloState || soloState.gameOver) return;
   if (soloState.currentPlayer === soloPlayerSymbol) return;
 
-  const move = findBestBotMove(soloState);
+  const move = findBestBotMove(soloState, soloDifficulty);
   if (move) {
     doMove(soloState, move.bi, move.ci);
     renderSoloBoard();
@@ -451,11 +506,164 @@ function botMove() {
   }
 }
 
-function findBestBotMove(state) {
+/**
+ * 三档 AI：
+ * - easy：纯随机
+ * - normal：启发式（优先取胜 → 封堵对手立即取胜 → 优先中心 → 随机）
+ * - hard：增强启发式（normal 基础上 + 双威胁布局 + 避免把好棋盘让给对手）
+ */
+function findBestBotMove(state, difficulty) {
   const validMoves = getValidMoves(state);
   if (validMoves.length === 0) return null;
-  // 简单 AI：随机选一步
+
+  if (difficulty === 'hard') {
+    return findHardMove(state, validMoves);
+  }
+  if (difficulty === 'normal') {
+    return findNormalMove(state, validMoves);
+  }
+  // easy：纯随机
   return validMoves[Math.floor(Math.random() * validMoves.length)];
+}
+
+// 中等 AI：能赢就赢 → 能堵就堵 → 中心格 → 随机
+function findNormalMove(state, validMoves) {
+  const botSymbol = state.currentPlayer;
+  const oppSymbol = botSymbol === 'rosa' ? 'amber' : 'rosa';
+
+  // 1. 立即取胜
+  const winMove = findWinningMove(state, botSymbol);
+  if (winMove) return winMove;
+
+  // 2. 封堵对手立即取胜
+  const blockMove = findWinningMove(state, oppSymbol);
+  if (blockMove) return blockMove;
+
+  // 3. 优先中心格（每个 mini-board 的中心是 4，全局中心是 4 号棋盘）
+  const centerMoves = validMoves.filter(m => m.ci === 4);
+  if (centerMoves.length > 0) {
+    return centerMoves[Math.floor(Math.random() * centerMoves.length)];
+  }
+
+  // 4. 随机
+  return validMoves[Math.floor(Math.random() * validMoves.length)];
+}
+
+// 困难 AI：中等基础上 + 制造双威胁 + 避免把可胜棋盘让给对手
+function findHardMove(state, validMoves) {
+  const botSymbol = state.currentPlayer;
+  const oppSymbol = botSymbol === 'rosa' ? 'amber' : 'rosa';
+
+  // 1. 立即取胜
+  const winMove = findWinningMove(state, botSymbol);
+  if (winMove) return winMove;
+
+  // 2. 封堵对手立即取胜
+  const blockMove = findWinningMove(state, oppSymbol);
+  if (blockMove) return blockMove;
+
+  // 3. 评分选择：制造自身威胁 + 避免送给对手好棋盘
+  let bestScore = -Infinity;
+  let bestMoves = [];
+  for (const move of validMoves) {
+    const score = evaluateMove(state, move, botSymbol, oppSymbol);
+    if (score > bestScore) {
+      bestScore = score;
+      bestMoves = [move];
+    } else if (score === bestScore) {
+      bestMoves.push(move);
+    }
+  }
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+// 评估某一步的得分
+function evaluateMove(state, move, botSymbol, oppSymbol) {
+  let score = 0;
+
+  // 模拟落子
+  const sim = cloneState(state);
+  doMove(sim, move.bi, move.ci);
+
+  // 加分：模拟后能制造几个潜在取胜线（mini-board 内）
+  const myThreats = countThreats(sim, botSymbol);
+  score += myThreats * 3;
+
+  // 减分：模拟后对手在该棋盘有取胜机会
+  const oppThreats = countThreats(sim, oppSymbol);
+  score -= oppThreats * 2;
+
+  // 加分：落到中心格
+  if (move.ci === 4) score += 2;
+
+  // 加分：赢得 mini-board
+  if (sim.boardWinners[move.bi] === botSymbol) score += 5;
+
+  // 减分：下一步会把对手送到已赢/好棋盘（activeBoard 让对手主导）
+  const nextBoard = sim.activeBoard;
+  if (nextBoard !== null && sim.boardWinners[nextBoard] === oppSymbol) {
+    score -= 4;
+  }
+
+  return score;
+}
+
+// 统计某玩家在所有 mini-board 的潜在取胜线数（2 子 + 1 空）
+function countThreats(state, symbol) {
+  let count = 0;
+  for (let bi = 0; bi < 9; bi++) {
+    if (state.boardWinners[bi] !== null) continue;
+    const bd = state.boardData[bi];
+    for (const p of winPatterns) {
+      const cells = [bd[p[0]], bd[p[1]], bd[p[2]]];
+      const mine = cells.filter(c => c === symbol).length;
+      const empty = cells.filter(c => c === null).length;
+      if (mine === 2 && empty === 1) count++;
+    }
+  }
+  return count;
+}
+
+// 查找能让指定玩家立即取胜的落子
+function findWinningMove(state, symbol) {
+  const validMoves = getValidMoves(state);
+  for (const move of validMoves) {
+    const sim = cloneState(state);
+    doMove(sim, move.bi, move.ci);
+    if (sim.gameOver && sim.winner === symbol) return move;
+    // 也算 mini-board 即将取胜的封堵（非全局取胜）
+    if (sim.boardWinners[move.bi] === symbol) {
+      // 如果这步能赢得 mini-board 且形成全局威胁，优先
+      const globalSim = cloneState(state);
+      doMove(globalSim, move.bi, move.ci);
+      if (createsGlobalThreat(globalSim, symbol)) return move;
+    }
+  }
+  return null;
+}
+
+// 判断赢得某 mini-board 后是否形成全局取胜威胁（2 个棋盘连线 + 第 3 个可争）
+function createsGlobalThreat(state, symbol) {
+  const w = state.boardWinners;
+  for (const p of winPatterns) {
+    const a = w[p[0]], b = w[p[1]], c = w[p[2]];
+    const mine = [a, b, c].filter(x => x === symbol).length;
+    const empty = [a, b, c].filter(x => x === null).length;
+    if (mine === 2 && empty === 1) return true;
+  }
+  return false;
+}
+
+// 浅克隆游戏状态（用于 AI 模拟）
+function cloneState(state) {
+  return {
+    currentPlayer: state.currentPlayer,
+    activeBoard: state.activeBoard,
+    boardWinners: [...state.boardWinners],
+    boardData: state.boardData.map(bd => [...bd]),
+    gameOver: state.gameOver,
+    winner: state.winner
+  };
 }
 
 function getValidMoves(state) {
@@ -610,21 +818,9 @@ function finishSoloChallenge() {
 }
 
 async function submitToLeaderboardSolo(score) {
-  const nickname = localStorage.getItem('gameNickname');
-  if (!nickname || !nickname.trim()) return;
-  try {
-    await fetch('/api/leaderboard/rosa-ember', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nickname,
-        score,
-        extra: { mode: 'solo', symbol: soloPlayerSymbol }
-      })
-    });
-  } catch (e) {
-    console.warn('排行榜提交失败:', e);
-  }
+  // 排行榜记录累计胜场：只有胜利（100分）才计入，平局(50)/负局(0)不计
+  if (score < 100) return;
+  await submitWinToLeaderboard('solo', soloDifficulty);
 }
 
 function showSoloScreen(screen) {
@@ -650,12 +846,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const soloFinishBtn = document.getElementById('soloFinishBtn');
 
   if (soloModeBtn) soloModeBtn.addEventListener('click', startSoloMode);
-  if (soloStartRosaBtn) soloStartRosaBtn.addEventListener('click', () => enterSoloGame('rosa'));
-  if (soloStartAmberBtn) soloStartAmberBtn.addEventListener('click', () => enterSoloGame('amber'));
+  // 单人模式：选择执棋时读取当前选中的难度
+  if (soloStartRosaBtn) soloStartRosaBtn.addEventListener('click', () => enterSoloGame('rosa', soloDifficulty));
+  if (soloStartAmberBtn) soloStartAmberBtn.addEventListener('click', () => enterSoloGame('amber', soloDifficulty));
   if (soloBackBtn) soloBackBtn.addEventListener('click', () => showSoloScreen('menu'));
   if (soloQuitBtn) soloQuitBtn.addEventListener('click', quitSoloMode);
   if (soloNextBtn) soloNextBtn.addEventListener('click', soloNextRound);
   if (soloFinishBtn) soloFinishBtn.addEventListener('click', finishSoloChallenge);
+
+  // 难度选择按钮：点击切换 active 并更新 soloDifficulty
+  const diffBtns = document.querySelectorAll('.solo-diff-btn');
+  diffBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      diffBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      soloDifficulty = btn.dataset.diff || 'easy';
+    });
+  });
+
+  // 排行榜 modal 事件
+  const lbModal = document.getElementById('leaderboardModal');
+  if (lbModal) {
+    // 点击外部关闭
+    lbModal.addEventListener('click', (e) => {
+      if (e.target === lbModal) closeLeaderboard();
+    });
+    // 难度 tab 切换
+    const diffTabs = lbModal.querySelectorAll('.lb-diff-tab');
+    diffTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        diffTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        loadLeaderboard(tab.dataset.diff || '');
+      });
+    });
+  }
 
   // 自动检测 URL 参数进入单人模式
   const params = new URLSearchParams(window.location.search);

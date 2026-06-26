@@ -96,6 +96,12 @@
                     💡 建议先在大厅练习熟悉游戏，再开始挑战哦！
                 </div>
 
+                <div class="challenge-rules-btn-wrap">
+                    <button class="challenge-rules-btn" onclick="showRules()">
+                        📊 查看积分规则
+                    </button>
+                </div>
+
                 <div class="challenge-games" id="challengeGames">
                     <!-- 动态生成游戏列表 -->
                 </div>
@@ -127,7 +133,7 @@
                     <button class="prediction-submit-btn" id="predictionSubmitBtn" onclick="handlePredictionAction()">
                         📤 提交全部预测
                     </button>
-                    <p class="prediction-submit-hint">参与预测得 5 积分，预测成功再得 25 积分</p>
+                    <p class="prediction-submit-hint">参与预测得 5 积分/场，预测成功再得 25 积分/场</p>
                 </div>
             </div>
 
@@ -233,6 +239,21 @@
             </div>
             <p class="lottery-remaining">剩余积分：<span id="remainingPoints">0</span></p>
             <button class="modal-btn" onclick="closeLotteryResult()">确定</button>
+        </div>
+    </div>
+
+    <!-- ==================== 积分规则弹窗 ==================== -->
+    <div class="modal-overlay hidden" id="rulesModal">
+        <div class="modal rules-modal">
+            <button class="close-modal" onclick="closeRules()">×</button>
+            <div class="modal-icon">📊</div>
+            <h2>积分获取规则</h2>
+            <p>每款游戏挑战3局，取最优成绩结算积分</p>
+            <div class="rules-container" id="rulesContainer">
+                <!-- 动态渲染规则 -->
+            </div>
+            <div class="rules-footer-note">* 每个游戏挑战3局取最优成绩，单游戏最高100积分</div>
+            <button class="modal-btn" onclick="closeRules()">知道了</button>
         </div>
     </div>
 
