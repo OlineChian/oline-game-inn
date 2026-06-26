@@ -161,8 +161,69 @@ function verifySubmission(gameId, body) {
   return { ok: true };
 }
 
+/**
+ * 反作弊遥测校验（防 AFK / 障碍物删除刷分）
+ *
+ * 客户端在 extra.antiCheat 中附带：
+ *   - inputCount：游戏中总输入次数（按键/触屏均计 1 次）
+ *   - maxNoInputMs：最长无操作间隔（毫秒）
+ *   - playedMs：游戏时长（毫秒）
+ *
+ * 校验规则：
+ *   1. 时长-分数一致性：playedMs >= score * 60
+ *      score = frameCount/10，60fps 下 6 分/秒，阈值允许最高 ~16 分/秒（兼容 120/144Hz）
+ *   2. 输入频率：inputCount >= floor(score / 30)
+ *      正常约每 3-5 秒需输入一次（避障），阈值放宽到每 5 秒 1 次
+ *   3. AFK 检测：maxNoInputMs < 10000
+ *      超过 10 秒无操作视为挂机（easy 难度首障约 7 秒到达，留足余量）
+ *
+ * 无 extra.antiCheat 字段时跳过校验（向后兼容未接入的游戏）。
+ *
+ * @param {string} gameId
+ * @param {object} body - req.body，需含 score + extra.antiCheat
+ * @returns {{ok:true}|{ok:false,error:string,code:number}}
+ */
+function verifyAntiCheat(gameId, body) {
+  const extra = body && body.extra;
+  const ac = extra && extra.antiCheat;
+  if (!ac) return { ok: true }; // 无遥测数据，跳过校验（向后兼容）
+
+  const score = Number(body.score);
+  if (!Number.isFinite(score)) {
+    return { ok: false, error: 'score 格式错误', code: 400 };
+  }
+
+  const inputCount = Number(ac.inputCount);
+  const maxNoInputMs = Number(ac.maxNoInputMs);
+  const playedMs = Number(ac.playedMs);
+  if (!Number.isFinite(inputCount) || !Number.isFinite(maxNoInputMs) || !Number.isFinite(playedMs)) {
+    return { ok: false, error: 'antiCheat 字段格式错误', code: 400 };
+  }
+  if (inputCount < 0 || maxNoInputMs < 0 || playedMs < 0) {
+    return { ok: false, error: 'antiCheat 字段非法', code: 400 };
+  }
+
+  // 1. 时长-分数一致性：score 不应超过时长允许的上限
+  if (playedMs < score * 60) {
+    return { ok: false, error: '游戏时长与分数不匹配', code: 400 };
+  }
+
+  // 2. 输入频率：分数越高应累计越多输入，AFK 刷分 inputCount 会很低
+  if (inputCount < Math.floor(score / 30)) {
+    return { ok: false, error: '输入次数异常', code: 400 };
+  }
+
+  // 3. AFK 检测：最长无操作间隔不超过 10 秒
+  if (maxNoInputMs >= 10000) {
+    return { ok: false, error: '检测到长时间无操作', code: 400 };
+  }
+
+  return { ok: true };
+}
+
 module.exports = {
   verifySubmission,
+  verifyAntiCheat,
   computeSignature,
   // 暴露供测试：清理 nonce 缓存
   _resetNonceStore() {

@@ -4,7 +4,7 @@
  */
 
 const LeaderboardService = require('./service');
-const { verifySubmission } = require('./security');
+const { verifySubmission, verifyAntiCheat } = require('./security');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
@@ -127,6 +127,12 @@ module.exports = function(app, context) {
       const verification = verifySubmission(gameId, req.body);
       if (!verification.ok) {
         return res.status(verification.code).json({ success: false, error: verification.error });
+      }
+
+      // 反作弊校验：防 AFK / 障碍物删除刷分（仅当 extra.antiCheat 存在时校验，向后兼容未接入的游戏）
+      const acCheck = verifyAntiCheat(gameId, req.body);
+      if (!acCheck.ok) {
+        return res.status(acCheck.code).json({ success: false, error: acCheck.error });
       }
 
       // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算

@@ -236,17 +236,24 @@
             margin-top: 15px;
             padding: 0 10px;
         }
+        .mobile-control-group {
+            display: flex;
+            gap: 10px;
+        }
         .mobile-btn {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             border: 2px solid var(--color-accent);
             background: rgba(0, 255, 136, 0.1);
             color: var(--color-accent);
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         }
         .mobile-btn:active { background: rgba(0, 255, 136, 0.3); }
         @media (max-width: 768px) {
@@ -489,8 +496,14 @@
             <canvas id="gameCanvas" width="500" height="320"></canvas>
             <div class="hint">空格/点击 跳跃(二段跳) · ←→/AD 左右移动 · ↓/S 下蹲躲避飞鸟</div>
             <div class="mobile-controls">
-                <button class="mobile-btn" id="duckBtn">⬇️</button>
-                <button class="mobile-btn" id="jumpBtn">⬆️</button>
+                <div class="mobile-control-group">
+                    <button class="mobile-btn" id="leftBtn">⬅️</button>
+                    <button class="mobile-btn" id="rightBtn">➡️</button>
+                </div>
+                <div class="mobile-control-group">
+                    <button class="mobile-btn" id="duckBtn">⬇️</button>
+                    <button class="mobile-btn" id="jumpBtn">⬆️</button>
+                </div>
             </div>
             <div class="game-controls">
                 <button class="btn btn-secondary" id="backToMenuBtn">← 返回菜单</button>
@@ -525,8 +538,14 @@
             <canvas id="soloCanvas" width="500" height="320"></canvas>
             <div class="hint">空格/点击 跳跃(二段跳) · ←→/AD 左右移动 · ↓/S 下蹲躲避飞鸟</div>
             <div class="mobile-controls">
-                <button class="mobile-btn" id="soloDuckBtn">⬇️</button>
-                <button class="mobile-btn" id="soloJumpBtn">⬆️</button>
+                <div class="mobile-control-group">
+                    <button class="mobile-btn" id="soloLeftBtn">⬅️</button>
+                    <button class="mobile-btn" id="soloRightBtn">➡️</button>
+                </div>
+                <div class="mobile-control-group">
+                    <button class="mobile-btn" id="soloDuckBtn">⬇️</button>
+                    <button class="mobile-btn" id="soloJumpBtn">⬆️</button>
+                </div>
             </div>
             <div class="game-controls">
                 <button class="btn btn-secondary" id="soloQuitBtn">← 返回菜单</button>

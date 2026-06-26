@@ -50,6 +50,46 @@ function createPlayer() {
   };
 }
 
+// ==================== 输入遥测（防 AFK / 障碍物删除刷分）====================
+// 追踪游戏中玩家的按键/触屏事件，提交时附带至服务端校验：
+//   - inputCount：总输入次数（任何按键/触屏均计 1 次）
+//   - maxNoInputMs：最长无操作间隔（用于检测 AFK）
+//   - playedMs：游戏时长（score = frameCount/10，60fps 下 6 分/秒，用于时间-分数一致性校验）
+function createInputTracker() {
+  return { count: 0, lastTime: 0, maxGap: 0, startMs: 0, endMs: 0, active: false };
+}
+function startInputTracker(t) {
+  t.count = 0; t.lastTime = 0; t.maxGap = 0;
+  t.startMs = Date.now(); t.endMs = 0; t.active = true;
+}
+function recordInput(t) {
+  if (!t.active) return;
+  const now = Date.now();
+  if (t.lastTime > 0) {
+    const gap = now - t.lastTime;
+    if (gap > t.maxGap) t.maxGap = gap;
+  }
+  t.lastTime = now;
+  t.count++;
+}
+function stopInputTracker(t) {
+  t.active = false;
+  t.endMs = Date.now();
+  // 整局无任何输入：maxGap 记为总时长（必然超过 6 秒阈值，触发拒绝）
+  if (t.lastTime === 0) t.maxGap = t.endMs - t.startMs;
+}
+function getTelemetry(t) {
+  return { inputCount: t.count, maxNoInputMs: t.maxGap, playedMs: t.endMs - t.startMs };
+}
+// 当前激活的游戏（联机/单人）记录一次输入
+function recordGameInput() {
+  if (soloRunning && !soloGameOver) recordInput(soloInput);
+  else if (onlineRunning && !onlineGameOver) recordInput(onlineInput);
+}
+
+let soloInput = createInputTracker();
+let onlineInput = createInputTracker();
+
 // ==================== DOM 引用 ====================
 const $ = (id) => document.getElementById(id);
 const screens = {
@@ -235,6 +275,7 @@ function initOnlineState() {
   onlineScore = 0;
   lastTime = 0;
   lastScoreSync = Date.now();
+  startInputTracker(onlineInput);
   if (localScoreEl) localScoreEl.textContent = '0';
   if (opponentScoreEl) opponentScoreEl.textContent = '0';
 }
@@ -333,11 +374,12 @@ function endOnlineGame() {
   onlineGameOver = true;
   onlineRunning = false;
   stopOnlineLoop();
+  stopInputTracker(onlineInput);
   socket.emit('gameOver', onlineScore, (res) => {
     if (res.success && res.bothFinished) handleOnlineGameOver(res.gameState);
     else showStatus('已结束，等待对手完成...');
   });
-  submitScoreToLeaderboard(onlineScore, 'online');
+  submitScoreToLeaderboard(onlineScore, 'online', getTelemetry(onlineInput));
 }
 
 function handleOnlineGameOver(gameState) {
@@ -379,6 +421,7 @@ function initSoloState() {
   soloGameSpeed = difficulties[currentDifficulty].startSpeed;
   soloScore = 0;
   lastTime = 0;
+  startInputTracker(soloInput);
   if (soloScoreEl) soloScoreEl.textContent = '0';
   if (soloBestEl) soloBestEl.textContent = soloBest;
 }
@@ -459,6 +502,7 @@ function endSoloGame() {
   soloGameOver = true;
   soloRunning = false;
   stopSoloLoop();
+  stopInputTracker(soloInput);
 
   // 更新历史最高
   if (soloScore > soloBest) {
@@ -467,7 +511,7 @@ function endSoloGame() {
   }
 
   // 提交排行榜
-  submitScoreToLeaderboard(soloScore, 'solo');
+  submitScoreToLeaderboard(soloScore, 'solo', getTelemetry(soloInput));
 
   // 显示结果（随时重玩，不跳转活动页）
   showScreen('soloResult');
@@ -698,7 +742,7 @@ function drawBird(ctx, x, y, w, h, frameCount) {
 }
 
 // ==================== 排行榜提交 ====================
-async function submitScoreToLeaderboard(score, mode) {
+async function submitScoreToLeaderboard(score, mode, telemetry) {
   const nickname = localStorage.getItem('gameNickname');
   if (!nickname || !nickname.trim()) return;
   if (!window.ScoreSigner) {
@@ -707,13 +751,15 @@ async function submitScoreToLeaderboard(score, mode) {
   }
   try {
     const sig = await window.ScoreSigner.sign({ gameId: '8bit-arcade', nickname, score });
+    const extra = { difficulty: currentDifficulty, mode };
+    if (telemetry) extra.antiCheat = telemetry;
     await fetch('/api/leaderboard/8bit-arcade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nickname,
         score,
-        extra: { difficulty: currentDifficulty, mode },
+        extra,
         timestamp: sig.timestamp,
         nonce: sig.nonce,
         signature: sig.signature
@@ -792,6 +838,8 @@ function bindEvents() {
 
   // 键盘控制（联机 + 单人共用，根据当前激活屏幕分发）
   document.addEventListener('keydown', (e) => {
+    // 输入遥测：游戏进行中任意按键都记一次（排除长按重复事件）
+    if (!e.repeat) recordGameInput();
     if (e.code === 'Space') {
       e.preventDefault();
       if (soloRunning && !soloGameOver) {
@@ -834,9 +882,11 @@ function bindEvents() {
   if (gameCanvas) {
     gameCanvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      recordGameInput();
       if (onlineRunning && !onlineGameOver) jump(onlinePlayer, onlineRunning, onlineGameOver);
     });
     gameCanvas.addEventListener('click', () => {
+      recordGameInput();
       if (onlineRunning && !onlineGameOver) jump(onlinePlayer, onlineRunning, onlineGameOver);
     });
   }
@@ -845,9 +895,11 @@ function bindEvents() {
   if (soloCanvas) {
     soloCanvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      recordGameInput();
       if (soloRunning && !soloGameOver) jump(soloPlayer, soloRunning, soloGameOver);
     });
     soloCanvas.addEventListener('click', () => {
+      recordGameInput();
       if (soloRunning && !soloGameOver) jump(soloPlayer, soloRunning, soloGameOver);
     });
   }
@@ -858,15 +910,31 @@ function bindEvents() {
   if (jumpBtn) {
     jumpBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      recordGameInput();
       if (onlineRunning && !onlineGameOver) jump(onlinePlayer, onlineRunning, onlineGameOver);
     });
     jumpBtn.addEventListener('click', () => {
+      recordGameInput();
       if (onlineRunning && !onlineGameOver) jump(onlinePlayer, onlineRunning, onlineGameOver);
     });
   }
   if (duckBtn) {
-    duckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (onlineRunning && !onlineGameOver) duck(onlinePlayer, onlineRunning, onlineGameOver, true); });
+    duckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); if (onlineRunning && !onlineGameOver) duck(onlinePlayer, onlineRunning, onlineGameOver, true); });
     duckBtn.addEventListener('touchend', (e) => { e.preventDefault(); if (onlineRunning && !onlineGameOver) duck(onlinePlayer, onlineRunning, onlineGameOver, false); });
+  }
+
+  // 移动端左右移动按钮（联机）
+  const leftBtn = $('leftBtn');
+  const rightBtn = $('rightBtn');
+  if (leftBtn) {
+    leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); keys.left = true; });
+    leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+    leftBtn.addEventListener('click', () => { recordGameInput(); });
+  }
+  if (rightBtn) {
+    rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); keys.right = true; });
+    rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+    rightBtn.addEventListener('click', () => { recordGameInput(); });
   }
 
   const sJumpBtn = $('soloJumpBtn');
@@ -874,15 +942,31 @@ function bindEvents() {
   if (sJumpBtn) {
     sJumpBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      recordGameInput();
       if (soloRunning && !soloGameOver) jump(soloPlayer, soloRunning, soloGameOver);
     });
     sJumpBtn.addEventListener('click', () => {
+      recordGameInput();
       if (soloRunning && !soloGameOver) jump(soloPlayer, soloRunning, soloGameOver);
     });
   }
   if (sDuckBtn) {
-    sDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if (soloRunning && !soloGameOver) duck(soloPlayer, soloRunning, soloGameOver, true); });
+    sDuckBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); if (soloRunning && !soloGameOver) duck(soloPlayer, soloRunning, soloGameOver, true); });
     sDuckBtn.addEventListener('touchend', (e) => { e.preventDefault(); if (soloRunning && !soloGameOver) duck(soloPlayer, soloRunning, soloGameOver, false); });
+  }
+
+  // 移动端左右移动按钮（单人）
+  const sLeftBtn = $('soloLeftBtn');
+  const sRightBtn = $('soloRightBtn');
+  if (sLeftBtn) {
+    sLeftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); keys.left = true; });
+    sLeftBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+    sLeftBtn.addEventListener('click', () => { recordGameInput(); });
+  }
+  if (sRightBtn) {
+    sRightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); recordGameInput(); keys.right = true; });
+    sRightBtn.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+    sRightBtn.addEventListener('click', () => { recordGameInput(); });
   }
 
   // 回车键加入房间
