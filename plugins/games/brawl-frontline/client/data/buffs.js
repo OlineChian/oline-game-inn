@@ -41,7 +41,7 @@ export const BUFF_POOL = [
   {
     id: 'base-hp-200', name: '基地生命 +200', quality: 'rare',
     effect: { type: 'base-hp-flat', value: 200 },
-    desc: '基地最大生命值 +200'
+    desc: '基地最大生命值 +200，并恢复 300 点生命'
   },
   // ---- 史诗 ----
   {

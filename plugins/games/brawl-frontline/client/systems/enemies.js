@@ -6,20 +6,18 @@
  *   - hunter：追击最近英雄，进入射程后远程射击（gunner-bot）
  *   - bomber：冲向最近英雄，接近后自爆范围伤害（bomber-bot）
  *
- * 特殊机制：
- *   - shield-guard 拥有 damageReduction，受到伤害按比例削减
- *   - bomber-bot 死亡时触发范围爆炸，对英雄+基地造成伤害
- *   - mega-pig（Boss）定期召唤小怪
+ * 特殊机制：shield-guard 减伤 / bomber-bot 自爆 / mega-pig 召唤小怪
  */
 import { Game, LAYOUT } from '../core/game.js';
 import { ENEMIES } from '../data/enemies.js';
 import { uid, randomRange, distance } from '../core/utils.js';
 import { Economy } from './economy.js';
 
+/** rusher 对基地的伤害折扣（前期直冲基地敌人对基地伤害太高） */
+const BASE_DAMAGE_RATE = 0.6;
+
 export const Enemies = {
-  /** 生成一个敌人（出怪集中在中间区域，便于英雄防御）
-   *  根据当前波数应用难度系数：前 3 波削弱，第 4 波起标准，无限波次递增
-   */
+  /** 生成敌人（出怪集中在中间区域，根据波数应用难度系数） */
   spawn(enemyId) {
     const data = ENEMIES[enemyId];
     if (!data) return;
@@ -88,10 +86,7 @@ export const Enemies = {
     }
   },
 
-  /** AI 分发器：按 ai 字段调用对应行为
-   *  减速效果：slowTimer > 0 时攻击冷却恢复速度按 slowRate 衰减
-   *  眩晕效果：stunTimer > 0 时完全无法行动（跳跃/弗兰肯超能）
-   *  中毒效果：poisonTimer > 0 时每秒受到 poisonDps 伤害（乌鸦超能） */
+  /** AI 分发器：减速/眩晕/中毒状态机 + 按 ai 字段分发 */
   _ai(en, dt) {
     // 中毒持续伤害（独立于行动，即使被眩晕也扣血）
     if (en.poisonTimer > 0) {
@@ -141,14 +136,15 @@ export const Enemies = {
       default: this._aiRusher(en, dt); break;
     }
 
-    // Boss 召唤技能（mega-pig 召唤普通机器人 / elite-summoner 召唤胖机器人）
+    // Boss 召唤技能
     if (en.skill && en.skillCd <= 0 && en.skill.type === 'summon') {
       for (let k = 0; k < en.skill.count; k++) this.spawn(en.skill.summonId);
       en.skillCd = en.skill.interval;
     }
   },
 
-  /** rusher AI：直冲基地，碰到设施时攻击设施，抵达 baseLine 后优先攻击射程内炮台，否则攻击基地 */
+  /** rusher AI：直冲基地，碰到设施攻击设施，抵达基地前线后主动攻击射程内炮台/舰炮，否则攻击基地
+   *  对基地伤害统一按 BASE_DAMAGE_RATE 折扣，避免前期对基地秒杀 */
   _aiRusher(en, dt) {
     // 移动中碰到挡路设施：先打掉
     for (const f of Game.buildings.facilities) {
@@ -165,18 +161,19 @@ export const Enemies = {
       en.y += en.moveSpeed * dt;
       return;
     }
-    // 抵达基地前线：优先攻击射程内炮台（设施），否则攻击基地
+    // 抵达基地前线：优先攻击射程内炮台/舰炮（用设施自身射程判定，炮台能打到敌人则敌人也反击）
     if (en.atkCd > 0) return;
     let targetFacility = null, minD = Infinity;
     for (const f of Game.buildings.facilities) {
       if (!f) continue;
       const d = distance(en, f);
-      if (d <= en.range + f.radius && d < minD) { minD = d; targetFacility = f; }
+      const reach = (f.range || 0) + f.radius;
+      if (d <= reach && d < minD) { minD = d; targetFacility = f; }
     }
     if (targetFacility) {
       Game.systems.facilities.takeDamage(targetFacility, en.attack);
     } else {
-      Game.damageBase(en.attack);
+      Game.damageBase(en.attack * BASE_DAMAGE_RATE);
     }
     en.atkCd = 1 / en.attackSpeed;
   },
@@ -187,19 +184,16 @@ export const Enemies = {
     if (!target) { this._aiRusher(en, dt); return; }
     const dist = distance(en, target);
     if (dist > en.range) {
-      // 追击英雄
       const dx = target.x - en.x, dy = target.y - en.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       en.x += (dx / d) * en.moveSpeed * dt;
       en.y += (dy / d) * en.moveSpeed * dt;
     } else if (en.atkCd <= 0) {
-      // 在射程内，发射投射物攻击英雄
       const dx = target.x - en.x, dy = target.y - en.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const speed = 220;
       Game.systems.combat.spawnProjectile({
         x: en.x, y: en.y,
-        vx: (dx / d) * speed, vy: (dy / d) * speed,
+        vx: (dx / d) * 220, vy: (dy / d) * 220,
         damage: en.attack, color: en.color,
         radius: 5, life: 2, targetTeam: 'hero'
       });
@@ -213,10 +207,8 @@ export const Enemies = {
     if (!target) { this._aiRusher(en, dt); return; }
     const dist = distance(en, target);
     if (dist <= en.range) {
-      // 接近英雄，触发自爆
       en.hp = 0;
     } else {
-      // 追击英雄
       const dx = target.x - en.x, dy = target.y - en.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       en.x += (dx / d) * en.moveSpeed * dt;
@@ -241,9 +233,7 @@ export const Enemies = {
     Game.state.kills += 1;
     Game.state.killCounter += 1;
     if (en.isBoss) Game.state.bossKills += 1;
-    // 爆破兵死亡自爆：对附近英雄+基地造成范围伤害
     if (en.ai === 'bomber') this._explode(en);
-    // 死亡粒子
     for (let i = 0; i < 8; i++) {
       Game.spawnParticle({
         x: en.x, y: en.y,
@@ -261,11 +251,9 @@ export const Enemies = {
       if (h.hp <= 0) continue;
       if (distance(en, h) <= r) h.hp -= en.attack;
     }
-    // 基地在爆炸范围内也受伤
     if (Math.abs(en.y - LAYOUT.base.y) < r + LAYOUT.base.h / 2) {
       Game.damageBase(Math.floor(en.attack * 0.5));
     }
-    // 爆炸粒子（橙红色扩散）
     for (let i = 0; i < 16; i++) {
       Game.spawnParticle({
         x: en.x, y: en.y,
@@ -278,7 +266,6 @@ export const Enemies = {
 
   /** 对某敌人造成伤害（护盾优先吸收 → 盾卫减伤 → 本体扣血） */
   takeDamage(enemy, dmg) {
-    // 护盾优先吸收
     if (enemy.shieldHp > 0) {
       enemy.shieldHp -= dmg;
       if (enemy.shieldHp < 0) {

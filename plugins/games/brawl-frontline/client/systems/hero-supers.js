@@ -89,12 +89,14 @@ export const Supers = {
     if (nearest) { nearest.slowTimer = def.duration; nearest.slowRate = def.slowRate; }
   },
 
-  /** 杰西：召唤炮台 */
+  /** 杰西：召唤炮台
+   *  射程 = 杰西 range ×50% = 100，攻速 = 杰西 attackSpeed ×150% = 1.5 */
   _turret(h, def) {
     Game.entities.turrets.push({
       uid: uid('t'), x: h.x, y: h.y - 40,
       hp: def.turretHp, maxHp: def.turretHp, damage: def.damage,
-      atkCd: 0, duration: def.duration, color: h.color
+      atkCd: 0, duration: def.duration, color: h.color,
+      range: Math.floor(h.range * 0.5)  // 杰西 range × 50%
     });
   },
 
@@ -194,9 +196,12 @@ export const Supers = {
     });
   },
 
-  /** 炮台更新：自动攻击射程内敌人，到期消失 */
+  /** 杰西炮台更新：自动攻击射程内敌人，到期消失
+   *  属性：射程 = 杰西 range ×50% = 100，攻速 = 杰西 attackSpeed ×150% = 1.5 */
   updateTurrets(dt) {
     const ts = Game.entities.turrets;
+    const TURRET_RANGE = 100;   // 杰西 range(200) × 50%
+    const TURRET_ASPEED = 1.5;  // 杰西 attackSpeed(1.0) × 150%
     for (let i = ts.length - 1; i >= 0; i--) {
       const t = ts[i];
       t.duration -= dt;
@@ -206,12 +211,12 @@ export const Supers = {
         let nearest = null, minDist = Infinity;
         Game.entities.enemies.forEach(en => {
           const d = distance(t, en);
-          if (d < 180 && d < minDist) { minDist = d; nearest = en; }
+          if (d < TURRET_RANGE && d < minDist) { minDist = d; nearest = en; }
         });
         if (nearest) {
           const dir = Combat.dirTo(t, nearest, 380);
           Combat.spawnProjectile({ x: t.x, y: t.y, vx: dir.vx, vy: dir.vy, damage: t.damage, color: t.color, radius: 4, life: 1.5 });
-          t.atkCd = 1.0;
+          t.atkCd = 1 / TURRET_ASPEED;
         }
       }
     }

@@ -38,19 +38,20 @@ export const Wave = {
     Game.state.phase = 'wave';
   },
 
-  /** 无限波次生成（第 7 波起）- 数量指数级增长，混合所有敌人类型 */
+  /** 无限波次生成（第 7 波起）- 数量指数级增长，混合所有敌人类型
+   *  设计：直冲基地（grunt+heavy+shield）与攻击英雄（gunner+bomber）数量接近 */
   _generateEndless(n) {
     const extra = n - 6;
-    // 数量指数级增长，设上限避免画面卡顿（60+25+18+12+8 = 123 只封顶）
-    const gruntCount = Math.min(60, 6 + Math.floor(Math.pow(1.28, extra)));
-    const heavyCount = Math.min(25, 2 + Math.floor(Math.pow(1.22, extra)));
-    const gunnerCount = Math.min(18, 1 + Math.floor(Math.pow(1.20, extra)));
-    const bomberCount = Math.min(12, 1 + Math.floor(extra * 0.6));
-    const shieldCount = Math.min(8, Math.floor(extra / 2));
+    // 数量指数级增长，设上限避免画面卡顿（40+20+30+15+6 = 111 只封顶）
+    const gruntCount = Math.min(40, 4 + Math.floor(Math.pow(1.25, extra)));
+    const heavyCount = Math.min(20, 1 + Math.floor(Math.pow(1.20, extra)));
+    const gunnerCount = Math.min(30, 3 + Math.floor(Math.pow(1.24, extra)));
+    const bomberCount = Math.min(15, 1 + Math.floor(extra * 0.7));
+    const shieldCount = Math.min(6, Math.floor(extra / 2));
     // 出怪间隔随波数缩短（数量多时密集出怪，避免一波耗时过长）
-    const gruntInterval = Math.max(0.15, 0.5 - extra * 0.02);
-    const heavyInterval = Math.max(0.3, 0.8 - extra * 0.03);
-    const gunnerInterval = Math.max(0.2, 0.6 - extra * 0.02);
+    const gruntInterval = Math.max(0.18, 0.55 - extra * 0.02);
+    const heavyInterval = Math.max(0.3, 0.85 - extra * 0.03);
+    const gunnerInterval = Math.max(0.2, 0.55 - extra * 0.02);
     const gruntEnd = (gruntCount - 1) * gruntInterval;
     const heavyEnd = gruntEnd + 2 + (heavyCount - 1) * heavyInterval;
     // 普通机器人（紧凑出怪）

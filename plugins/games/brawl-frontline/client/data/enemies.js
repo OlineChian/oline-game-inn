@@ -190,35 +190,36 @@ export const ENEMIES = {
 };
 
 /** 波次敌人组成（1~5 普通波 + 6 Boss 波）
+ *  设计原则：直冲基地（rusher）与攻击英雄（hunter+bomber）数量接近，避免一边倒
  *  第 1 波为新手适应波，第 2 波引入快射手，第 4 波引入爆破兵，第 5 波引入盾卫
  */
 export const WAVES = [
   { wave: 1, enemies: [{ id: 'grunt-bot', count: 2, interval: 2.0 }] },
   { wave: 2, enemies: [
-    { id: 'grunt-bot', count: 5, interval: 1.2 },
-    { id: 'gunner-bot', count: 1, interval: 2 }
+    { id: 'grunt-bot', count: 3, interval: 1.4 },
+    { id: 'gunner-bot', count: 2, interval: 1.8 }
   ] },
   { wave: 3, enemies: [
-    { id: 'grunt-bot', count: 6, interval: 1.0 },
+    { id: 'grunt-bot', count: 4, interval: 1.1 },
     { id: 'heavy-bot', count: 1, interval: 1.8 },
-    { id: 'gunner-bot', count: 2, interval: 1.5 }
+    { id: 'gunner-bot', count: 3, interval: 1.3 }
   ] },
   { wave: 4, enemies: [
-    { id: 'grunt-bot', count: 8, interval: 0.9 },
+    { id: 'grunt-bot', count: 4, interval: 1.0 },
     { id: 'heavy-bot', count: 2, interval: 1.6 },
-    { id: 'gunner-bot', count: 2, interval: 1.2 },
-    { id: 'bomber-bot', count: 1, interval: 3 }
+    { id: 'gunner-bot', count: 4, interval: 1.0 },
+    { id: 'bomber-bot', count: 2, interval: 2.8 }
   ] },
   { wave: 5, enemies: [
-    { id: 'grunt-bot', count: 8, interval: 0.8 },
-    { id: 'heavy-bot', count: 3, interval: 1.4 },
-    { id: 'gunner-bot', count: 3, interval: 1.0 },
+    { id: 'grunt-bot', count: 5, interval: 0.9 },
+    { id: 'heavy-bot', count: 2, interval: 1.4 },
+    { id: 'gunner-bot', count: 5, interval: 0.9 },
     { id: 'bomber-bot', count: 2, interval: 2.5 },
     { id: 'shield-guard', count: 1, interval: 0 }
   ] },
   { wave: 6, enemies: [
     { id: 'mega-pig', count: 1, interval: 0 },
-    { id: 'gunner-bot', count: 2, interval: 2 }
+    { id: 'gunner-bot', count: 3, interval: 2 }
   ], isBoss: true }
 ];
 

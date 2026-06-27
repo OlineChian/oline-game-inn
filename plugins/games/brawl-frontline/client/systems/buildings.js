@@ -1,14 +1,11 @@
 /**
- * 建筑系统：主题季宝库升级 + 召唤炮台维护 + 战场设施（Phase 2）
+ * 建筑系统：主题季宝库升级 + 战场设施（Phase 2）
  * - upgradeVault(): 升级宝库等级（消耗金币）
- * - update(dt): 维护召唤炮台（攻击、持续时长、死亡移除）
+ * - update(dt): 占位（召唤炮台维护已迁移至 systems/hero-supers.js，避免双更新）
  * - buildFacility(): Phase 2 实装 C 类设施
  */
 import { Game } from '../core/game.js';
 import { BUILDINGS, FACILITIES } from '../data/buildings.js';
-import { distance } from '../core/utils.js';
-import { Combat } from './combat.js';
-import { Enemies } from './enemies.js';
 
 export const Buildings = {
   /** 升级主题季宝库（需波数到达 + 金币足够） */
@@ -25,43 +22,9 @@ export const Buildings = {
     return { ok: true, level: vault.level };
   },
 
-  /** 每帧更新：召唤炮台维护 */
+  /** 每帧更新：占位（召唤炮台维护已迁移至 hero-supers.js） */
   update(dt) {
-    this._updateTurrets(dt);
     // Phase 2: this._updateFacilities(dt);
-  },
-
-  _updateTurrets(dt) {
-    const turrets = Game.entities.turrets;
-    for (let i = turrets.length - 1; i >= 0; i--) {
-      const t = turrets[i];
-      t.duration -= dt;
-      t.atkCd = Math.max(0, t.atkCd - dt);
-      if (t.atkCd <= 0) {
-        const target = this._findEnemyForTurret(t);
-        if (target) {
-          const dir = Combat.dirTo(t, target, 400);
-          Combat.spawnProjectile({
-            x: t.x, y: t.y, vx: dir.vx, vy: dir.vy,
-            damage: t.damage, color: t.color, radius: 4, life: 1.2
-          });
-          t.atkCd = 0.8;
-        }
-      }
-      if (t.duration <= 0 || t.hp <= 0) {
-        turrets.splice(i, 1);
-      }
-    }
-  },
-
-  _findEnemyForTurret(t) {
-    let best = null;
-    let bestDist = 200;
-    Game.entities.enemies.forEach(en => {
-      const d = distance(t, en);
-      if (d < bestDist) { bestDist = d; best = en; }
-    });
-    return best;
   },
 
   /** 建造 C 类设施（Phase 2 启用） */

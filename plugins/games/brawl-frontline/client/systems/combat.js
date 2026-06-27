@@ -37,14 +37,19 @@ export const Combat = {
                 Game.spawnParticle({ x: p.x, y: p.y, vx: Math.cos(ang) * 150, vy: Math.sin(ang) * 150, life: 0.4, maxLife: 0.4, color: p.color, size: 4 });
               }
             }
-            // 杰西子弹弹射：对附近另一敌人造成额外伤害
+            // 杰西子弹弹射：选择距离命中目标最近的另一敌人，造成额外伤害
             if (p.bounce) {
+              let bounceTarget = null, bounceDist = Infinity;
               for (const en2 of Game.entities.enemies) {
                 if (en2 === en) continue;
-                if (distance(p, en2) <= p.bounce.radius + en2.radius) {
-                  Enemies.takeDamage(en2, p.damage * p.bounce.damageRate);
-                  break;
+                const d = distance(en, en2); // 以命中敌人为中心搜索
+                if (d <= p.bounce.radius + en2.radius && d < bounceDist) {
+                  bounceDist = d;
+                  bounceTarget = en2;
                 }
+              }
+              if (bounceTarget) {
+                Enemies.takeDamage(bounceTarget, p.damage * p.bounce.damageRate);
               }
             }
             hit = true;

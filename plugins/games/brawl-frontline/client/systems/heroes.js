@@ -160,8 +160,10 @@ export const Heroes = {
     Supers.updateSummons(dt);
   },
 
-  /** AI：坦克可前进追击威胁基地者，近战追击，射手横向移动，治疗保持后排
-   *  无敌人时所有英雄返回靠近基地（yMax 附近） */
+  /** AI：所有英雄优先锁定"距离基地最近的敌人"作为移动目标
+   *   - 坦克（公牛）只在后半场巡查（y >= baseLine-100），不会跑到最前方
+   *   - 近战追击敌人，射手横向移动，治疗保持后排
+   *   - 无敌人时所有英雄返回靠近基地（yMax 附近） */
   _ai(h, dt) {
     h.atkCd = Math.max(0, h.atkCd - dt);
     const isMelee = h.projectileSpeed === 0;
@@ -172,9 +174,15 @@ export const Heroes = {
       this._attack(h, target);
       h.atkCd = 1 / h.effectiveAspd;
     }
-    // 坦克优先锁定"威胁基地的敌人"（y >= baseLine-30），否则按普通逻辑选最近敌人
-    const baseAttacker = isTank ? this._findBaseAttacker() : null;
-    const moveTarget = baseAttacker || target || this._nearestEnemy(h);
+    // 所有英雄优先锁定"距离基地最近的敌人"作为移动目标
+    // 坦克只在后半场巡查（y >= baseLine-100），找不到就回基地
+    const baseAttacker = isTank ? this._findBaseThreat() : this._findBaseAttacker();
+    let moveTarget;
+    if (isTank) {
+      moveTarget = baseAttacker; // 公牛只用后半场威胁者作为目标，否则原地守基地
+    } else {
+      moveTarget = baseAttacker || target || this._nearestEnemy(h);
+    }
     if (moveTarget) {
       const dx = moveTarget.x - h.x;
       if (Math.abs(dx) > 4) h.x += Math.sign(dx) * h.moveSpeed * dt * (isTank ? 0.6 : 1);
@@ -219,10 +227,20 @@ export const Heroes = {
     return best;
   },
 
-  /** 查找正在攻击基地的敌人（y >= baseLine-30），用于坦克优先仇恨 */
+  /** 查找距离基地最近的敌人（全图），用于所有英雄的移动目标优先级 */
   _findBaseAttacker() {
     let best = null, bestDist = Infinity;
-    const threatY = LAYOUT.baseLine - 30;
+    Game.entities.enemies.forEach(en => {
+      const d = distance(LAYOUT.base, en);
+      if (d < bestDist) { bestDist = d; best = en; }
+    });
+    return best;
+  },
+
+  /** 查找后半场内（y >= baseLine-100）距离基地最近的敌人，用于坦克巡查 */
+  _findBaseThreat() {
+    let best = null, bestDist = Infinity;
+    const threatY = LAYOUT.baseLine - 100;
     Game.entities.enemies.forEach(en => {
       if (en.y < threatY) return;
       const d = distance(LAYOUT.base, en);

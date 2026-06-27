@@ -33,11 +33,14 @@ export const Buffs = {
     Game.state.phase = 'wave';
   },
 
-  /** 部分强化需要立即生效（如基地血量） */
+  /** 部分强化需要立即生效（如基地血量）
+   *  基地血量类：加上限的同时按 1.5 倍恢复血量（受新上限约束） */
   _applyImmediate(buff) {
     if (buff.effect.type === 'base-hp-flat') {
       Game.state.baseMaxHp += buff.effect.value;
-      Game.state.baseHp += buff.effect.value;
+      // 恢复血量 = 强化上限值 × 1.5（不超过新上限）
+      const heal = Math.floor(buff.effect.value * 1.5);
+      Game.state.baseHp = Math.min(Game.state.baseMaxHp, Game.state.baseHp + heal);
     }
   },
 

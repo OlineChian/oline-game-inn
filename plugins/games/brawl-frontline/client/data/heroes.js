@@ -22,7 +22,7 @@ export const HEROES = [
   // ============ 初始（1）— 开局可用 ============
   {
     id: 'shelly', name: '雪莉', role: '近战', rarity: 'starter', faction: 'Starr Force',
-    hp: 900, attack: 70, range: 90, attackSpeed: 1.1, moveSpeed: 78,
+    hp: 900, attack: 70, range: 90, attackSpeed: 1.1, moveSpeed: 88,
     projectileSpeed: 0, cost: { tickets: 100 }, color: '#e74c8b', accent: '#ffd1e6',
     super: { name: '超级技能：扇形爆发', type: 'cone', damage: 280, angle: 60, radius: 150, knockback: 80, chargePerHit: 0.28 }
   },
@@ -35,7 +35,7 @@ export const HEROES = [
   },
   {
     id: 'bull', name: '公牛', role: '坦克', rarity: 'rare', faction: '矿场',
-    hp: 1600, attack: 58, range: 70, attackSpeed: 0.85, moveSpeed: 50,
+    hp: 1600, attack: 92, range: 70, attackSpeed: 0.85, moveSpeed: 50,
     projectileSpeed: 0, cost: { tickets: 100 }, color: '#f4a261', accent: '#ffd9a8',
     super: { name: '超级技能：威慑怒吼', type: 'slow', radius: 200, slowRate: 0.5, duration: 4, chargePerHit: 0.22 }
   },
@@ -44,7 +44,8 @@ export const HEROES = [
     hp: 760, attack: 52, range: 200, attackSpeed: 1.0, moveSpeed: 55,
     projectileSpeed: 360, cost: { tickets: 100 }, color: '#2ec4b6', accent: '#a8e6e0',
     bounce: { damageRate: 0.5, radius: 60 },
-    super: { name: '超级技能：炮台召唤', type: 'turret', damage: 30, turretHp: 400, duration: 8, chargePerHit: 0.26 }
+    // 炮台：持续 5 秒，伤害 = 杰西普攻 ×150% = 78，射程 = 杰西 ×50% = 100，攻速 = 杰西 ×150% = 1.5
+    super: { name: '超级技能：炮台召唤', type: 'turret', damage: 78, turretHp: 400, duration: 5, chargePerHit: 0.26 }
   },
   // ============ 史诗（5）— 需解锁 300 券 ============
   {

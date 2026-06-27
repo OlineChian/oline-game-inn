@@ -124,16 +124,18 @@ export const Renderer = {
     ctx.textBaseline = 'alphabetic';
   },
 
-  /** 建筑：仅绘制 C 设施建造位（宝库/星妙之路由 HUD 按钮交互，不在地图上画） */
+  /** 建筑：仅绘制 C 设施建造位（宝库/星妙之路由 HUD 按钮交互，不在地图上画）
+   *  booster / attacker 类型均显示攻击范围（浅色低透明度虚线） */
   _drawBuildings() {
     const ctx = this.ctx;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     LAYOUT.facilitySlots.forEach((slot, i) => {
       const f = Game.buildings.facilities[i];
       if (f) {
-        if (f.type === 'booster') {
-          ctx.strokeStyle = 'rgba(108,92,231,0.3)'; ctx.lineWidth = 2;
-          ctx.setLineDash([6, 6]);
+        // 攻击范围：浅色 + 低透明度 + 虚线
+        if (f.type === 'booster' || f.type === 'attacker') {
+          ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
           ctx.beginPath(); ctx.arc(slot.x, slot.y, f.range, 0, Math.PI * 2); ctx.stroke();
           ctx.setLineDash([]);
         }
@@ -235,9 +237,16 @@ export const Renderer = {
     ctx.textBaseline = 'alphabetic';
   },
 
-  /** 炮台：SVG 化（圆形炮塔 + 矩形底座 + 粗描边） */
+  /** 炮台：SVG 化（圆形炮塔 + 矩形底座 + 粗描边 + 攻击范围） */
   _drawTurret(t) {
     const ctx = this.ctx;
+    // 攻击范围：浅色 + 低透明度 + 虚线
+    if (t.range) {
+      ctx.strokeStyle = 'rgba(46,196,182,0.20)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.fillStyle = '#555';
     roundRect(ctx, t.x - 10, t.y + 4, 20, 8, 3); ctx.fill();
     ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW; ctx.stroke();
