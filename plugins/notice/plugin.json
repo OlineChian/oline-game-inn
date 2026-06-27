@@ -1,0 +1,14 @@
+{
+  "id": "notice",
+  "name": "公告系统",
+  "version": "1.0.0",
+  "description": "隐藏 /gg 后台发公告，客户端弹窗展示，每用户仅展示一次，含迎新公告",
+  "type": "feature",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js"
+  },
+  "dependencies": [],
+  "provides": ["notice-api"],
+  "config": {}
+}
