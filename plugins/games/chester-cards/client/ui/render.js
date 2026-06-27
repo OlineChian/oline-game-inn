@@ -1,15 +1,18 @@
 /**
  * 切斯特牌 - 渲染模块
  * 阶段 2：含糖果槽渲染与得分动效触发列表
- * 阶段 6：实时分数预览（选牌时显示牌型与分数）
+ * 阶段 6：实时分数预览（选牌时显示牌型与分数）→ 拆分到 preview-render.js
  * 纯 DOM 操作，状态由 main.js 推送
  */
 
 import { scoreHand } from '../core/scoring.js';
-import { previewCandiesToScore } from '../systems/candy-system.js';
+import { getTarget } from '../core/targets.js';
 import { renderVictorySubmitSection } from './submit-section.js';
 
-/** 主入口容器渲染（仅首次，需 config 渲染关卡总数） */
+// 实时预览渲染已拆分到 preview-render.js
+export { renderLivePreview } from './preview-render.js';
+
+/** 主入口容器渲染（无尽模式，无关卡总数） */
 export function renderGame(config) {
   const stage = document.getElementById('chesterStage');
   stage.innerHTML = `
@@ -18,7 +21,7 @@ export function renderGame(config) {
         <div class="cc-hud-pill cc-pill-round">
           <span class="cc-hud-label">关卡</span>
           <span class="cc-round-num">
-            <span class="cc-round-current" id="ccRoundCurrent">1</span><span class="cc-round-total">/${config.rounds}</span>
+            <span class="cc-round-current" id="ccRoundCurrent">1</span><span class="cc-round-total"> ∞</span>
           </span>
         </div>
         <div class="cc-hud-pill cc-pill-target">
@@ -57,89 +60,12 @@ export function renderGame(config) {
           <span class="cc-btn-count" id="ccDiscLeft">2/${config.discardsPerRound}</span>
           <span class="cc-btn-label">弃牌</span>
         </button>
-        <button class="cc-btn cc-btn-restart" data-action="restart">重新开始</button>
+        <button class="cc-btn cc-btn-quit" data-action="quit">退出</button>
       </div>
     </section>
 
     <div class="cc-score-popup hidden" id="ccPopup"></div>
     <div class="cc-overlay hidden" id="ccOverlay"></div>
-  `;
-}
-
-/** 实时分数预览（选牌时显示当前牌型与分数）
- * 依据 state.selected 实时计算牌型与分数（应用糖果效果）
- * mult_chance 类型糖果不实际掷骰子，仅标记「机会加成」
- */
-export function renderLivePreview(state, config) {
-  const previewEl = document.getElementById('ccPreview');
-  if (!previewEl) return;
-  // 非游戏中状态隐藏预览
-  if (state.phase !== 'playing') {
-    previewEl.classList.add('hidden');
-    return;
-  }
-  previewEl.classList.remove('hidden');
-
-  // 未选牌时显示提示
-  if (state.selected.size === 0) {
-    previewEl.innerHTML = `<div class="cc-preview-hint">选择 ${config.maxPlay} 张以内的牌查看实时牌型与分数</div>`;
-    return;
-  }
-
-  // 计算当前选牌的牌型与分数（应用牌型升级等级）
-  const played = state.hand.filter(c => state.selected.has(c.id));
-  const baseResult = scoreHand(played, state.handLevels || {});
-  if (!baseResult.handType) {
-    previewEl.innerHTML = `<div class="cc-preview-hint">无效牌组</div>`;
-    return;
-  }
-  const result = previewCandiesToScore(baseResult, state.candies);
-  // mult_chance 机会块：得分后以「或」连接，显示触发后的潜在得分
-  const chanceBlocks = result.triggered.filter(t => t.isChance);
-  const chanceBlocksHtml = chanceBlocks.map(t => {
-    const potentialMult = result.mult * t.candy.effect.mult;
-    const potentialScore = (result.base + result.chips) * potentialMult;
-    const chancePct = Math.round(t.candy.effect.chance * 100);
-    return `<div class="cc-formula-op cc-formula-or">或</div>
-      <div class="cc-formula-block cc-formula-chance">
-        <div class="cc-formula-label">${t.candy.name}效果<br>${chancePct}% ×${t.candy.effect.mult}倍</div>
-        <div class="cc-formula-value">${potentialScore}</div>
-      </div>`;
-  }).join('');
-  // 非机会类糖果触发列表
-  const normalTriggers = result.triggered.filter(t => !t.isChance);
-  const triggersHtml = normalTriggers.length > 0
-    ? `<div class="cc-preview-triggers">
-        ${normalTriggers.map(t => `<span class="cc-preview-trigger">${t.candy.emoji} ${t.msg}</span>`).join('')}
-      </div>`
-    : '';
-  const levelTag = baseResult.level > 1 ? ` <span class="cc-preview-level">Lv.${baseResult.level}</span>` : '';
-
-  previewEl.innerHTML = `
-    <div class="cc-preview-hand">${result.handType.name}${levelTag}</div>
-    <div class="cc-formula-viz">
-      <div class="cc-formula-block">
-        <div class="cc-formula-label">基础筹码</div>
-        <div class="cc-formula-value">${result.base}</div>
-      </div>
-      <div class="cc-formula-op">+</div>
-      <div class="cc-formula-block">
-        <div class="cc-formula-label">牌面筹码</div>
-        <div class="cc-formula-value">${result.chips}</div>
-      </div>
-      <div class="cc-formula-op">×</div>
-      <div class="cc-formula-block">
-        <div class="cc-formula-label">倍率</div>
-        <div class="cc-formula-value">${result.mult}</div>
-      </div>
-      <div class="cc-formula-op">=</div>
-      <div class="cc-formula-block cc-formula-result">
-        <div class="cc-formula-label">得分</div>
-        <div class="cc-formula-value">${result.score}</div>
-      </div>
-      ${chanceBlocksHtml}
-    </div>
-    ${triggersHtml}
   `;
 }
 
@@ -190,7 +116,7 @@ export function renderCandies(state, config) {
 
 /** 渲染 HUD（单行四胶囊，无进度条） */
 export function renderHUD(state, config) {
-  const target = config.targets[state.round - 1] || 0;
+  const target = getTarget(state.round);
   const setText = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
@@ -235,47 +161,37 @@ export function showScorePopup(result) {
   }, 1800);
 }
 
-/** 结束界面（胜利/失败/通关）
- * 阶段 3：移除免费糖果奖励文案，改为金币结算 + 进入商店按钮
- * 阶段 7：胜利时显示分数提交 UI（昵称输入 + 提交按钮）
- * state.lastCoinGain 由 main.js 在 endRound 中写入
+/** 结束界面（无尽模式：过关/失败/退出）
+ * 过关：显示金币结算 + 进入商店按钮
+ * 失败/退出：显示提交 UI + 再来一局按钮
  * opts.submitState: undefined | 'submitting' | 'success' | 'fail'
  */
 export function renderEndScreen(state, config, opts = {}) {
   const overlay = document.getElementById('ccOverlay');
   if (!overlay) return;
-  const target = config.targets[state.round - 1] || 0;
-  const isVictory = state.phase === 'victory';
+  const target = getTarget(state.round);
   const isRoundWin = state.phase === 'roundWin';
   const isLose = state.phase === 'roundLose';
+  const isQuit = state.phase === 'quit';
+  if (!isRoundWin && !isLose && !isQuit) { overlay.classList.add('hidden'); return; }
 
-  let title, desc, btnLabel, btnAction;
-  let extraHtml = '';
-  if (isVictory) {
-    title = '🏆 通关！';
-    desc = `8 关全部完成！累计得分 ${state.totalScore}，金币 ${state.coins}`;
-    btnLabel = '再来一局';
-    btnAction = 'restart';
-    extraHtml = renderVictorySubmitSection(state, opts);
-  } else if (isRoundWin) {
-    const gain = state.lastCoinGain || 0;
-    title = `🎉 第 ${state.round} 关完成`;
-    desc = `本关 ${state.roundScore} / 目标 ${target} · 获得 ${gain} 金币`;
-    btnLabel = '进入商店';
-    btnAction = 'open-shop';
-  } else if (isLose) {
-    title = '💔 本关失败';
-    desc = `本关 ${state.roundScore} / 目标 ${target}，差 ${target - state.roundScore} 分`;
-    btnLabel = '重新开始';
-    btnAction = 'restart';
+  let icon, title, desc, btnLabel, btnAction, extraHtml = '';
+  if (isRoundWin) {
+    icon = '🎉';
+    title = `第 ${state.round} 关完成`;
+    desc = `本关 ${state.roundScore} / 目标 ${target} · 获得 ${state.lastCoinGain || 0} 金币`;
+    btnLabel = '进入商店'; btnAction = 'open-shop';
   } else {
-    overlay.classList.add('hidden');
-    return;
+    icon = isQuit ? '🚪' : '💔';
+    title = isQuit ? `第 ${state.round} 关退出` : `第 ${state.round} 关失败`;
+    desc = `累计得分 ${state.totalScore} · 到达第 ${state.round} 关`;
+    btnLabel = '再来一局'; btnAction = 'restart';
+    extraHtml = renderVictorySubmitSection(state, opts);
   }
 
   overlay.innerHTML = `
     <div class="cc-modal">
-      <div class="cc-modal-icon">${isVictory ? '🏆' : (isLose ? '💔' : '🎉')}</div>
+      <div class="cc-modal-icon">${icon}</div>
       <h2 class="cc-modal-title">${title}</h2>
       <p class="cc-modal-desc">${desc}</p>
       ${extraHtml}
@@ -303,11 +219,11 @@ export function renderStartScreen() {
       <h1 class="cc-start-title">切斯特牌</h1>
       <p class="cc-start-sub">Balatro 风格扑克牌组合 · 糖果增益</p>
       <ul class="cc-start-rules">
-        <li>每关 4 次出牌机会，目标分达标进入下一关</li>
+        <li>无尽模式 · 目标分三段式增长，越后期越难</li>
+        <li>每关 4 次出牌，达标进商店升级，未达标游戏结束</li>
         <li>每次最多选 5 张牌，每关 2 次弃牌</li>
         <li>得分 = (基础分 + 牌面分) × 倍率</li>
-        <li>每关胜利获得 1 张糖果，最多 5 张同时生效</li>
-        <li>共 8 关，目标分数逐关递增</li>
+        <li>最多装备 5 颗糖果 · 可随时退出并记录分数</li>
       </ul>
       <button class="cc-btn cc-btn-primary cc-btn-start" data-action="start">开始游戏</button>
     </section>

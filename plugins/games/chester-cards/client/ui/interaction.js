@@ -13,6 +13,7 @@ let bound = false;
  *   - onPlay(): 出牌
  *   - onDiscard(): 弃牌
  *   - onRestart(): 重新开始
+ *   - onQuit(): 玩家主动退出（无尽模式提交分数）
  *   - onStart(): 开始游戏（首屏）
  *   - onNextRound(): 进入下一关
  *   - onPickCandy(candyId): 三选一选牌
@@ -20,6 +21,9 @@ let bound = false;
  *   - onDrawRandom(): 商店随机抽选
  *   - onSellCandy(candyId): 回收糖果
  *   - onCloseShop(): 关闭商店
+ *   - onRefreshShop(): 刷新商店货架（阶段 5/7）
+ *   - onBuySpecialItem(itemId): 购买特殊商品（阶段 6）
+ *   - onUpgradeShop(): 升级商店等级（阶段 8）
  *   - onSubmitScore(): 提交分数到排行榜
  */
 export function setupInteraction(handlers) {
@@ -49,6 +53,7 @@ export function setupInteraction(handlers) {
     if (act === 'play') handlers.onPlay();
     else if (act === 'discard') handlers.onDiscard();
     else if (act === 'restart') handlers.onRestart();
+    else if (act === 'quit') handlers.onQuit && handlers.onQuit();
     else if (act === 'start') handlers.onStart();
     else if (act === 'next-round') handlers.onNextRound && handlers.onNextRound();
     else if (act === 'pick-candy') {
@@ -61,7 +66,18 @@ export function setupInteraction(handlers) {
     } else if (act === 'sell-candy') {
       handlers.onSellCandy && handlers.onSellCandy(action.dataset.candyId);
     } else if (act === 'upgrade-hand') {
-      handlers.onUpgradeHand && handlers.onUpgradeHand(action.dataset.handKey);
+      // 阶段 4：传递 toLevel 支持组合升级跨级
+      const toLevel = action.dataset.toLevel ? Number(action.dataset.toLevel) : null;
+      handlers.onUpgradeHand && handlers.onUpgradeHand(action.dataset.handKey, toLevel);
+    } else if (act === 'refresh-shop') {
+      // 阶段 5/7：刷新商店货架
+      handlers.onRefreshShop && handlers.onRefreshShop();
+    } else if (act === 'buy-special-item') {
+      // 阶段 6：购买特殊商品
+      handlers.onBuySpecialItem && handlers.onBuySpecialItem(action.dataset.itemId);
+    } else if (act === 'upgrade-shop') {
+      // 阶段 8：升级商店等级
+      handlers.onUpgradeShop && handlers.onUpgradeShop();
     } else if (act === 'close-shop') {
       handlers.onCloseShop && handlers.onCloseShop();
     } else if (act === 'open-shop') {

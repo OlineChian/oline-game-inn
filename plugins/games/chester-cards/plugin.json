@@ -17,9 +17,9 @@
       "unit": "分",
       "label": "得分",
       "scoreFloor": 0,
-      "scoreCap": 999999
+      "scoreCap": 99999999
     },
-    "rounds": 8,
+    "endless": true,
     "handSize": 8,
     "maxPlay": 5,
     "discardsPerRound": 2,

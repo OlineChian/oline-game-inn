@@ -1,136 +1,29 @@
 /**
- * 切斯特牌 - 糖果数据
- * 阶段 5：20 颗糖果（6 common / 6 rare / 4 epic / 3 mythic / 1 legendary）
+ * 切斯特牌 - 糖果数据汇总入口
+ * 合并 5 个稀有度子模块，对外统一导出
  *
- * 稀有度解锁规则：
- *   - common：始终可用
- *   - rare：round >= 2
- *   - epic：round >= 3
- *   - mythic：round >= 4
- *   - legendary：round >= 5
+ * 糖果总数：36 颗（21 common + 4 rare + 5 epic + 4 mythic + 2 legendary）
+ * 数据按稀有度拆分以遵守单文件 ≤300 行铁律
  *
- * 开局三选一：仅 common + rare 池
- * 随机抽选：按 50/30/15/4/1 递减权重
- *
- * 效果类型（effect.type）：
- *   - base_bonus:        基础分加成（如 +10）
- *   - mult_bonus:        倍率加成（如 +1）
- *   - score_conditional: 条件性分数加成（指定 handType）
- *   - mult_conditional:  条件性倍率加成（指定 handType）
- *   - mult_chance:       概率倍率翻倍（chance + mult）
- *   - coin_per_round:    每回合获得金币
+ * Wave 解锁规则（替代旧的固定关卡解锁）：
+ *   Wave 1-10（关 1-10）：  普通 70% / 稀有 25% / 史诗 5%
+ *   Wave 11-30（关 11-30）：普通 45% / 稀有 35% / 史诗 15% / 神话 5%
+ *   Wave 30+（关 30+）：    普通 30% / 稀有 35% / 史诗 20% / 神话 10% / 传奇 5%
  */
 
+import { CANDIES_COMMON } from './candies-common.js';
+import { CANDIES_RARE } from './candies-rare.js';
+import { CANDIES_EPIC } from './candies-epic.js';
+import { CANDIES_MYTHIC } from './candies-mythic.js';
+import { CANDIES_LEGENDARY } from './candies-legendary.js';
+
+/** 全部糖果（合并所有稀有度） */
 export const CANDIES = [
-  // ---------- common（6 张）----------
-  {
-    id: 'hard-candy', name: '硬糖', emoji: '🍬', rarity: 'common',
-    desc: '+10 基础分', price: 4,
-    effect: { type: 'base_bonus', value: 10 }
-  },
-  {
-    id: 'cotton-candy', name: '棉花糖', emoji: '🍡', rarity: 'common',
-    desc: '+5 基础分', price: 4,
-    effect: { type: 'base_bonus', value: 5 }
-  },
-  {
-    id: 'caramel', name: '焦糖', emoji: '🍮', rarity: 'common',
-    desc: '高牌时 +30 分', price: 4,
-    effect: { type: 'score_conditional', handType: 'HIGH_CARD', value: 30 }
-  },
-  {
-    id: 'licorice', name: '甘草糖', emoji: '🍫', rarity: 'common',
-    desc: '对子时 +50 分', price: 5,
-    effect: { type: 'score_conditional', handType: 'PAIR', value: 50 }
-  },
-  {
-    id: 'fruit-gel', name: '水果糖', emoji: '🍓', rarity: 'common',
-    desc: '两对时 +40 分', price: 5,
-    effect: { type: 'score_conditional', handType: 'TWO_PAIR', value: 40 }
-  },
-  {
-    id: 'jumping-candy', name: '跳跳糖', emoji: '🎈', rarity: 'common',
-    desc: '30% 概率倍率 ×2', price: 5,
-    effect: { type: 'mult_chance', chance: 0.3, mult: 2 }
-  },
-
-  // ---------- rare（6 张）----------
-  {
-    id: 'grape', name: '葡萄糖', emoji: '🍇', rarity: 'rare',
-    desc: '三条倍率 +2', price: 6,
-    effect: { type: 'mult_conditional', handType: 'THREE_KIND', value: 2 }
-  },
-  {
-    id: 'gummy', name: '软糖', emoji: '🐻', rarity: 'rare',
-    desc: '葫芦时 +80 分', price: 6,
-    effect: { type: 'score_conditional', handType: 'FULL_HOUSE', value: 80 }
-  },
-  {
-    id: 'mint', name: '薄荷糖', emoji: '🌿', rarity: 'rare',
-    desc: '顺子倍率 +3', price: 6,
-    effect: { type: 'mult_conditional', handType: 'STRAIGHT', value: 3 }
-  },
-  {
-    id: 'lollipop', name: '棒棒糖', emoji: '🍭', rarity: 'rare',
-    desc: '25% 概率倍率 ×3', price: 6,
-    effect: { type: 'mult_chance', chance: 0.25, mult: 3 }
-  },
-  {
-    id: 'coin-candy', name: '金币糖', emoji: '💰', rarity: 'rare',
-    desc: '每回合 +2 金币', price: 5,
-    effect: { type: 'coin_per_round', value: 2 }
-  },
-  {
-    id: 'chocolate', name: '巧克力', emoji: '🍪', rarity: 'rare',
-    desc: '每回合 +3 金币', price: 6,
-    effect: { type: 'coin_per_round', value: 3 }
-  },
-
-  // ---------- epic（4 张）----------
-  {
-    id: 'explosion', name: '爆炸糖', emoji: '💥', rarity: 'epic',
-    desc: '所有牌型倍率 +1', price: 8,
-    effect: { type: 'mult_bonus', value: 1 }
-  },
-  {
-    id: 'rainbow', name: '彩虹糖', emoji: '🌈', rarity: 'epic',
-    desc: '四条倍率 +5', price: 8,
-    effect: { type: 'mult_conditional', handType: 'FOUR_KIND', value: 5 }
-  },
-  {
-    id: 'sour', name: '酸糖', emoji: '🍋', rarity: 'epic',
-    desc: '20% 概率倍率 ×4', price: 8,
-    effect: { type: 'mult_chance', chance: 0.2, mult: 4 }
-  },
-  {
-    id: 'dark-choco', name: '黑巧克力', emoji: '🌑', rarity: 'epic',
-    desc: '每回合 +5 金币', price: 8,
-    effect: { type: 'coin_per_round', value: 5 }
-  },
-
-  // ---------- mythic（3 张）----------
-  {
-    id: 'diamond', name: '钻石糖', emoji: '💎', rarity: 'mythic',
-    desc: '+20 基础分', price: 12,
-    effect: { type: 'base_bonus', value: 20 }
-  },
-  {
-    id: 'moonlight', name: '月光糖', emoji: '🌙', rarity: 'mythic',
-    desc: '15% 概率倍率 ×5', price: 11,
-    effect: { type: 'mult_chance', chance: 0.15, mult: 5 }
-  },
-  {
-    id: 'star', name: '星辰糖', emoji: '⭐', rarity: 'mythic',
-    desc: '同花顺倍率 +8', price: 11,
-    effect: { type: 'mult_conditional', handType: 'STRAIGHT_FLUSH', value: 8 }
-  },
-
-  // ---------- legendary（1 张）----------
-  {
-    id: 'divine', name: '神圣糖', emoji: '✨', rarity: 'legendary',
-    desc: '所有牌型倍率 +3', price: 18,
-    effect: { type: 'mult_bonus', value: 3 }
-  }
+  ...CANDIES_COMMON,
+  ...CANDIES_RARE,
+  ...CANDIES_EPIC,
+  ...CANDIES_MYTHIC,
+  ...CANDIES_LEGENDARY
 ];
 
 /** 按 ID 查糖果 */
@@ -147,12 +40,17 @@ export const RARITY_CLASS = {
   legendary: 'cc-rarity-legendary'
 };
 
-/** 稀有度解锁关卡 */
+/**
+ * 稀有度解锁关卡（基于 Wave 系统）
+ * 阶段 2 将实现完整的 Wave 权重，此处仅控制池子可用性
+ */
 export const RARITY_UNLOCK_ROUND = {
-  common: 1, rare: 2, epic: 3, mythic: 4, legendary: 5
+  common: 1, rare: 1, epic: 1, mythic: 11, legendary: 30
 };
 
-/** 随机抽选权重（50/30/15/4/1） */
+/**
+ * 旧版权重（向后兼容，阶段 2 将被 Wave 系统替代）
+ */
 export const RARITY_WEIGHT = {
   common: 50, rare: 30, epic: 15, mythic: 4, legendary: 1
 };

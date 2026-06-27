@@ -25,21 +25,37 @@ export const HAND_SCORES = {
   FLUSH_FIVE:     { base: 160, mult: 16, plusChips: 50, plusMult: 3 }
 };
 
+/** 牌型等级上限（阶段 4：指数升级，最多 10 级） */
+export const MAX_HAND_LEVEL = 10;
+
 /** 获取牌型当前等级（默认 1） */
 export function getHandLevel(handLevels, handKey) {
   return (handLevels && handLevels[handKey]) || 1;
 }
 
+/** 检查是否还能升级（未达上限） */
+export function canUpgrade(handLevels, handKey) {
+  return getHandLevel(handLevels, handKey) < MAX_HAND_LEVEL;
+}
+
 /** 升级牌型（返回新等级表，不可变更新） */
 export function upgradeHandType(handLevels, handKey) {
   const level = getHandLevel(handLevels, handKey);
+  if (level >= MAX_HAND_LEVEL) return handLevels; // 达上限不再升级
   return { ...handLevels, [handKey]: level + 1 };
 }
 
-/** 升级牌型所需金币（按等级递增：基础 5 + 当前等级 × 3） */
+/**
+ * 升级牌型所需金币（指数增长：base 12 × 1.25^(level-1)）
+ * 阶段 4：lv1→2=12, lv2→3=15, lv3→4=19, ... lv9→10=72
+ * @param {Object} handLevels 牌型等级表
+ * @param {string} handKey 牌型 key
+ * @returns {number} 升级所需金币
+ */
 export function upgradeCost(handLevels, handKey) {
   const level = getHandLevel(handLevels, handKey);
-  return 5 + level * 3;
+  if (level >= MAX_HAND_LEVEL) return Infinity; // 达上限返回无穷
+  return Math.round(12 * Math.pow(1.25, level - 1));
 }
 
 /**

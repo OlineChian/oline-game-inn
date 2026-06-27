@@ -7,12 +7,13 @@
  *   - 随机抽选：按平均价格 Math.round(sum/length)
  *   - 回收变卖：floor(price / 2)（向下取整）
  *
- * 开局三选一：仅 common + rare 池（最高稀有）
- * 随机抽选：按 RARITY_WEIGHT 50/30/15/4/1 递减权重
+ * 开局三选一：仅 common + rare 池（开局最高选稀有）
+ * 随机抽选：按 Wave 系统分段权重（1-10关 70/25/5，11-30关 45/35/15/5，31+关 30/35/20/10/5）
  */
 
 import { getPoolForRound } from './candy-system.js';
-import { CANDIES, RARITY_WEIGHT } from '../data/candies.js';
+import { CANDIES } from '../data/candies.js';
+import { getWaveWeights } from '../data/wave-config.js';
 
 /**
  * 开局三选一池：仅 common + rare（开局最高选稀有）
@@ -35,6 +36,7 @@ export function getAveragePrice(pool) {
 
 /**
  * 获取商店货架（按当前关卡稀有度过滤的可购买列表）
+ * 阶段 5：糖果货架从"全部可购买"改为"随机抽 N 个"
  * @param {number} round 当前关卡
  * @returns {Array} 糖果数组
  */
@@ -43,30 +45,71 @@ export function getShopOfferings(round) {
 }
 
 /**
- * 按稀有度权重递减抽选 1 张糖果（50/30/15/4/1）
+ * 阶段 5：从糖果货架中随机抽取指定数量的不重复糖果
+ * 商店货架显示固定数量（默认 3 个），刷新时重新抽取
  * @param {number} round 当前关卡
+ * @param {number} count 数量（默认 3，对应"糖果 ×3"）
+ * @returns {Array} 糖果数组
+ */
+export function getCandyShopOfferings(round, count = 3) {
+  const pool = getShopOfferings(round);
+  if (pool.length === 0) return [];
+  const shuffled = shuffle(pool);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+/**
+ * 按 Wave 系统的稀有度权重抽选 1 张糖果
+ * 采用两步法：先按权重抽稀有度，再从该稀有度中随机选 1 颗
+ * 这样每个稀有度的概率严格符合 Wave 权重，不受糖果数量影响
+ * Wave 1（1-10关）：70/25/5
+ * Wave 2（11-30关）：45/35/15/5
+ * Wave 3（31+关）：30/35/20/10/5
+ * @param {number} round 当前关卡
+ * @param {number} [luckyBonus=1] 幸运加成（阶段 6 幸运饼干）：传奇权重 ×luckyBonus
+ * @param {number} [shopBonus=0] 商店等级传奇加成（阶段 8 Lv4+）：传奇权重 +shopBonus
  * @returns 糖果对象
  */
-export function drawWeightedCandy(round) {
+export function drawWeightedCandy(round, luckyBonus = 1, shopBonus = 0) {
   const pool = getPoolForRound(round);
   if (pool.length === 0) return null;
-  const weighted = pool.map(c => ({ candy: c, weight: RARITY_WEIGHT[c.rarity] || 0 }));
-  const total = weighted.reduce((s, w) => s + w.weight, 0);
-  let r = Math.random() * total;
-  for (const w of weighted) {
-    r -= w.weight;
-    if (r <= 0) return w.candy;
+  const weights = getWaveWeights(round);
+
+  // 阶段 6：幸运饼干效果 — 传奇权重 ×luckyBonus
+  if (luckyBonus > 1 && weights.legendary > 0) {
+    weights.legendary = Math.round(weights.legendary * luckyBonus);
   }
-  return weighted[weighted.length - 1].candy;
+  // 阶段 8：商店等级 Lv4+ 传奇概率加成 — 传奇权重 +shopBonus
+  if (shopBonus > 0 && weights.legendary !== undefined) {
+    weights.legendary += shopBonus;
+  }
+
+  // 第一步：按稀有度权重抽选稀有度
+  const rarities = Object.keys(weights).filter(r => weights[r] > 0);
+  const totalWeight = rarities.reduce((s, r) => s + weights[r], 0);
+  let r = Math.random() * totalWeight;
+  let selectedRarity = null;
+  for (const rarity of rarities) {
+    r -= weights[rarity];
+    if (r <= 0) { selectedRarity = rarity; break; }
+  }
+  if (!selectedRarity) selectedRarity = rarities[rarities.length - 1];
+
+  // 第二步：从该稀有度的糖果中随机选 1 颗
+  const candidates = pool.filter(c => c.rarity === selectedRarity);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 /**
  * 随机抽选 1 张糖果（向后兼容，内部调用 drawWeightedCandy）
  * @param {number} round 当前关卡
+ * @param {number} [luckyBonus=1] 幸运加成（阶段 6）
+ * @param {number} [shopBonus=0] 商店等级传奇加成（阶段 8）
  * @returns 糖果对象
  */
-export function drawRandomCandy(round) {
-  return drawWeightedCandy(round);
+export function drawRandomCandy(round, luckyBonus = 1, shopBonus = 0) {
+  return drawWeightedCandy(round, luckyBonus, shopBonus);
 }
 
 /**

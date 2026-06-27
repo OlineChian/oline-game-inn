@@ -1,36 +1,35 @@
 /**
- * 切斯特牌 - 入口与状态机
- * 阶段 3：开局三选一 + 每关结算金币 + 商店购买
- * 状态流转：idle → candyChoice → playing → roundWin/roundLose → shop/victory
+ * 切斯特牌 - 入口与状态机（无尽模式）
+ * 状态流转：idle → candyChoice → playing → roundWin(→shop→下一关) / roundLose / quit
+ * 排行榜提交时机：失败或主动退出时提交 totalScore
  */
 
 import { createDeck, shuffle, drawCards } from './core/deck.js';
-import { scoreHand, upgradeHandType, upgradeCost } from './core/scoring.js';
+import { scoreHand, upgradeHandType } from './core/scoring.js';
+import { getTarget } from './core/targets.js';
 import {
   renderGame, renderHand, renderHUD, renderCandies,
   renderLivePreview, showScorePopup, renderEndScreen, hideEndScreen, renderStartScreen
 } from './ui/render.js';
 import { setupInteraction } from './ui/interaction.js';
 import {
-  applyCandiesToScore, applyCandiesPerRound, canAddCandy
+  applyCandiesToScore, applyCandiesPerRound
 } from './systems/candy-system.js';
+import {
+  handlePlayEnd, handleDiscard, handleRoundStart, handleRoundEnd
+} from './systems/candy-hooks.js';
 import { settleRoundCoins } from './systems/economy.js';
-import {
-  getChoiceCandies, drawRandomCandy, getRandomDrawPrice, canAfford, sellPrice
-} from './systems/shop-system.js';
-import {
-  renderCandyChoice, renderShop, hideShop, setDrawnCandy, resetDrawnCandy
-} from './ui/shop-ui.js';
-import { getCandyById } from './data/candies.js';
+import { getChoiceCandies } from './systems/shop-system.js';
+import { renderCandyChoice, hideShop } from './ui/shop-ui.js';
+import { createShopActions } from './systems/shop-actions.js';
+import { submitAndRefresh, submitWithNickname } from './leaderboard-submit.js';
 
 const CONFIG = {
-  rounds: 8,
   handSize: 8,
   maxPlay: 5,
   discardsPerRound: 2,
   playsPerRound: 4,
-  maxCandies: 5,
-  targets: [300, 600, 1000, 1500, 2200, 3000, 4000, 5500]
+  maxCandies: 5
 };
 
 const State = {
@@ -46,7 +45,10 @@ const State = {
   discardsLeft: CONFIG.discardsPerRound,
   phase: 'idle',
   candies: [],
-  handLevels: {}  // 牌型升级等级表 { HAND_KEY: level }，默认全部 1 级
+  handLevels: {},  // 牌型升级等级表 { HAND_KEY: level }，默认全部 1 级
+  prevRoundHandType: null,  // 上关最后牌型 key（金砖巧克力用）
+  _firstPlayOfRound: true,  // 本关是否还未出牌（糖果魔术师用）
+  shopLevel: 1              // 阶段 8：商店等级（1-5）
 };
 
 /** 切换选牌 */
@@ -61,17 +63,28 @@ function toggleSelect(cardId) {
   renderAll();
 }
 
-/** 出牌（应用糖果效果） */
+/** 出牌（应用糖果效果 + 永久状态更新） */
 function playSelected() {
   if (State.phase !== 'playing') return;
   if (State.selected.size === 0 || State.playsLeft <= 0) return;
 
   const played = State.hand.filter(c => State.selected.has(c.id));
   const baseResult = scoreHand(played, State.handLevels);
-  const result = applyCandiesToScore(baseResult, State.candies);
+  const context = {
+    playedCards: played,
+    deckUsed: 52 - State.deck.length,
+    isLastPlayOfRound: State.playsLeft <= 1,
+    prevRoundHandType: State.prevRoundHandType,
+    maxCandies: CONFIG.maxCandies,
+    candyCount: State.candies.length
+  };
+  const result = applyCandiesToScore(baseResult, State.candies, context);
   State.roundScore += result.score;
   State.totalScore += result.score;
   State.playsLeft--;
+
+  // 出牌后钩子：永久状态更新 + 糖果魔术师牌型升级
+  handlePlayEnd(State, played, baseResult.handType, upgradeHandType);
 
   // 补牌
   const need = State.selected.size;
@@ -84,14 +97,18 @@ function playSelected() {
   showScorePopup(result);
 
   if (State.playsLeft <= 0) {
+    State.prevRoundHandType = baseResult.handType ? baseResult.handType.key : null;
     setTimeout(endRound, 1200);
   }
 }
 
-/** 弃牌 */
+/** 弃牌（更新糖果永久状态 + 糖果王下关倍率） */
 function discardSelected() {
   if (State.phase !== 'playing') return;
   if (State.selected.size === 0 || State.discardsLeft <= 0) return;
+
+  const discarded = State.hand.filter(c => State.selected.has(c.id));
+  handleDiscard(State, discarded);
 
   const need = State.selected.size;
   State.hand = State.hand.filter(c => !State.selected.has(c.id));
@@ -102,46 +119,60 @@ function discardSelected() {
   renderAll();
 }
 
-/** 结束本关（结算金币，不再免费奖励糖果）
- * 胜利时若已有昵称，先渲染「提交中」，await 真实提交结果后再回写状态
- * 避免 fire-and-forget 吞掉错误导致 UI 误导
+/** 结束本关（结算金币，达标进入商店，未达标游戏结束并提交排行榜）
+ * 无尽模式：无通关上限，失败时提交 totalScore 到排行榜
  */
 async function endRound() {
-  const target = CONFIG.targets[State.round - 1];
+  const target = getTarget(State.round);
   if (State.roundScore >= target) {
+    // 过关 → 糖果工厂产出（获得随机糖果或金币）
+    handleRoundEnd(State, CONFIG);
     const settle = settleRoundCoins(State.roundScore, target);
     State.coins += settle.coins;
     State.lastCoinGain = settle.coins;
-    if (State.round >= CONFIG.rounds) {
-      State.phase = 'victory';
-      const nickname = localStorage.getItem('gameNickname');
-      if (nickname && nickname.trim()) {
-        // 先渲染提交中状态，让用户看到正在提交
-        renderAll();
-        renderEndScreen(State, CONFIG, { submitState: 'submitting' });
-        const ok = await submitScoreToLeaderboard(nickname.trim());
-        renderEndScreen(State, CONFIG, { submitState: ok ? 'success' : 'fail' });
-        return;
-      }
-    } else {
-      State.phase = 'roundWin';
-    }
+    State.phase = 'roundWin';
+    renderAll();
+    renderEndScreen(State, CONFIG);
   } else {
+    // 未达标 → 游戏结束 → 提交排行榜
     State.phase = 'roundLose';
     State.lastCoinGain = 0;
+    renderAll();
+    const nickname = localStorage.getItem('gameNickname');
+    if (nickname && nickname.trim()) {
+      await submitAndRefresh(State, CONFIG, nickname.trim());
+    } else {
+      renderEndScreen(State, CONFIG);
+    }
   }
-  renderAll();
-  renderEndScreen(State, CONFIG);
 }
 
-/** 关闭商店并进入下一关 */
+/** 玩家主动退出：提交当前分数到排行榜后显示结算界面 */
+async function quitGame() {
+  if (State.phase === 'idle' || State.phase === 'candyChoice') return;
+  if (State.totalScore <= 0) { startGame(); return; }
+  State.phase = 'quit';
+  renderAll();
+  const nickname = localStorage.getItem('gameNickname');
+  if (nickname && nickname.trim()) {
+    await submitAndRefresh(State, CONFIG, nickname.trim());
+  } else {
+    renderEndScreen(State, CONFIG);
+  }
+}
+
+/** 关闭商店并进入下一关
+ * 阶段 6：清除幸运加成状态（lucky-cookie 已在 openShop 时激活并使用）
+ */
 function closeShop() {
   hideShop();
+  State._luckyBonus = 1;
+  State._activeLuckyBonus = 1;
   State.round++;
   startRound();
 }
 
-/** 开始一关（应用每回合糖果效果） */
+/** 开始一关（应用回合开始钩子 + 每回合糖果效果） */
 function startRound() {
   State.deck = shuffle(createDeck());
   State.hand = drawCards(State.deck, CONFIG.handSize);
@@ -150,6 +181,9 @@ function startRound() {
   State.playsLeft = CONFIG.playsPerRound;
   State.discardsLeft = CONFIG.discardsPerRound;
   State.phase = 'playing';
+  State._firstPlayOfRound = true;
+  // 糖果机器：回合开始回收右侧糖果
+  handleRoundStart(State, CONFIG);
   // 应用每回合糖果效果（金币等）
   const roundBonus = applyCandiesPerRound(State.candies);
   State.coins += roundBonus.coinBonus;
@@ -165,6 +199,9 @@ function startGame() {
   State.lastCoinGain = 0;
   State.candies = [];
   State.handLevels = {};
+  State.prevRoundHandType = null;
+  State._firstPlayOfRound = true;
+  State.shopLevel = 1;  // 阶段 8：重置商店等级
   renderGame(CONFIG);
   const choices = getChoiceCandies(1, 3);
   renderCandyChoice(choices, CONFIG);
@@ -182,124 +219,11 @@ function pickStartingCandy(candyId) {
   startRound();
 }
 
-/** 打开商店（从胜利界面进入） */
-function openShop() {
-  if (State.phase !== 'roundWin') return;
-  hideEndScreen();
-  resetDrawnCandy();
-  renderShop(State, CONFIG);
-}
-
-/** 商店：指定糖果购买 */
-function buyCandy(candyId, price) {
-  if (State.phase !== 'roundWin') return;
-  const candy = getCandyById(candyId);
-  if (!candy) return;
-  if (!canAfford(State.coins, price)) return;
-  if (!canAddCandy(State.candies, CONFIG.maxCandies)) return;
-  if (State.candies.some(c => c.id === candyId)) return;
-  State.coins -= price;
-  State.candies.push(candy);
-  renderShop(State, CONFIG);
-  renderAll();
-}
-
-/** 商店：随机抽选（按权重递减，先抽后扣以防池空） */
-function drawRandom() {
-  if (State.phase !== 'roundWin') return;
-  const price = getRandomDrawPrice(State.round);
-  if (!canAfford(State.coins, price)) return;
-  if (!canAddCandy(State.candies, CONFIG.maxCandies)) return;
-  const candy = drawRandomCandy(State.round);
-  if (!candy) return;
-  State.coins -= price;
-  State.candies.push(candy);
-  setDrawnCandy(candy);
-  renderShop(State, CONFIG);
-  renderAll();
-}
-
-/** 商店：回收糖果（半价 floor(price/2) 返还） */
-function sellCandy(candyId) {
-  if (State.phase !== 'roundWin') return;
-  const idx = State.candies.findIndex(c => c.id === candyId);
-  if (idx < 0) return;
-  const candy = State.candies[idx];
-  const refund = sellPrice(candy);
-  State.candies.splice(idx, 1);
-  State.coins += refund;
-  renderShop(State, CONFIG);
-  renderAll();
-}
-
-/** 商店：升级牌型（花费金币提升某牌型等级，永久生效至本局结束） */
-function upgradeHand(handKey) {
-  if (State.phase !== 'roundWin') return;
-  const cost = upgradeCost(State.handLevels, handKey);
-  if (!canAfford(State.coins, cost)) return;
-  State.coins -= cost;
-  State.handLevels = upgradeHandType(State.handLevels, handKey);
-  renderShop(State, CONFIG);
-  renderAll();
-}
+/** 打开商店、购买、抽选、回收、升级牌型等操作已拆分到 shop-actions.js */
 
 /** 重新开始 */
 function restart() {
   startGame();
-}
-
-/** 排行榜：提交分数到服务器（参考 8bit-arcade 简化版） */
-async function submitScoreToLeaderboard(nickname) {
-  if (!nickname || !nickname.trim()) return false;
-  if (!window.ScoreSigner) {
-    console.warn('[chester] ScoreSigner 未加载，跳过成绩提交');
-    return false;
-  }
-  try {
-    const sig = await window.ScoreSigner.sign({
-      gameId: 'chester-cards',
-      nickname,
-      score: State.totalScore
-    });
-    const response = await fetch('/api/leaderboard/chester-cards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nickname,
-        score: State.totalScore,
-        extra: {
-          rounds: CONFIG.rounds,
-          candies: State.candies.length,
-          coins: State.coins,
-          handLevels: State.handLevels
-        },
-        timestamp: sig.timestamp,
-        nonce: sig.nonce,
-        signature: sig.signature
-      })
-    });
-    const data = await response.json();
-    if (!data.success) {
-      console.warn('[chester] 成绩提交失败:', data.error);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.warn('[chester] 排行榜提交失败:', e);
-    return false;
-  }
-}
-
-/** 用户点击"提交成绩"按钮：读取输入框昵称，提交后重渲染 */
-async function submitScoreWithNickname() {
-  const input = document.getElementById('ccNicknameInput');
-  if (!input) return;
-  const nickname = input.value.trim();
-  if (!nickname) return;
-  localStorage.setItem('gameNickname', nickname);
-  renderEndScreen(State, CONFIG, { submitState: 'submitting' });
-  const ok = await submitScoreToLeaderboard(nickname);
-  renderEndScreen(State, CONFIG, { submitState: ok ? 'success' : 'fail' });
 }
 
 /** 全量渲染 */
@@ -310,6 +234,9 @@ function renderAll() {
   renderLivePreview(State, CONFIG);
 }
 
+/** 商店操作集合（工厂模式，注入 State/CONFIG/renderAll） */
+const shopActions = createShopActions(State, CONFIG, renderAll);
+
 /** 初始化 */
 function init() {
   renderStartScreen();
@@ -318,15 +245,19 @@ function init() {
     onPlay: playSelected,
     onDiscard: discardSelected,
     onRestart: restart,
+    onQuit: quitGame,
     onStart: startGame,
     onPickCandy: pickStartingCandy,
-    onBuyCandy: buyCandy,
-    onDrawRandom: drawRandom,
-    onSellCandy: sellCandy,
+    onBuyCandy: shopActions.buyCandy,
+    onDrawRandom: shopActions.drawRandom,
+    onSellCandy: shopActions.sellCandy,
     onCloseShop: closeShop,
-    onOpenShop: openShop,
-    onUpgradeHand: upgradeHand,
-    onSubmitScore: submitScoreWithNickname
+    onOpenShop: shopActions.openShop,
+    onUpgradeHand: shopActions.upgradeHand,
+    onRefreshShop: shopActions.refreshShop,
+    onBuySpecialItem: shopActions.buySpecialItem,
+    onUpgradeShop: shopActions.upgradeShop,
+    onSubmitScore: () => submitWithNickname(State, CONFIG)
   });
 }
 
