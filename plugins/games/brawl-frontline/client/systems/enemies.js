@@ -59,18 +59,19 @@ export const Enemies = {
     Game.entities.enemies.push(enemy);
   },
 
-  /** 波次难度系数：第 1 波大幅削弱，第 4 波起标准，无尽模式指数级递增 */
+  /** 波次难度系数：第 1 波大幅削弱，第 4 波起标准，无尽模式指数级递增
+   *  增长率调低（hp 1.25 / atk 1.18），让玩家能坚持到 20 波 */
   _difficultyMult(wave) {
     if (wave <= 1) return { hp: 0.35, atk: 0.45, spd: 0.6 };
     if (wave === 2) return { hp: 0.6, atk: 0.7, spd: 0.8 };
     if (wave === 3) return { hp: 0.8, atk: 0.85, spd: 0.9 };
     if (wave <= 6) return { hp: 1.0, atk: 1.0, spd: 1.0 };
-    // 无尽模式：指数级增长（每波 hp ×1.30、atk ×1.22，spd 线性小幅增长避免无法反应）
+    // 无尽模式：增长率调低，第 20 波 hp ×1.25^14≈22.7（原 1.30^14≈39.5）
     const extra = wave - 6;
     return {
-      hp: Math.pow(1.30, extra),
-      atk: Math.pow(1.22, extra),
-      spd: 1.0 + extra * 0.03
+      hp: Math.pow(1.25, extra),
+      atk: Math.pow(1.18, extra),
+      spd: 1.0 + extra * 0.02
     };
   },
 

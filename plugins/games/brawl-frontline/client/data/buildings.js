@@ -13,11 +13,11 @@ export const BUILDINGS = {
     type: 'economy',
     desc: '持续产出金币，指定波数才能升级',
     levels: [
-      { level: 1, goldPerSec: 5 },
-      { level: 2, goldPerSec: 9 },
-      { level: 3, goldPerSec: 14 },
-      { level: 4, goldPerSec: 20 },
-      { level: 5, goldPerSec: 28 }
+      { level: 1, goldPerSec: 8 },
+      { level: 2, goldPerSec: 14 },
+      { level: 3, goldPerSec: 21 },
+      { level: 4, goldPerSec: 30 },
+      { level: 5, goldPerSec: 42 }
     ],
     upgradeCost: [150, 300, 500, 800],   // 1→2, 2→3, 3→4, 4→5
     upgradeWaves: [1, 5, 10, 20],        // 各等级升级所需波数（第1波/5波/10波/20波）

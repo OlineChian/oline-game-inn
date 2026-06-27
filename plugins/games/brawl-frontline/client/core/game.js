@@ -32,8 +32,8 @@ export const LAYOUT = {
   heroZone: { yMin: 80, yMax: 560 }               // 英雄活动 y 范围（最远可到红色边界 y=80）
 };
 
-/** 基地初始生命 */
-const BASE_MAX_HP = 1500;
+/** 基地初始生命（配合高稀有度英雄数值，避免基地比英雄还脆） */
+const BASE_MAX_HP = 5000;
 
 export const Game = {
   state: null,
