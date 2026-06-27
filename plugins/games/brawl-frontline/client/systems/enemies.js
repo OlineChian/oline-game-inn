@@ -144,8 +144,10 @@ export const Enemies = {
     }
   },
 
-  /** rusher AI：直冲基地，碰到设施攻击设施，抵达基地前线后主动攻击射程内炮台/舰炮，否则攻击基地
-   *  对基地伤害统一按 BASE_DAMAGE_RATE 折扣，避免前期对基地秒杀 */
+  /** rusher AI：直冲基地，碰到设施攻击设施，抵达基地前线后按优先级攻击：
+   *   1) 射程内守家型英雄（坦克/治疗）—— 承担基地防御，避免基地被秒
+   *   2) 射程内炮台/舰炮
+   *   3) 基地（伤害按 BASE_DAMAGE_RATE 折扣） */
   _aiRusher(en, dt) {
     // 移动中碰到挡路设施：先打掉
     for (const f of Game.buildings.facilities) {
@@ -162,8 +164,15 @@ export const Enemies = {
       en.y += en.moveSpeed * dt;
       return;
     }
-    // 抵达基地前线：优先攻击射程内炮台/舰炮（用设施自身射程判定，炮台能打到敌人则敌人也反击）
     if (en.atkCd > 0) return;
+    // 优先攻击射程内守家型英雄（坦克/治疗），让他们承担伤害
+    const guard = this._nearestGuardHero(en);
+    if (guard) {
+      guard.hp -= en.attack;
+      en.atkCd = 1 / en.attackSpeed;
+      return;
+    }
+    // 其次攻击射程内炮台/舰炮
     let targetFacility = null, minD = Infinity;
     for (const f of Game.buildings.facilities) {
       if (!f) continue;
@@ -177,6 +186,18 @@ export const Enemies = {
       Game.damageBase(en.attack * BASE_DAMAGE_RATE);
     }
     en.atkCd = 1 / en.attackSpeed;
+  },
+
+  /** 查找射程内的守家型英雄（坦克/治疗），用于 rusher 优先攻击 */
+  _nearestGuardHero(en) {
+    let nearest = null, minDist = Infinity;
+    for (const h of Game.entities.heroes) {
+      if (h.hp <= 0) continue;
+      if (h.role !== '坦克' && h.role !== '治疗') continue;
+      const d = distance(en, h);
+      if (d <= en.range + h.radius && d < minDist) { minDist = d; nearest = h; }
+    }
+    return nearest;
   },
 
   /** hunter AI：追击最近英雄，进入射程后远程射击 */

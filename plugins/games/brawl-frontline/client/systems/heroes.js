@@ -141,6 +141,7 @@ export const Heroes = {
 
   update(dt) {
     const heroes = Game.entities.heroes;
+    this._lockCount = {};   // 每帧重置目标锁定计数 { enemyUid: count }，用于分散火力
     for (let i = heroes.length - 1; i >= 0; i--) {
       const h = heroes[i];
       this._ai(h, dt);
@@ -169,14 +170,18 @@ export const Heroes = {
     const isMelee = h.projectileSpeed === 0;
     const isTank = h.role === '坦克';
     const isSupport = h.role === '治疗';
-    const target = this._findEnemy(h);
-    if (target && h.atkCd <= 0) {
-      this._attack(h, target);
-      h.atkCd = 1 / h.effectiveAspd;
+    // 仅在能攻击时选目标并占用锁定名额（atkCd > 0 时不锁敌，避免浪费分散火力配额）
+    let target = null;
+    if (h.atkCd <= 0) {
+      target = this._findEnemy(h);
+      if (target) {
+        this._attack(h, target);
+        h.atkCd = 1 / h.effectiveAspd;
+      }
     }
     // 所有英雄优先锁定"距离基地最近的敌人"作为移动目标
     // 坦克只在后半场巡查（y >= baseLine-100），找不到就回基地
-    const baseAttacker = isTank ? this._findBaseThreat() : this._findBaseAttacker();
+    const baseAttacker = this._findNearestToBase(isTank);
     let moveTarget;
     if (isTank) {
       moveTarget = baseAttacker; // 公牛只用后半场威胁者作为目标，否则原地守基地
@@ -224,44 +229,56 @@ export const Heroes = {
     }
   },
 
+  /** 查找射程内最近敌人，遵循"分散火力"规则：
+   *  - 同一敌人最多被 3 个英雄锁定，第 4 个改选第二近的
+   *  - 大型/高血量敌人（isBoss 或 maxHp≥2500）不受限制，可继续集火
+   *  - 距离相近（容差 10）时优先 x 距离更近的，避免左右两边都有时总打一边 */
   _findEnemy(h) {
-    let best = null, bestDist = h.range + h.radius + 20;
-    Game.entities.enemies.forEach(en => {
+    const reach = h.range + h.radius + 20;
+    const list = [];
+    for (const en of Game.entities.enemies) {
       const d = distance(h, en);
-      if (d < bestDist) { bestDist = d; best = en; }
-    });
+      if (d < reach) list.push({ en, d, xD: Math.abs(h.x - en.x) });
+    }
+    if (!list.length) return null;
+    list.sort((a, b) => Math.abs(a.d - b.d) <= 10 ? a.xD - b.xD : a.d - b.d);
+    for (const item of list) {
+      const large = item.en.isBoss || item.en.maxHp >= 2500;
+      const cnt = this._lockCount[item.en.uid] || 0;
+      if (large || cnt < 3) {
+        this._lockCount[item.en.uid] = cnt + 1;
+        return item.en;
+      }
+    }
+    this._lockCount[list[0].en.uid] = (this._lockCount[list[0].en.uid] || 0) + 1;
+    return list[0].en;
+  },
+
+  /** 通用：在敌人列表中找最近者，距离相近（容差 10）时优先 x 距离更近的，避免左右偏向 */
+  _nearestOf(ref, refX, arr) {
+    let best = null, bestDist = Infinity, bestXDist = Infinity;
+    for (const en of arr) {
+      const d = distance(ref, en);
+      const xD = Math.abs(refX - en.x);
+      if (Math.abs(d - bestDist) <= 10) {
+        if (xD < bestXDist) { bestDist = d; bestXDist = xD; best = en; }
+      } else if (d < bestDist) {
+        bestDist = d; bestXDist = xD; best = en;
+      }
+    }
     return best;
   },
 
-  /** 查找距离基地最近的敌人（全图），用于所有英雄的移动目标优先级 */
-  _findBaseAttacker() {
-    let best = null, bestDist = Infinity;
-    Game.entities.enemies.forEach(en => {
-      const d = distance(LAYOUT.base, en);
-      if (d < bestDist) { bestDist = d; best = en; }
-    });
-    return best;
-  },
-
-  /** 查找后半场内（y >= baseLine-100）距离基地最近的敌人，用于坦克巡查 */
-  _findBaseThreat() {
-    let best = null, bestDist = Infinity;
-    const threatY = LAYOUT.baseLine - 100;
-    Game.entities.enemies.forEach(en => {
-      if (en.y < threatY) return;
-      const d = distance(LAYOUT.base, en);
-      if (d < bestDist) { bestDist = d; best = en; }
-    });
-    return best;
+  /** 距离基地最近敌人；threatOnly=true 时只看后半场（坦克巡查用） */
+  _findNearestToBase(threatOnly) {
+    const arr = threatOnly
+      ? Game.entities.enemies.filter(en => en.y >= LAYOUT.baseLine - 100)
+      : Game.entities.enemies;
+    return this._nearestOf(LAYOUT.base, LAYOUT.base.x, arr);
   },
 
   _nearestEnemy(h) {
-    let best = null, bestDist = Infinity;
-    Game.entities.enemies.forEach(en => {
-      const d = distance(h, en);
-      if (d < bestDist) { bestDist = d; best = en; }
-    });
-    return best;
+    return this._nearestOf(h, h.x, Game.entities.enemies);
   },
 
   _attack(h, target) {
