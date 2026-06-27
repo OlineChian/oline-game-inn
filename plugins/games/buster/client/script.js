@@ -896,12 +896,9 @@ async function submitScore(score, won) {
             })
         });
 
+        // 安全事件统一入口：403 封禁 / 200 警告（成绩不上传）自动弹窗
+        if (window.BanNotice && await window.BanNotice.handleSecurityEvent(response)) return;
         const data = await response.json().catch(() => ({}));
-        // 403 = IP 被封禁：弹窗提示玩家联系管理员，而非误以为是 bug
-        if (response.status === 403 && window.BanNotice) {
-            window.BanNotice.show(data);
-            return;
-        }
         if (data.success) {
             console.log(`成绩提交成功！排名：${data.rank}/${data.total}`);
         } else {

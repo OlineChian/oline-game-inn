@@ -307,8 +307,8 @@ async function submitWinToLeaderboard(mode, difficulty) {
         signature: sig.signature
       })
     });
-    // 403 = IP 被封禁：弹窗提示玩家联系管理员
-    if (window.BanNotice && await window.BanNotice.handleIfBanned(response)) return;
+    // 安全事件统一入口：403 封禁 / 200 警告（成绩不上传）自动弹窗
+    if (window.BanNotice && await window.BanNotice.handleSecurityEvent(response)) return;
   } catch (e) {
     console.warn('排行榜提交失败:', e);
   }
