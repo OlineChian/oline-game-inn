@@ -52,18 +52,24 @@ export function hasFreeRefresh(level) {
  */
 export function canUpgradeShop(level, round, coins) {
   if (level >= MAX_SHOP_LEVEL) {
-    return { canUpgrade: false, reason: '已达最高等级' };
+    return { canUpgrade: false, reason: '已达最高等级', reasonType: 'max' };
   }
   const currentConfig = getShopLevelConfig(level);
   const nextLevel = SHOP_LEVELS.find(l => l.level === level + 1);
   if (!nextLevel) {
-    return { canUpgrade: false, reason: '无下一级' };
+    return { canUpgrade: false, reason: '无下一级', reasonType: 'none' };
   }
   if (round < currentConfig.upgradeRound) {
-    return { canUpgrade: false, reason: `需第 ${currentConfig.upgradeRound} 关` };
+    return {
+      canUpgrade: false, reason: `需第 ${currentConfig.upgradeRound} 关`,
+      reasonType: 'round', requiredRound: currentConfig.upgradeRound
+    };
   }
   if (coins < currentConfig.upgradeCost) {
-    return { canUpgrade: false, reason: `需 ${currentConfig.upgradeCost} 金币` };
+    return {
+      canUpgrade: false, reason: `需 ${currentConfig.upgradeCost} 金币`,
+      reasonType: 'coins', requiredCost: currentConfig.upgradeCost
+    };
   }
   return { canUpgrade: true, nextLevel, cost: currentConfig.upgradeCost };
 }

@@ -91,7 +91,16 @@ export function buildOffering(handKey, handLevels) {
   // 价格 = 升级到 toLevel 的价格 = upgradeCost({ [handKey]: toLevel - 1 }, handKey)
   const tempLevels = { [handKey]: toLevel - 1 };
   const cost = upgradeCost(tempLevels, handKey);
-  return { handKey, fromLevel, toLevel, cost, isCombo };
+  // 组合升级原价 = 逐级升级总和（用于 UI 划线显示，体现超值）
+  let originalCost = null;
+  if (isCombo) {
+    let sum = 0;
+    for (let lv = fromLevel; lv < toLevel; lv++) {
+      sum += upgradeCost({ [handKey]: lv }, handKey);
+    }
+    originalCost = sum;
+  }
+  return { handKey, fromLevel, toLevel, cost, isCombo, originalCost };
 }
 
 /**

@@ -72,15 +72,12 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg } };
     }
 
-    case 'per_rank_chance': {
+    case 'per_rank_mult': {
       const matched = playedCards.filter(c => effect.ranks.includes(c.rank));
       if (matched.length === 0) return {};
-      // 每张匹配牌 ×mult 倍率（乘法叠加）
+      // 每张匹配牌确定性 ×mult 倍率（乘法叠加：×mult^count）
       const totalMul = Math.pow(effect.mult, matched.length);
-      if (isPreview) {
-        return { triggered: { candy, msg: `${matched.length}×${effect.ranks.join('/')} ×${effect.mult} 机会`, isChance: true } };
-      }
-      return { multMul: totalMul, triggered: { candy, msg: `${matched.length}×${effect.ranks.join('/')} ×${totalMul}` } };
+      return { multMul: totalMul, triggered: { candy, msg: `${matched.length}张${effect.ranks.join('')} ×${totalMul}` } };
     }
 
     case 'per_parity': {

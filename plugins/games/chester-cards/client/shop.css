@@ -93,7 +93,8 @@
     border: 1px solid #0a1818;
 }
 .cc-upgrade-card-bonus { font-family: var(--font-number); font-size: var(--fs-small); color: var(--text-secondary); line-height: 1.3; }
-.cc-upgrade-card-hint { font-family: var(--font-body); font-size: var(--fs-tiny); color: var(--text-muted); line-height: 1.3; min-height: 28px; }
+/* 组合升级原价划线（现价 + 原价灰色划线，体现超值） */
+.cc-combo-price-orig { text-decoration: line-through; color: var(--text-muted); font-size: var(--fs-tiny); margin-left: 4px; opacity: 0.8; }
 .cc-upgrade-combo-tag { display: inline-block; font-family: var(--font-display); font-size: 10px; font-weight: 700; color: #1a2e2f; background: var(--color-gold-accent); padding: 1px 6px; margin-left: 4px; border-radius: 2px; vertical-align: middle; }
 .cc-upgrade-card-btn {
     width: 100%; padding: 8px 10px;

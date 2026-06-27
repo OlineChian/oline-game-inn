@@ -96,17 +96,20 @@ function renderUpgradeCard(offering, handLevels, coins) {
   const bonusChips = cfg.plusChips * (offering.toLevel - 1);
   const bonusMult = cfg.plusMult * (offering.toLevel - 1);
   const cardClass = offering.isCombo ? 'cc-upgrade-card is-combo' : 'cc-upgrade-card';
+  // 组合升级：现价 + 原价划线，体现超值
+  const priceHtml = (offering.isCombo && offering.originalCost)
+    ? `${offering.cost}💰<span class="cc-combo-price-orig">${offering.originalCost}💰</span>`
+    : `${offering.cost}💰`;
   return `
     <div class="${cardClass}">
       <div class="cc-upgrade-card-name">${HAND_TYPES[offering.handKey].name}${comboTag}</div>
       <div class="cc-upgrade-card-level">${levelDisplay}</div>
       <div class="cc-upgrade-card-bonus">累计 +${bonusChips}筹码/+${bonusMult}倍</div>
-      <div class="cc-upgrade-card-hint">提升该牌型的基础筹码与倍率</div>
       <button class="cc-upgrade-card-btn ${disabled ? 'is-disabled' : ''}"
               data-action="upgrade-hand" data-hand-key="${offering.handKey}"
               data-to-level="${offering.toLevel}"
               ${disabled ? 'disabled' : ''}>
-        ${offering.cost}💰
+        ${priceHtml}
       </button>
     </div>
   `;
@@ -233,11 +236,22 @@ function renderRefreshButton(refreshCount) {
 function renderShopLevelBar(state) {
   const level = state.shopLevel || 1;
   const check = canUpgradeShop(level, state.round, state.coins);
+  const label = `商店等级：Lv${level}`;
   if (!check.canUpgrade) {
-    return `<span class="cc-shop-level-info">商店 Lv${level}（${check.reason}）</span>`;
+    let hint = '';
+    if (check.reasonType === 'max') {
+      hint = '已满级';
+    } else if (check.reasonType === 'round') {
+      hint = `完成第${check.requiredRound}关可升级`;
+    } else if (check.reasonType === 'coins') {
+      hint = `需${check.requiredCost}💰可升级`;
+    } else {
+      hint = check.reason;
+    }
+    return `<span class="cc-shop-level-info">${label} · ${hint}</span>`;
   }
   return `
-    <span class="cc-shop-level-info">商店 Lv${level}</span>
+    <span class="cc-shop-level-info">${label}</span>
     <button class="cc-btn cc-btn-upgrade-shop" data-action="upgrade-shop">
       升级 → Lv${level + 1}（${check.cost}💰）
     </button>

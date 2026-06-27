@@ -9,7 +9,7 @@
  *   permanent_mult_play     出牌 +perPlay 倍率 / 弃牌 +perDiscard 倍率（永久）
  *   permanent_chips_hand    指定牌型出牌时永久 +value 筹码
  *   per_rank                每张指定点数牌给予 chips/mult
- *   per_rank_chance         每张指定点数牌概率给予 ×mult 倍率
+ *   per_rank_mult            每张指定点数牌确定性 ×mult 倍率（乘法叠加 mult^count）
  *   per_parity              每张奇/偶点数牌给予 chips/mult
  *   min_rank_to_mult        最低点数牌的点数加入倍率
  */
@@ -83,7 +83,7 @@ export const CANDIES_COMMON = [
     effect: { type: 'per_rank', ranks: ['J', 'Q', 'K'], chips: 30 } },
   { id: 'honey', name: '蜂蜜糖', emoji: '🍯', rarity: 'common',
     desc: '每张 JQK 牌给予 ×2 倍率', price: 6,
-    effect: { type: 'per_rank_chance', ranks: ['J', 'Q', 'K'], mult: 2 } },
+    effect: { type: 'per_rank_mult', ranks: ['J', 'Q', 'K'], mult: 2 } },
   { id: 'sour-candy', name: '酸糖', emoji: '🍋', rarity: 'common',
     desc: '每张奇数点数牌给予 +30 筹码', price: 7,
     effect: { type: 'per_parity', parity: 'odd', chips: 30 } },
