@@ -122,8 +122,11 @@ function verifySubmission(gameId, body) {
 /**
  * 反作弊遥测校验分发器
  * 无 extra.antiCheat 字段时跳过（向后兼容）；有则委托 anti-cheat.js 按 gameId 分发
+ * @param {string} gameId
+ * @param {object} body - POST body
+ * @param {object} [rules] - 安全规则开关（来自 penalty.getRules），未传则全开
  */
-function verifyAntiCheat(gameId, body) {
+function verifyAntiCheat(gameId, body, rules) {
   const extra = body && body.extra;
   const ac = extra && extra.antiCheat;
   if (!ac) return { ok: true };
@@ -131,7 +134,7 @@ function verifyAntiCheat(gameId, body) {
   if (!Number.isFinite(score)) {
     return { ok: false, error: 'score 格式错误', code: 400 };
   }
-  return verifyGameAntiCheat(gameId, score, ac, extra);
+  return verifyGameAntiCheat(gameId, score, ac, extra, rules);
 }
 
 
@@ -184,12 +187,16 @@ function checkBan(storage, ip) {
  * @param {string} reason - 封禁原因
  * @param {string} action - 'ban'（默认）或 'purge'
  * @param {string} [nickname] - 作弊者昵称（用于管理后台展示）
+ * @param {number} [durationMs] - 自定义封禁时长；未传则按 action 默认（ban=7天/purge=30天）
  */
-function flagCheater(storage, ip, reason, action, nickname) {
+function flagCheater(storage, ip, reason, action, nickname, durationMs) {
   if (!storage || !ip) return;
   action = action || 'ban';
   const now = Date.now();
-  const until = now + (action === 'purge' ? PURGE_DURATION_MS : BAN_DURATION_MS);
+  const dur = (typeof durationMs === 'number' && durationMs > 0)
+    ? durationMs
+    : (action === 'purge' ? PURGE_DURATION_MS : BAN_DURATION_MS);
+  const until = now + dur;
   storage.set(BAN_KEY_PREFIX + ip, {
     until: until,
     reason: reason,

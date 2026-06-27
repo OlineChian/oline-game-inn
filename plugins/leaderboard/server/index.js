@@ -4,7 +4,10 @@
  */
 
 const LeaderboardService = require('./service');
-const { verifySubmission, verifyAntiCheat, checkBan, flagCheater, listBans, unban } = require('./security');
+const { verifySubmission, verifyAntiCheat, checkBan, listBans, unban } = require('./security');
+const {
+  applyPenalty, getRules, setRules, listHistory, resetViolation, RULE_CATEGORIES
+} = require('./penalty');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
@@ -151,20 +154,31 @@ module.exports = function(app, context) {
         return res.status(verification.code).json({ success: false, error: verification.error });
       }
 
-      // L3: 反作弊校验（防 AFK / 状态篡改）
-      const acCheck = verifyAntiCheat(gameId, req.body);
+      // L3: 反作弊校验（防 AFK / 状态篡改），传入安全规则开关
+      const rules = getRules(service.storage);
+      const acCheck = verifyAntiCheat(gameId, req.body, rules);
       if (!acCheck.ok) {
-        // L4: 检测到作弊 → 封禁 IP（30 天）+ 清除该 IP 全部历史成绩
-        flagCheater(service.storage, ip, acCheck.error, 'purge', nickname);
-        const removed = service.purgeCheaterScores(ip, siteConfig);
-        console.warn(`[security] 作弊检测触发清除 IP=${ip} nickname=${nickname || '-'} 移除 ${removed} 条历史成绩 原因=${acCheck.error}`);
-        // 返回 banned=true 触发客户端封禁弹窗
-        return res.status(acCheck.code).json({
+        // 分级惩罚：第1次警告（成绩不上传）→ 10min → 30min → 2h → 8h → 24h 封顶
+        const penalty = applyPenalty(service.storage, ip, acCheck.error, nickname, gameId);
+        if (penalty.action === 'warn') {
+          // 警告：本次成绩不上传，不封禁 IP，玩家可继续游戏
+          return res.status(200).json({
+            success: false,
+            warned: true,
+            error: acCheck.error,
+            reason: acCheck.error,
+            violationCount: penalty.count,
+            penaltyLevel: penalty.level
+          });
+        }
+        // 封禁：返回 403 触发客户端封禁弹窗
+        return res.status(403).json({
           success: false,
-          error: acCheck.error,
+          error: '该 IP 已被封禁：' + acCheck.error,
           banned: true,
           banReason: acCheck.error,
-          banUntil: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          banUntil: Date.now() + penalty.durationMs,
+          banAt: Date.now(),
           nickname: nickname
         });
       }
@@ -237,7 +251,8 @@ module.exports = function(app, context) {
     });
 
     // 解除封禁
-    // DELETE /api/security/bans/:ip
+    // DELETE /api/security/bans/:ip?resetViolation=true
+    //   resetViolation=true 同时重置违规计数，使该 IP 从警告等级重新开始（避免误封累积）
     app.delete('/api/security/bans/:ip', (req, res) => {
       const auth = checkAdminAuth(req);
       if (!auth.ok) {
@@ -251,7 +266,48 @@ module.exports = function(app, context) {
       if (!existed) {
         return res.status(404).json({ success: false, error: '未找到该 IP 的封禁记录' });
       }
-      res.json({ success: true, ip });
+      let violationReset = false;
+      if (req.query.resetViolation === 'true') {
+        violationReset = resetViolation(service.storage, ip);
+      }
+      res.json({ success: true, ip, violationReset });
+    });
+
+    // 读取安全规则开关
+    // GET /api/security/rules
+    app.get('/api/security/rules', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const rules = getRules(service.storage);
+      res.json({
+        success: true,
+        rules,
+        categories: RULE_CATEGORIES
+      });
+    });
+
+    // 更新安全规则开关
+    // PUT /api/security/rules  body: { timeConsistency: false, ... }
+    app.put('/api/security/rules', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const rules = setRules(service.storage, req.body || {});
+      res.json({ success: true, rules });
+    });
+
+    // 查询惩罚历史记录（永久保存全部，按时间倒序）
+    // GET /api/security/history
+    app.get('/api/security/history', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const history = listHistory(service.storage);
+      res.json({ success: true, history, total: history.length });
     });
   }
   
