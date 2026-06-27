@@ -63,6 +63,25 @@ th { color: var(--muted); font-weight: 600; }
 .welcome-status.loaded { color: var(--success); border-color: var(--success); background: rgba(48,164,108,0.08); }
 .welcome-status.dirty { color: var(--warn); border-color: var(--warn); background: rgba(245,166,35,0.08); }
 .welcome-status.err { color: var(--danger); border-color: var(--danger); background: rgba(229,72,77,0.08); }
+.md-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.md-hint summary { cursor: pointer; color: var(--accent); user-select: none; }
+.md-hint details[open] summary { margin-bottom: 6px; }
+.md-hint code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-family: Consolas,monospace; }
+.md-preview-wrap { margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.md-preview-head { padding: 6px 12px; background: var(--bg); font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.md-preview-body { padding: 14px 16px; max-height: 240px; overflow-y: auto; font-size: 14px; line-height: 1.8; color: var(--text); }
+.md-preview-body:empty::before { content: '（无内容）'; color: var(--muted); font-style: italic; }
+.md-preview-body p { margin: 0 0 8px; }
+.md-preview-body p:last-child { margin-bottom: 0; }
+.md-preview-body h1 { font-size: 18px; font-weight: 700; margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.md-preview-body h2 { font-size: 16px; font-weight: 700; margin: 8px 0 4px; }
+.md-preview-body h3 { font-size: 14px; font-weight: 600; margin: 6px 0 3px; }
+.md-preview-body ul, .md-preview-body ol { margin: 4px 0 8px; padding-left: 22px; }
+.md-preview-body li { margin: 2px 0; }
+.md-preview-body blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--border); background: var(--bg); color: var(--muted); font-style: italic; }
+.md-preview-body code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-family: Consolas,monospace; font-size: 13px; }
+.md-preview-body hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.md-preview-body a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -125,12 +144,30 @@ th { color: var(--muted); font-weight: 600; }
         </div>
       </div>
       <div class="form-row">
-        <label>内容（支持多行）</label>
-        <textarea id="content" placeholder="公告正文..."></textarea>
+        <label>内容（支持多行，支持 Markdown）</label>
+        <textarea id="content" placeholder="公告正文..." oninput="updatePreview('content','previewContent')"></textarea>
+        <details class="md-hint">
+          <summary>Markdown 语法提示</summary>
+          <div>
+            <code># 标题1</code> <code>## 标题2</code> <code>### 标题3</code> ·
+            <code>**粗体**</code> <code>*斜体*</code> <code>`代码`</code> ·
+            <code>- 列表</code> <code>1. 有序列表</code> ·
+            <code>&gt; 引用</code> <code>---</code> 分隔线 ·
+            <code>[文字](https://...)</code> 链接 ·
+            <code>{{red 文字}}</code> 或 <code>{{#ff0000 文字}}</code> 颜色
+          </div>
+        </details>
+        <div class="md-preview-wrap">
+          <div class="md-preview-head">
+            <span>预览</span>
+            <button class="btn btn-sm btn-secondary" onclick="updatePreview('content','previewContent')">刷新预览</button>
+          </div>
+          <div class="md-preview-body" id="previewContent"></div>
+        </div>
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-primary" onclick="saveNotice()">保存公告</button>
-        <button class="btn btn-secondary" onclick="resetForm()">清空表单</button>
+        <button class="btn btn-secondary" onclick="resetForm();updatePreview('content','previewContent')">清空表单</button>
       </div>
     </div>
   </div>
@@ -155,8 +192,26 @@ th { color: var(--muted); font-weight: 600; }
         </div>
       </div>
       <div class="form-row">
-        <label>内容（支持多行）</label>
-        <textarea id="wContent" placeholder="迎新公告正文..." oninput="markWelcomeDirty()"></textarea>
+        <label>内容（支持多行，支持 Markdown）</label>
+        <textarea id="wContent" placeholder="迎新公告正文..." oninput="markWelcomeDirty();updatePreview('wContent','previewWelcome')"></textarea>
+        <details class="md-hint">
+          <summary>Markdown 语法提示</summary>
+          <div>
+            <code># 标题1</code> <code>## 标题2</code> <code>### 标题3</code> ·
+            <code>**粗体**</code> <code>*斜体*</code> <code>`代码`</code> ·
+            <code>- 列表</code> <code>1. 有序列表</code> ·
+            <code>&gt; 引用</code> <code>---</code> 分隔线 ·
+            <code>[文字](https://...)</code> 链接 ·
+            <code>{{red 文字}}</code> 或 <code>{{#ff0000 文字}}</code> 颜色
+          </div>
+        </details>
+        <div class="md-preview-wrap">
+          <div class="md-preview-head">
+            <span>预览</span>
+            <button class="btn btn-sm btn-secondary" onclick="updatePreview('wContent','previewWelcome')">刷新预览</button>
+          </div>
+          <div class="md-preview-body" id="previewWelcome"></div>
+        </div>
       </div>
       <button class="btn btn-primary" id="welcomeBtn" onclick="saveWelcome()">保存迎新公告</button>
     </div>
@@ -165,6 +220,9 @@ th { color: var(--muted); font-weight: 600; }
 
 <div class="status" id="status"></div>
 
+<!-- 引入公告客户端模块（用于 Markdown 渲染预览，禁用自动弹公告） -->
+<script>window.NOTICE_DISABLE_AUTO = true;</script>
+<script src="/notice.js"></script>
 <script>
 var adminToken = '';
 var templates = [];
@@ -220,6 +278,19 @@ function escapeHtml(s) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+// 实时预览 Markdown 渲染（使用 notice.js 暴露的渲染器）
+function updatePreview(srcId, dstId) {
+  var src = document.getElementById(srcId);
+  var dst = document.getElementById(dstId);
+  if (!src || !dst) return;
+  var text = src.value || '';
+  if (window.Notice && typeof window.Notice.renderMarkdown === 'function') {
+    dst.innerHTML = window.Notice.renderMarkdown(text);
+  } else {
+    // notice.js 未加载时降级为纯文本（保留换行）
+    dst.textContent = text;
+  }
+}
 
 // ===== 公告列表 =====
 function loadNotices() {
@@ -269,6 +340,7 @@ function applyTemplate(idx) {
   document.getElementById('content').value = t.content;
   document.getElementById('signature').value = t.signature;
   document.getElementById('type').value = t.type;
+  updatePreview('content','previewContent');
   showStatus('已载入模板：' + t.name, true);
 }
 
@@ -307,6 +379,7 @@ function editNotice(id) {
       document.getElementById('type').value = n.type;
       document.getElementById('active').checked = n.active;
       document.getElementById('formTitle').textContent = '编辑公告';
+      updatePreview('content','previewContent');
       switchTab('create');
     })
     .catch(function(e) { showStatus('网络错误: ' + e.message, false); });
@@ -363,6 +436,7 @@ function loadWelcome() {
       welcomeLoaded = true;
       welcomeDirty = false;
       setWelcomeButton();
+      updatePreview('wContent','previewWelcome');
       var ts = w.updatedAt ? '（更新于 ' + formatDate(w.updatedAt) + '）' : '';
       setWelcomeStatus('loaded', '已加载' + ts);
     })
