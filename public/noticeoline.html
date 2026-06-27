@@ -59,6 +59,10 @@ th { color: var(--muted); font-weight: 600; }
 .empty { text-align: center; padding: 30px; color: var(--muted); font-size: 14px; }
 .toggle-active { display: inline-flex; align-items: center; gap: 6px; }
 .toggle-active input { margin: 0; }
+.welcome-status { display: inline-block; font-size: 12px; padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+.welcome-status.loaded { color: var(--success); border-color: var(--success); background: rgba(48,164,108,0.08); }
+.welcome-status.dirty { color: var(--warn); border-color: var(--warn); background: rgba(245,166,35,0.08); }
+.welcome-status.err { color: var(--danger); border-color: var(--danger); background: rgba(229,72,77,0.08); }
 </style>
 </head>
 <body>
@@ -135,25 +139,26 @@ th { color: var(--muted); font-weight: 600; }
   <div class="tab-pane" id="pane-welcome">
     <div class="card">
       <h2>迎新公告（首次访问的玩家展示一次）</h2>
+      <div class="welcome-status" id="welcomeStatus">未加载</div>
       <div class="form-row">
         <label>标题</label>
-        <input type="text" id="wTitle" placeholder="迎新公告标题">
+        <input type="text" id="wTitle" placeholder="迎新公告标题" oninput="markWelcomeDirty()">
       </div>
       <div class="form-inline">
         <div class="form-row" style="flex:0 0 200px;">
           <label>落款</label>
-          <input type="text" id="wSignature" placeholder="如：Oline 客栈管理组">
+          <input type="text" id="wSignature" placeholder="如：Oline 客栈管理组" oninput="markWelcomeDirty()">
         </div>
         <div class="form-row" style="flex:0 0 auto;">
           <label>启用</label>
-          <label class="toggle-active"><input type="checkbox" id="wActive" checked> 启用迎新公告</label>
+          <label class="toggle-active"><input type="checkbox" id="wActive" onchange="markWelcomeDirty()"> 启用迎新公告</label>
         </div>
       </div>
       <div class="form-row">
         <label>内容（支持多行）</label>
-        <textarea id="wContent" placeholder="迎新公告正文..."></textarea>
+        <textarea id="wContent" placeholder="迎新公告正文..." oninput="markWelcomeDirty()"></textarea>
       </div>
-      <button class="btn btn-primary" onclick="saveWelcome()">保存迎新公告</button>
+      <button class="btn btn-primary" id="welcomeBtn" onclick="saveWelcome()">保存迎新公告</button>
     </div>
   </div>
 </div>
@@ -164,6 +169,8 @@ th { color: var(--muted); font-weight: 600; }
 var adminToken = '';
 var templates = [];
 var activeTab = 'list';
+var welcomeLoaded = false;       // 迎新公告是否已从服务端加载
+var welcomeDirty = false;        // 表单是否有未保存的修改
 
 (function initToken() {
   var saved = localStorage.getItem('adminToken');
@@ -177,6 +184,16 @@ function authHeaders() {
   var h = {};
   if (adminToken) h['x-admin-token'] = adminToken;
   return h;
+}
+// 统一 JSON 解析：非 JSON 响应给出明确错误（避免 "Unexpected token '<'" 这种模糊提示）
+function parseJson(res) {
+  var ct = res.headers.get('content-type') || '';
+  if (ct.indexOf('application/json') < 0) {
+    return res.text().then(function() {
+      throw new Error('服务器返回非 JSON 响应（HTTP ' + res.status + '，可能路由未注册或服务异常）');
+    });
+  }
+  return res.json();
 }
 function showStatus(msg, isOk) {
   var el = document.getElementById('status');
@@ -207,7 +224,7 @@ function escapeHtml(s) {
 // ===== 公告列表 =====
 function loadNotices() {
   fetch('/api/notice/list', { headers: authHeaders() })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
       var body = document.getElementById('noticeBody');
       var empty = document.getElementById('noticeEmpty');
@@ -233,7 +250,7 @@ function loadNotices() {
 // ===== 模板 =====
 function loadTemplates() {
   fetch('/api/notice/templates')
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
       if (!data.success) return;
       templates = data.templates || [];
@@ -242,7 +259,8 @@ function loadTemplates() {
         templates.map(function(t, i) {
           return '<button class="template-btn" onclick="applyTemplate(' + i + ')">' + escapeHtml(t.name) + '</button>';
         }).join('');
-    });
+    })
+    .catch(function(e) { showStatus('模板加载失败: ' + e.message, false); });
 }
 function applyTemplate(idx) {
   var t = templates[idx];
@@ -268,7 +286,7 @@ function saveNotice() {
   var method = id ? 'PUT' : 'POST';
   var url = id ? '/api/notice/' + id : '/api/notice';
   fetch(url, { method: method, headers: Object.assign({'Content-Type':'application/json'}, authHeaders()), body: JSON.stringify(body) })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
       if (data.success) { showStatus(id ? '已更新' : '已创建', true); resetForm(); switchTab('list'); }
       else showStatus(data.error || '保存失败', false);
@@ -277,9 +295,9 @@ function saveNotice() {
 }
 function editNotice(id) {
   fetch('/api/notice/list', { headers: authHeaders() })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
-      if (!data.success) return;
+      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
       var n = (data.notices || []).find(function(x) { return x.id === id; });
       if (!n) return;
       document.getElementById('editId').value = n.id;
@@ -290,16 +308,18 @@ function editNotice(id) {
       document.getElementById('active').checked = n.active;
       document.getElementById('formTitle').textContent = '编辑公告';
       switchTab('create');
-    });
+    })
+    .catch(function(e) { showStatus('网络错误: ' + e.message, false); });
 }
 function deleteNotice(id) {
   if (!confirm('确认删除这条公告？')) return;
   fetch('/api/notice/' + id, { method: 'DELETE', headers: authHeaders() })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
       if (data.success) { showStatus('已删除', true); loadNotices(); }
       else showStatus(data.error || '删除失败', false);
-    });
+    })
+    .catch(function(e) { showStatus('网络错误: ' + e.message, false); });
 }
 function resetForm() {
   document.getElementById('editId').value = '';
@@ -312,16 +332,42 @@ function resetForm() {
 }
 
 // ===== 迎新公告 =====
+function setWelcomeStatus(state, text) {
+  var el = document.getElementById('welcomeStatus');
+  el.className = 'welcome-status' + (state ? ' ' + state : '');
+  el.textContent = text;
+}
+function setWelcomeButton() {
+  document.getElementById('welcomeBtn').textContent = welcomeLoaded ? '更改公告' : '保存迎新公告';
+}
+function markWelcomeDirty() {
+  if (!welcomeLoaded) return; // 加载前的填充不算 dirty
+  welcomeDirty = true;
+  setWelcomeStatus('dirty', '有未保存的修改');
+}
 function loadWelcome() {
   fetch('/api/notice/welcome', { headers: authHeaders() })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
-      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
+      if (!data.success) {
+        setWelcomeStatus('err', '加载失败：' + (data.error || '未知错误'));
+        return;
+      }
       var w = data.welcome || {};
+      // 标记加载完成前先关掉 oninput 监听，避免回填触发 dirty
+      welcomeLoaded = false;
       document.getElementById('wTitle').value = w.title || '';
       document.getElementById('wContent').value = w.content || '';
       document.getElementById('wSignature').value = w.signature || '';
       document.getElementById('wActive').checked = w.active !== false;
+      welcomeLoaded = true;
+      welcomeDirty = false;
+      setWelcomeButton();
+      var ts = w.updatedAt ? '（更新于 ' + formatDate(w.updatedAt) + '）' : '';
+      setWelcomeStatus('loaded', '已加载' + ts);
+    })
+    .catch(function(e) {
+      setWelcomeStatus('err', '网络错误: ' + e.message);
     });
 }
 function saveWelcome() {
@@ -332,12 +378,32 @@ function saveWelcome() {
     active: document.getElementById('wActive').checked
   };
   if (!body.title.trim() || !body.content.trim()) { showStatus('标题和内容不能为空', false); return; }
+  // 禁用按钮防重复点击
+  var btn = document.getElementById('welcomeBtn');
+  btn.disabled = true;
+  btn.textContent = '正在保存...';
   fetch('/api/notice/welcome', { method: 'PUT', headers: Object.assign({'Content-Type':'application/json'}, authHeaders()), body: JSON.stringify(body) })
-    .then(function(r) { return r.json(); })
+    .then(parseJson)
     .then(function(data) {
-      if (data.success) showStatus('迎新公告已保存', true);
-      else showStatus(data.error || '保存失败', false);
-    });
+      if (data.success) {
+        welcomeLoaded = true;
+        welcomeDirty = false;
+        var ts = data.welcome && data.welcome.updatedAt ? data.welcome.updatedAt : Date.now();
+        setWelcomeButton();
+        setWelcomeStatus('loaded', '已保存（更新于 ' + formatDate(ts) + '）');
+        showStatus('迎新公告已保存', true);
+      } else {
+        setWelcomeButton();
+        setWelcomeStatus('err', '保存失败：' + (data.error || '未知错误'));
+        showStatus(data.error || '保存失败', false);
+      }
+    })
+    .catch(function(e) {
+      setWelcomeButton();
+      setWelcomeStatus('err', '网络错误: ' + e.message);
+      showStatus('网络错误: ' + e.message, false);
+    })
+    .finally(function() { btn.disabled = false; });
 }
 
 // 初始化
