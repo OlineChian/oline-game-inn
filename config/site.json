@@ -120,11 +120,11 @@
       }
     },
     {
-      "_说明": "切斯特牌 - Balatro 风格扑克牌组合游戏（单机）",
+      "_说明": "切斯特牌 - Balatro 风格扑克牌组合游戏（单机，无尽模式）",
       "id": "chester-cards",
       "name": "切斯特牌",
       "icon": "🎪",
-      "description": "扑克牌型组合 + 糖果增益，8 关冲刺挑战",
+      "description": "扑克牌型组合 + 糖果增益 + 商店升级，无尽模式挑战高分",
       "tag": "卡牌益智",
       "tagClass": "tag-card",
       "isOnline": false,
