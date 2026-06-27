@@ -18,10 +18,12 @@ import { canAddCandy } from './candy-system.js';
 
 /**
  * 随机抽取 1 个特殊商品（"特殊商品 ×1"）
+ * 20% 概率本回合不出现特殊商品（返回 null）
  * @param {number} round 当前关卡（保留参数，未来可基于关卡调整）
- * @returns {Object} 特殊商品对象
+ * @returns {Object|null} 特殊商品对象，或 null 表示本回合无特殊商品
  */
 export function getSpecialItemOffering(round) {
+  if (Math.random() < 0.2) return null;
   const idx = Math.floor(Math.random() * SPECIAL_ITEMS.length);
   return SPECIAL_ITEMS[idx];
 }

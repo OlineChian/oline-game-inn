@@ -18,13 +18,14 @@ let bound = false;
  *   - onNextRound(): 进入下一关
  *   - onPickCandy(candyId): 三选一选牌
  *   - onBuyCandy(candyId, price): 商店指定购买
- *   - onDrawRandom(): 商店随机抽选
  *   - onSellCandy(candyId): 回收糖果
  *   - onCloseShop(): 关闭商店
  *   - onRefreshShop(): 刷新商店货架（阶段 5/7）
  *   - onBuySpecialItem(itemId): 购买特殊商品（阶段 6）
  *   - onUpgradeShop(): 升级商店等级（阶段 8）
  *   - onSubmitScore(): 提交分数到排行榜
+ * 内部 action：
+ *   - toggle-candy-info: 切换已拥有糖果卡片的效果显示（无需回调，直接 DOM 操作）
  */
 export function setupInteraction(handlers) {
   if (bound) return;
@@ -61,8 +62,6 @@ export function setupInteraction(handlers) {
     } else if (act === 'buy-candy') {
       const price = Number(action.dataset.price);
       handlers.onBuyCandy && handlers.onBuyCandy(action.dataset.candyId, price);
-    } else if (act === 'draw-random') {
-      handlers.onDrawRandom && handlers.onDrawRandom();
     } else if (act === 'sell-candy') {
       handlers.onSellCandy && handlers.onSellCandy(action.dataset.candyId);
     } else if (act === 'upgrade-hand') {
@@ -78,6 +77,11 @@ export function setupInteraction(handlers) {
     } else if (act === 'upgrade-shop') {
       // 阶段 8：升级商店等级
       handlers.onUpgradeShop && handlers.onUpgradeShop();
+    } else if (act === 'toggle-candy-info') {
+      // 切换已拥有糖果卡片的效果显示（内部 DOM 操作，无需回调）
+      const card = action.closest('.cc-shop-card');
+      const desc = card && card.querySelector('.cc-shop-card-desc');
+      if (desc) desc.classList.toggle('is-hidden');
     } else if (act === 'close-shop') {
       handlers.onCloseShop && handlers.onCloseShop();
     } else if (act === 'open-shop') {

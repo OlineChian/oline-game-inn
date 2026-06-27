@@ -7,7 +7,7 @@
 import { getCandyById } from '../data/candies.js';
 import { canAddCandy } from './candy-system.js';
 import {
-  drawRandomCandy, getRandomDrawPrice, canAfford, sellPrice, getCandyShopOfferings
+  canAfford, sellPrice, getCandyShopOfferings
 } from './shop-system.js';
 import { upgradeCost, getHandLevel, MAX_HAND_LEVEL } from '../core/scoring.js';
 import { getHandUpgradeOfferings, isOfferingValid } from './hand-upgrade-system.js';
@@ -17,9 +17,7 @@ import {
 import {
   getCandyCountForLevel, getLegendaryBonusForLevel, hasFreeRefresh, canUpgradeShop
 } from './shop-level-system.js';
-import {
-  renderShop, setDrawnCandy, resetDrawnCandy
-} from '../ui/shop-ui.js';
+import { renderShop } from '../ui/shop-ui.js';
 import { hideEndScreen } from '../ui/render.js';
 
 /**
@@ -27,14 +25,13 @@ import { hideEndScreen } from '../ui/render.js';
  * @param {Object} state 游戏状态
  * @param {Object} config 配置
  * @param {Function} renderAll 全量渲染函数
- * @returns {Object} { openShop, buyCandy, drawRandom, sellCandy, upgradeHand, refreshShop, buySpecialItem }
+ * @returns {Object} { openShop, buyCandy, sellCandy, upgradeHand, refreshShop, buySpecialItem, upgradeShop }
  */
 export function createShopActions(state, config, renderAll) {
   /** 打开商店（从胜利界面进入，刷新牌型升级选项与糖果货架） */
   function openShop() {
     if (state.phase !== 'roundWin') return;
     hideEndScreen();
-    resetDrawnCandy();
     // 阶段 4：每次打开商店刷新牌型升级选项
     state._upgradeOfferings = getHandUpgradeOfferings(state.round, state.handLevels);
     // 阶段 5/8：糖果货架数量随商店等级变化（Lv1=3, Lv2=4, Lv3+=5）
@@ -42,7 +39,7 @@ export function createShopActions(state, config, renderAll) {
     state._candyOfferings = getCandyShopOfferings(state.round, candyCount);
     // 阶段 5：每次打开商店重置刷新次数
     state._refreshCount = 0;
-    // 阶段 6：每次打开商店随机生成 1 个特殊商品
+    // 阶段 6：每次打开商店随机生成 1 个特殊商品（20% 概率不出现）
     state._specialItemOffering = getSpecialItemOffering(state.round);
     // 阶段 6：激活幸运加成（lucky-cookie 效果"下一次商店"生效，使用后清除）
     state._activeLuckyBonus = state._luckyBonus || 1;
@@ -89,26 +86,6 @@ export function createShopActions(state, config, renderAll) {
     if (state.candies.some(c => c.id === candyId)) return;
     state.coins -= price;
     state.candies.push(candy);
-    renderShop(state, config);
-    renderAll();
-  }
-
-  /** 商店：随机抽选（按 Wave 权重抽选，先抽后扣以防池空） */
-  function drawRandom() {
-    if (state.phase !== 'roundWin') return;
-    const price = getRandomDrawPrice(state.round);
-    if (!canAfford(state.coins, price)) return;
-    if (!canAddCandy(state.candies, config.maxCandies)) return;
-    // 阶段 6/8：使用幸运加成 + 商店等级传奇加成
-    const candy = drawRandomCandy(
-      state.round,
-      state._activeLuckyBonus || 1,
-      state._shopLegendaryBonus || 0
-    );
-    if (!candy) return;
-    state.coins -= price;
-    state.candies.push(candy);
-    setDrawnCandy(candy);
     renderShop(state, config);
     renderAll();
   }
@@ -192,5 +169,5 @@ export function createShopActions(state, config, renderAll) {
     renderAll();
   }
 
-  return { openShop, buyCandy, drawRandom, sellCandy, upgradeHand, refreshShop, buySpecialItem, upgradeShop };
+  return { openShop, buyCandy, sellCandy, upgradeHand, refreshShop, buySpecialItem, upgradeShop };
 }
