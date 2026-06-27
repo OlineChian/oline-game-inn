@@ -6,140 +6,70 @@
 <title>作弊与安全管理</title>
 <style>
   :root {
-    --bg: #f5f6f8;
-    --card: #ffffff;
-    --border: #e2e5ea;
-    --text: #1f2329;
-    --text-muted: #8a9099;
-    --primary: #4f7cff;
-    --primary-hover: #3a63d8;
-    --danger: #e5484d;
-    --danger-hover: #c73641;
-    --success: #30a46c;
-    --warn: #f5a623;
+    --bg: #f5f6f8; --card: #fff; --border: #e2e5ea; --text: #1f2329; --muted: #8a9099;
+    --primary: #4f7cff; --primary-hover: #3a63d8; --danger: #e5484d; --success: #30a46c; --warn: #f5a623;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding: 24px;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
-  h1 {
-    font-size: 20px;
-    margin: 0 24px 0 0;
-    font-weight: 600;
-  }
-  .toolbar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-  }
-  input[type="text"] {
-    padding: 6px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-  }
-  input:focus { border-color: var(--primary); }
-  button {
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    color: var(--text);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  button:hover { background: var(--bg); }
-  button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-  button.primary:hover { background: var(--primary-hover); }
-  button.danger { color: var(--danger); border-color: var(--border); }
-  button.danger:hover { background: #fef0f0; }
-  button.sm { padding: 3px 10px; font-size: 13px; }
-  .token-wrap {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--card);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
-  }
-  th, td {
-    padding: 10px 12px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-    word-break: break-word;
-  }
-  th {
-    background: #fafbfc;
-    font-weight: 600;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fafbfc; }
-  tr.expired td { opacity: .55; }
-  .time-cell { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
-  .ip-cell { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
-  .reason-cell { max-width: 320px; }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.5;
-  }
-  .badge-purge { background: #fdeeee; color: var(--danger); }
-  .badge-ban { background: #fff4e6; color: var(--warn); }
-  .badge-expired { background: #eef0f3; color: var(--text-muted); }
-  .status {
-    margin-top: 16px;
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-size: 14px;
-    display: none;
-  }
-  .status.show { display: block; }
-  .status.ok { background: #eaf6ef; color: var(--success); }
-  .status.err { background: #fdeeee; color: var(--danger); }
-  .empty { text-align: center; color: var(--text-muted); padding: 40px; }
-  .summary {
-    margin-bottom: 12px;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); padding:20px; }
+  h1 { font-size:20px; margin:0 20px 0 0; font-weight:600; }
+  .header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  input[type="text"] { padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:14px; outline:none; }
+  input:focus { border-color:var(--primary); }
+  button { padding:6px 14px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); font-size:14px; cursor:pointer; transition:background .15s; }
+  button:hover { background:var(--bg); }
+  button.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+  button.primary:hover { background:var(--primary-hover); }
+  button.danger { color:var(--danger); }
+  button.danger:hover { background:#fef0f0; }
+  button.sm { padding:3px 10px; font-size:13px; }
+  .token-wrap { margin-left:auto; display:flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
+  .tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+  .tab { padding:8px 18px; cursor:pointer; border:none; background:none; font-size:14px; color:var(--muted); border-bottom:2px solid transparent; border-radius:0; }
+  .tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:600; }
+  .tab-pane { display:none; }
+  .tab-pane.active { display:block; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  th, td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); font-size:14px; word-break:break-word; }
+  th { background:#fafbfc; font-weight:600; color:var(--muted); font-size:13px; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#fafbfc; }
+  tr.expired td { opacity:.55; }
+  .time-cell { color:var(--muted); font-size:12px; white-space:nowrap; }
+  .ip-cell { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
+  .reason-cell { max-width:300px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; line-height:1.5; }
+  .badge-purge { background:#fdeeee; color:var(--danger); }
+  .badge-ban { background:#fff4e6; color:var(--warn); }
+  .badge-warn { background:#fff8e1; color:var(--warn); }
+  .badge-expired { background:#eef0f3; color:var(--muted); }
+  .level-cell { font-weight:600; color:var(--primary); }
+  .status { margin-top:16px; padding:10px 14px; border-radius:6px; font-size:14px; display:none; }
+  .status.show { display:block; }
+  .status.ok { background:#eaf6ef; color:var(--success); }
+  .status.err { background:#fdeeee; color:var(--danger); }
+  .empty { text-align:center; color:var(--muted); padding:40px; }
+  .summary { margin-bottom:12px; color:var(--muted); font-size:13px; }
+  .rules-list { background:var(--card); border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .rule-item { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .rule-item:last-child { border-bottom:none; }
+  .rule-info { flex:1; }
+  .rule-name { font-weight:600; font-size:14px; margin-bottom:4px; }
+  .rule-desc { font-size:12px; color:var(--muted); }
+  .switch { position:relative; width:42px; height:24px; flex-shrink:0; margin-top:2px; }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; inset:0; background:#ccc; border-radius:24px; transition:.25s; cursor:pointer; }
+  .slider:before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.25s; }
+  .switch input:checked + .slider { background:var(--success); }
+  .switch input:checked + .slider:before { transform:translateX(18px); }
+  .rules-actions { margin-top:20px; display:flex; gap:8px; }
 </style>
 </head>
 <body>
   <div class="header">
     <h1>作弊与安全管理</h1>
     <div class="toolbar">
-      <button class="primary" onclick="loadBans()">刷新</button>
+      <button class="primary" onclick="refreshActive()">刷新</button>
     </div>
     <div class="token-wrap">
       <label for="adminToken">管理员Token(可选)</label>
@@ -147,37 +77,50 @@
     </div>
   </div>
 
-  <div class="summary" id="summary">加载中...</div>
+  <div class="tabs">
+    <button class="tab active" data-tab="bans" onclick="switchTab('bans')">封禁列表</button>
+    <button class="tab" data-tab="history" onclick="switchTab('history')">惩罚历史</button>
+    <button class="tab" data-tab="rules" data-once="0" onclick="switchTab('rules')">安全规则</button>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>昵称</th>
-        <th>IP</th>
-        <th>封禁原因</th>
-        <th>类型</th>
-        <th>封禁时间</th>
-        <th>解禁时间</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="bansBody">
-      <tr><td colspan="7" class="empty">加载中...</td></tr>
-    </tbody>
-  </table>
+  <!-- Tab 1: 封禁列表 -->
+  <div class="tab-pane active" id="pane-bans">
+    <div class="summary" id="bansSummary">加载中...</div>
+    <table>
+      <thead><tr><th>昵称</th><th>IP</th><th>封禁原因</th><th>类型</th><th>封禁时间</th><th>解禁时间</th><th>操作</th></tr></thead>
+      <tbody id="bansBody"><tr><td colspan="7" class="empty">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Tab 2: 惩罚历史 -->
+  <div class="tab-pane" id="pane-history">
+    <div class="summary" id="historySummary">加载中...</div>
+    <table>
+      <thead><tr><th>时间</th><th>IP</th><th>昵称</th><th>原因</th><th>等级</th><th>措施</th><th>时长</th><th>游戏</th></tr></thead>
+      <tbody id="historyBody"><tr><td colspan="8" class="empty">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Tab 3: 安全规则 -->
+  <div class="tab-pane" id="pane-rules">
+    <div class="rules-list" id="rulesList">
+      <div class="empty">加载中...</div>
+    </div>
+    <div class="rules-actions">
+      <button class="primary" onclick="saveRules()">保存规则</button>
+    </div>
+  </div>
 
   <div class="status" id="status"></div>
 
 <script>
 var adminToken = '';
+var activeTab = 'bans';
+var rulesLoaded = false;
 
-// Token 持久化
 (function initToken() {
   var saved = localStorage.getItem('adminToken');
-  if (saved) {
-    document.getElementById('adminToken').value = saved;
-    adminToken = saved;
-  }
+  if (saved) { document.getElementById('adminToken').value = saved; adminToken = saved; }
 })();
 document.getElementById('adminToken').addEventListener('change', function() {
   adminToken = this.value.trim();
@@ -189,28 +132,49 @@ function authHeaders() {
   if (adminToken) h['x-admin-token'] = adminToken;
   return h;
 }
-
 function showStatus(msg, isOk) {
   var el = document.getElementById('status');
   el.textContent = msg;
   el.className = 'status show ' + (isOk ? 'ok' : 'err');
   if (isOk) setTimeout(function() { el.className = 'status'; }, 2500);
 }
-
 function fmtTime(ts) {
   if (!ts) return '-';
   var d = new Date(Number(ts));
   if (isNaN(d.getTime())) return '-';
   return d.toLocaleString('zh-CN', { hour12: false });
 }
-
+function fmtDuration(ms) {
+  if (!ms || ms <= 0) return '-';
+  var min = Math.round(ms / 60000);
+  if (min < 60) return min + ' 分钟';
+  var hr = Math.round(min / 60);
+  if (hr < 24) return hr + ' 小时';
+  return Math.round(hr / 24) + ' 天';
+}
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
     return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
   });
 }
+function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 
-// 倒计时（剩余封禁时间）
+// ===== Tab 切换 =====
+function switchTab(name) {
+  activeTab = name;
+  document.querySelectorAll('.tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'pane-' + name);
+  });
+  if (name === 'bans') loadBans();
+  else if (name === 'history') loadHistory();
+  else if (name === 'rules') loadRules();
+}
+function refreshActive() { switchTab(activeTab); }
+
+// ===== 封禁列表 =====
 function fmtRemaining(until) {
   var ms = Number(until) - Date.now();
   if (ms <= 0) return '已过期';
@@ -221,36 +185,25 @@ function fmtRemaining(until) {
   if (hours > 0) return '剩 ' + hours + ' 小时 ' + mins + ' 分';
   return '剩 ' + mins + ' 分';
 }
-
 function renderBans(bans) {
   var body = document.getElementById('bansBody');
-  var summary = document.getElementById('summary');
-
+  var summary = document.getElementById('bansSummary');
   if (!bans || bans.length === 0) {
     body.innerHTML = '<tr><td colspan="7" class="empty">暂无封禁记录</td></tr>';
     summary.textContent = '共 0 条封禁记录';
     return;
   }
-
   var active = bans.filter(function(b) { return !b.expired; });
   var expired = bans.filter(function(b) { return b.expired; });
-  summary.textContent = '共 ' + bans.length + ' 条记录（' +
-    '生效中 ' + active.length + ' / 已过期 ' + expired.length + '）';
-
+  summary.textContent = '共 ' + bans.length + ' 条（生效中 ' + active.length + ' / 已过期 ' + expired.length + '）';
   body.innerHTML = '';
   bans.forEach(function(b) {
     var tr = document.createElement('tr');
     if (b.expired) tr.className = 'expired';
-
-    var badgeClass = b.expired ? 'badge-expired' :
-                     (b.action === 'purge' ? 'badge-purge' : 'badge-ban');
-    var badgeText = b.expired ? '已过期' :
-                    (b.action === 'purge' ? '清除+封禁' : '仅封禁');
-
+    var badgeClass = b.expired ? 'badge-expired' : (b.action === 'purge' ? 'badge-purge' : 'badge-ban');
+    var badgeText = b.expired ? '已过期' : (b.action === 'purge' ? '清除+封禁' : '仅封禁');
     var untilText = fmtTime(b.until);
-    if (!b.expired) untilText += '<br><span style="color:var(--success);font-size:11px">' +
-      escapeHtml(fmtRemaining(b.until)) + '</span>';
-
+    if (!b.expired) untilText += '<br><span style="color:var(--success);font-size:11px">' + escapeHtml(fmtRemaining(b.until)) + '</span>';
     var encodedIp = encodeURIComponent(b.ip);
     tr.innerHTML =
       '<td>' + escapeHtml(b.nickname || '-') + '</td>' +
@@ -259,55 +212,120 @@ function renderBans(bans) {
       '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
       '<td class="time-cell">' + fmtTime(b.at) + '</td>' +
       '<td class="time-cell">' + untilText + '</td>' +
-      '<td>' +
-        '<button class="sm danger" onclick="unbanIp(\'' + escapeAttr(encodedIp) + '\',\'' + escapeAttr(b.nickname || b.ip) + '\')">解封</button>' +
-      '</td>';
+      '<td><button class="sm danger" onclick="unbanIp(\'' + escapeAttr(encodedIp) + '\',\'' + escapeAttr(b.nickname || b.ip) + '\')">解封</button></td>';
     body.appendChild(tr);
   });
 }
-
-function escapeAttr(s) {
-  return String(s).replace(/'/g, "\\'");
-}
-
 function loadBans() {
   fetch('/api/security/bans', { headers: authHeaders() })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (!data.success) {
-        showStatus(data.error || '加载失败', false);
-        document.getElementById('bansBody').innerHTML =
-          '<tr><td colspan="7" class="empty">' + escapeHtml(data.error || '加载失败') + '</td></tr>';
-        return;
-      }
+      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
       renderBans(data.bans || []);
     })
-    .catch(function(err) {
-      showStatus('加载失败: ' + err.message, false);
-      document.getElementById('bansBody').innerHTML =
-        '<tr><td colspan="7" class="empty">加载失败：' + escapeHtml(err.message) + '</td></tr>';
-    });
+    .catch(function(err) { showStatus('加载失败: ' + err.message, false); });
 }
-
 function unbanIp(encodedIp, label) {
-  if (!confirm('确认解除 ' + label + ' 的封禁？')) return;
-  fetch('/api/security/bans/' + encodedIp, {
-    method: 'DELETE',
-    headers: authHeaders()
+  // 解封默认重置违规计数，使该 IP 从警告等级重新开始（避免误封累积）
+  if (!confirm('确认解除 ' + label + ' 的封禁？\n（将同时重置违规计数，从警告等级重新开始）')) return;
+  fetch('/api/security/bans/' + encodedIp + '?resetViolation=true', {
+    method: 'DELETE', headers: authHeaders()
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
-        showStatus('已解封 IP: ' + data.ip, true);
+        showStatus('已解封 IP: ' + data.ip + (data.violationReset ? '（违规计数已重置）' : ''), true);
         loadBans();
-      } else {
-        showStatus(data.error || '解封失败', false);
-      }
+      } else { showStatus(data.error || '解封失败', false); }
     })
     .catch(function(err) { showStatus('解封失败: ' + err.message, false); });
 }
 
-// 启动：自动加载
+// ===== 惩罚历史 =====
+function renderHistory(history) {
+  var body = document.getElementById('historyBody');
+  var summary = document.getElementById('historySummary');
+  if (!history || history.length === 0) {
+    body.innerHTML = '<tr><td colspan="8" class="empty">暂无惩罚历史</td></tr>';
+    summary.textContent = '共 0 条历史记录';
+    return;
+  }
+  summary.textContent = '共 ' + history.length + ' 条历史记录';
+  body.innerHTML = '';
+  history.forEach(function(h) {
+    var tr = document.createElement('tr');
+    var actionBadge = h.action === 'warn'
+      ? '<span class="badge badge-warn">警告</span>'
+      : '<span class="badge badge-ban">封禁</span>';
+    tr.innerHTML =
+      '<td class="time-cell">' + fmtTime(h.at) + '</td>' +
+      '<td class="ip-cell">' + escapeHtml(h.ip || '-') + '</td>' +
+      '<td>' + escapeHtml(h.nickname || '-') + '</td>' +
+      '<td class="reason-cell">' + escapeHtml(h.reason || '-') + '</td>' +
+      '<td class="level-cell">Lv' + (h.level || 1) + '</td>' +
+      '<td>' + actionBadge + '</td>' +
+      '<td class="time-cell">' + fmtDuration(h.durationMs) + '</td>' +
+      '<td class="time-cell">' + escapeHtml(h.gameId || '-') + '</td>';
+    body.appendChild(tr);
+  });
+}
+function loadHistory() {
+  fetch('/api/security/history', { headers: authHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
+      renderHistory(data.history || []);
+    })
+    .catch(function(err) { showStatus('加载失败: ' + err.message, false); });
+}
+
+// ===== 安全规则 =====
+function renderRules(rules, categories) {
+  var list = document.getElementById('rulesList');
+  list.innerHTML = '';
+  (categories || []).forEach(function(cat) {
+    var item = document.createElement('div');
+    item.className = 'rule-item';
+    var checked = rules[cat.id] !== false ? 'checked' : '';
+    item.innerHTML =
+      '<div class="rule-info">' +
+      '<div class="rule-name">' + escapeHtml(cat.label) + '</div>' +
+      '<div class="rule-desc">' + escapeHtml(cat.desc) + '</div>' +
+      '</div>' +
+      '<label class="switch"><input type="checkbox" data-rule="' + cat.id + '" ' + checked + '><span class="slider"></span></label>';
+    list.appendChild(item);
+  });
+  rulesLoaded = true;
+}
+function loadRules() {
+  if (rulesLoaded) return;
+  fetch('/api/security/rules', { headers: authHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
+      renderRules(data.rules || {}, data.categories || []);
+    })
+    .catch(function(err) { showStatus('加载失败: ' + err.message, false); });
+}
+function saveRules() {
+  var updates = {};
+  document.querySelectorAll('[data-rule]').forEach(function(cb) {
+    updates[cb.dataset.rule] = cb.checked;
+  });
+  fetch('/api/security/rules', {
+    method: 'PUT',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+    body: JSON.stringify(updates)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) showStatus('安全规则已保存', true);
+      else showStatus(data.error || '保存失败', false);
+    })
+    .catch(function(err) { showStatus('保存失败: ' + err.message, false); });
+}
+
+// 启动：自动加载封禁列表
 loadBans();
 </script>
 </body>

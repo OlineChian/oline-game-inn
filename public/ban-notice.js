@@ -1,21 +1,17 @@
 /**
- * 封禁提示弹窗（客户端公共模块）
+ * 安全事件提示弹窗（客户端公共模块）
  *
- * 当服务端 POST /api/leaderboard/:game 返回 403（IP 被封禁）时，
- * 各游戏客户端调用 BanNotice.show(data) 弹出友好提示，
- * 避免玩家误以为成绩提交失败是 bug。
- *
- * 弹窗含「联系管理员」按钮，链接与首页"提交反馈"一致。
+ * 当服务端 POST /api/leaderboard/:game 返回安全事件时：
+ *   - 403 banned：IP 被封禁 → show() 封禁弹窗（含联系管理员按钮）
+ *   - 200 warned：第1次违规警告，成绩不上传 → showWarning() 警告弹窗
  *
  * 用法：
- *   // 方式 A：游戏已解析 JSON
- *   if (response.status === 403) {
- *     if (window.BanNotice) window.BanNotice.show(data);
- *     return;
- *   }
+ *   // 统一入口（推荐，自动区分 banned/warned）
+ *   if (window.BanNotice && await window.BanNotice.handleSecurityEvent(response)) return;
  *
- *   // 方式 B：游戏未解析 JSON（自动解析）
- *   if (window.BanNotice && await window.BanNotice.handleIfBanned(response)) return;
+ *   // 手动调用
+ *   if (data.banned) window.BanNotice.show(data);
+ *   else if (data.warned) window.BanNotice.showWarning(data);
  *
  * 依赖：无（纯 vanilla JS，CSS 变量降级）
  */
@@ -32,12 +28,13 @@
     if (styleInjected) return;
     var style = document.createElement('style');
     style.id = 'ban-notice-style';
-    // CSS 变量降级（theme 未加载时用 fallback）
     style.textContent =
 '.ban-notice-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100000;animation:ban-fade .25s ease}' +
 '.ban-notice-box{background:var(--bg-surface,#fff);color:var(--text-primary,#333);padding:28px 32px;border-radius:12px;max-width:92vw;width:420px;box-shadow:0 12px 40px rgba(0,0,0,.4);text-align:center;font-family:system-ui,-apple-system,sans-serif;box-sizing:border-box}' +
-'.ban-notice-icon{font-size:42px;line-height:1;margin-bottom:12px}' +
-'.ban-notice-title{font-size:18px;font-weight:700;color:var(--color-danger,#d32f2f);margin-bottom:12px}' +
+'.ban-notice-icon{margin:0 auto 12px;display:block}' +
+'.ban-notice-title{font-size:18px;font-weight:700;margin-bottom:12px}' +
+'.ban-notice-title-ban{color:var(--color-danger,#d32f2f)}' +
+'.ban-notice-title-warn{color:var(--color-warn,#f57c00)}' +
 '.ban-notice-msg{font-size:14px;color:var(--text-primary,#333);line-height:1.6;margin-bottom:16px}' +
 '.ban-notice-meta{font-size:12px;color:var(--text-secondary,#888);line-height:1.7;margin-bottom:20px;padding:10px 12px;background:rgba(0,0,0,.04);border-radius:6px;text-align:left;word-break:break-all}' +
 '.ban-notice-meta strong{color:var(--text-primary,#333);font-weight:600}' +
@@ -54,7 +51,7 @@
 
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
     });
   }
 
@@ -63,80 +60,128 @@
     if (!Number.isFinite(n) || n <= 0) return '-';
     var d = new Date(n);
     if (isNaN(d.getTime())) return '-';
-    // YYYY-MM-DD HH:mm:ss（本地时区）
     var pad = function (x) { return x < 10 ? '0' + x : String(x); };
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
   }
 
-  function showModal(data) {
+  // SVG 警告图标（三角感叹号），符合"纯 HTML/CSS/SVG"约束
+  function warnIcon(color) {
+    return '<svg class="ban-notice-icon" width="48" height="48" viewBox="0 0 24 24" fill="none">' +
+      '<path d="M12 2L1 21h22L12 2z" fill="' + color + '" opacity=".15"/>' +
+      '<path d="M12 2L1 21h22L12 2z" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round" fill="none"/>' +
+      '<rect x="11" y="9" width="2" height="6" rx="1" fill="' + color + '"/>' +
+      '<circle cx="12" cy="18" r="1.2" fill="' + color + '"/>' +
+      '</svg>';
+  }
+
+  function closeModal() {
+    if (modalEl) { modalEl.remove(); modalEl = null; }
+  }
+
+  function showModal(html) {
     injectStyle();
-    if (modalEl) modalEl.remove();
+    closeModal();
     modalEl = document.createElement('div');
     modalEl.className = 'ban-notice-overlay';
+    modalEl.innerHTML = html;
+    document.body.appendChild(modalEl);
+    var closeBtn = modalEl.querySelector('.ban-notice-btn-secondary');
+    if (closeBtn) closeBtn.onclick = closeModal;
+    // 点击遮罩关闭
+    modalEl.addEventListener('click', function (e) {
+      if (e.target === modalEl) closeModal();
+    });
+  }
 
-    var reason = (data && (data.banReason || data.error)) || '检测到不正当游戏行为';
-    var until = (data && data.banUntil) ? formatDate(data.banUntil) : '-';
-    var nickname = data && data.nickname ? data.nickname : '';
-
-    var metaHtml =
+  /** 封禁弹窗（IP 已被封禁，含联系管理员按钮） */
+  function show(data) {
+    data = data || {};
+    var reason = data.banReason || data.error || '检测到不正当游戏行为';
+    var until = data.banUntil ? formatDate(data.banUntil) : '-';
+    var nickname = data.nickname || '';
+    var meta =
       '<div class="ban-notice-meta">' +
       (nickname ? '<div><strong>昵称：</strong>' + escapeHtml(nickname) + '</div>' : '') +
       '<div><strong>封禁原因：</strong>' + escapeHtml(reason) + '</div>' +
       '<div><strong>解禁时间：</strong>' + escapeHtml(until) + '</div>' +
       '</div>';
-
-    modalEl.innerHTML =
+    showModal(
       '<div class="ban-notice-box">' +
-      '<div class="ban-notice-icon">⚠️</div>' +
-      '<div class="ban-notice-title">账号暂时无法提交成绩</div>' +
+      warnIcon('#d32f2f') +
+      '<div class="ban-notice-title ban-notice-title-ban">账号暂时无法提交成绩</div>' +
       '<div class="ban-notice-msg">系统可能检测到不正当游戏行为，这不是你的错。如需解禁请联系管理员。</div>' +
-      metaHtml +
+      meta +
       '<div class="ban-notice-actions">' +
       '<a class="ban-notice-btn ban-notice-btn-primary" href="' + ADMIN_CONTACT_URL + '" target="_blank" rel="noopener">联系管理员</a>' +
       '<button class="ban-notice-btn ban-notice-btn-secondary" type="button">关闭</button>' +
-      '</div>' +
+      '</div></div>'
+    );
+  }
+
+  /** 警告弹窗（第1次违规，成绩未上传，未封禁） */
+  function showWarning(data) {
+    data = data || {};
+    var reason = data.reason || data.error || '检测到异常游戏行为';
+    var count = data.violationCount || 1;
+    var meta =
+      '<div class="ban-notice-meta">' +
+      '<div><strong>违规原因：</strong>' + escapeHtml(reason) + '</div>' +
+      '<div><strong>当前违规次数：</strong>' + escapeHtml(count) + ' 次</div>' +
       '</div>';
-
-    document.body.appendChild(modalEl);
-
-    var closeBtn = modalEl.querySelector('.ban-notice-btn-secondary');
-    if (closeBtn) {
-      closeBtn.onclick = function () {
-        modalEl.remove();
-        modalEl = null;
-      };
-    }
+    showModal(
+      '<div class="ban-notice-box">' +
+      warnIcon('#f57c00') +
+      '<div class="ban-notice-title ban-notice-title-warn">本次成绩未上传</div>' +
+      '<div class="ban-notice-msg">系统检测到异常游戏行为，本次成绩未计入排行榜。请规范游戏操作，多次违规将导致账号暂时封禁。</div>' +
+      meta +
+      '<div class="ban-notice-actions">' +
+      '<button class="ban-notice-btn ban-notice-btn-secondary" type="button">我知道了</button>' +
+      '</div></div>'
+    );
   }
 
   /**
-   * 显示封禁提示弹窗
-   * @param {object} [data] - 服务端 403 响应体 { banned, banReason, banUntil, nickname, error }
-   */
-  function show(data) {
-    showModal(data || {});
-  }
-
-  /**
-   * 检测 HTTP 响应是否为封禁 403，若是则弹窗并返回 true
-   * 用于不解析响应体的游戏客户端（rosa-ember / tara）
+   * 统一处理安全事件（推荐入口）
+   * 自动区分 403 封禁 / 200 警告，弹对应弹窗
    * @param {Response} response - fetch 返回的 Response 对象
-   * @returns {Promise<boolean>} true 表示已弹窗（应中止后续逻辑），false 表示非封禁
+   * @returns {Promise<boolean>} true 表示已弹窗（应中止后续逻辑），false 表示非安全事件
    */
-  async function handleIfBanned(response) {
-    if (!response || response.status !== 403) return false;
+  async function handleSecurityEvent(response) {
+    if (!response) return false;
+    var status = response.status;
+    if (status !== 403 && status !== 200) return false;
     var data;
     try {
       data = await response.clone().json();
     } catch (_) {
-      try {
-        var txt = await response.clone().text();
-        data = { error: String(txt) };
-      } catch (e2) {
-        data = {};
-      }
+      try { data = { error: await response.clone().text() }; }
+      catch (e2) { data = {}; }
     }
-    // 仅当响应明确标记 banned=true 或 error 文本含"封禁"时弹窗
+    if (!data) return false;
+    // 封禁：403 且 banned=true，或 error 含"封禁"
+    if (status === 403 && (data.banned === true ||
+        (typeof data.error === 'string' && data.error.indexOf('封禁') >= 0))) {
+      show(data);
+      return true;
+    }
+    // 警告：200 且 warned=true
+    if (status === 200 && data.warned === true) {
+      showWarning(data);
+      return true;
+    }
+    return false;
+  }
+
+  /** 旧接口（仅处理 403 封禁），向后兼容 */
+  async function handleIfBanned(response) {
+    if (!response || response.status !== 403) return false;
+    var data;
+    try { data = await response.clone().json(); }
+    catch (_) {
+      try { data = { error: await response.clone().text() }; }
+      catch (e2) { data = {}; }
+    }
     if (data && (data.banned === true ||
         (typeof data.error === 'string' && data.error.indexOf('封禁') >= 0))) {
       show(data);
@@ -147,6 +192,8 @@
 
   global.BanNotice = {
     show: show,
+    showWarning: showWarning,
+    handleSecurityEvent: handleSecurityEvent,
     handleIfBanned: handleIfBanned,
     ADMIN_CONTACT_URL: ADMIN_CONTACT_URL
   };
