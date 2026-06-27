@@ -209,7 +209,6 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
 
 const BRAWL_BASE_MAX_HP = 1500;
 const BRAWL_MAX_WAVE = 100;
-const BRAWL_MAX_HERO_COUNT = 50;
 const BRAWL_MAX_GOLD = 100000;
 const BRAWL_MAX_TICKETS = 100000;
 const BRAWL_AFK_THRESHOLD_MS = 60000;
@@ -250,9 +249,8 @@ function verifyBrawlAntiCheat(score, ac, rules) {
     if (v.baseHp > BRAWL_BASE_MAX_HP) {
       return { ok: false, error: '基地血量超过上限', code: 400 };
     }
-    if (v.heroCount > BRAWL_MAX_HERO_COUNT) {
-      return { ok: false, error: '英雄数量异常', code: 400 };
-    }
+    // 英雄数量无上限：受 tickets 上限（BRAWL_MAX_TICKETS）间接约束
+    // 原上限 50 在第 20 波后正常玩家即被误封
     if (v.gold > BRAWL_MAX_GOLD) {
       return { ok: false, error: '金币数量异常', code: 400 };
     }
