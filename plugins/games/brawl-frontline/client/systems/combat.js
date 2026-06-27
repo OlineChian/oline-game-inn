@@ -37,7 +37,7 @@ export const Combat = {
                 Game.spawnParticle({ x: p.x, y: p.y, vx: Math.cos(ang) * 150, vy: Math.sin(ang) * 150, life: 0.4, maxLife: 0.4, color: p.color, size: 4 });
               }
             }
-            // 杰西子弹弹射：选择距离命中目标最近的另一敌人，造成额外伤害
+            // 杰西子弹弹射：选择距离命中目标最近的另一敌人，生成弹射子弹飞过去造成伤害
             if (p.bounce) {
               let bounceTarget = null, bounceDist = Infinity;
               for (const en2 of Game.entities.enemies) {
@@ -49,7 +49,14 @@ export const Combat = {
                 }
               }
               if (bounceTarget) {
-                Enemies.takeDamage(bounceTarget, p.damage * p.bounce.damageRate);
+                // 生成弹射子弹（视觉 + 伤害），从命中敌人飞向目标，不再二次弹射
+                const dir = this.dirTo(en, bounceTarget, 320);
+                this.spawnProjectile({
+                  x: en.x, y: en.y, vx: dir.vx, vy: dir.vy,
+                  damage: Math.floor(p.damage * p.bounce.damageRate),
+                  color: p.color, radius: 3, life: 0.6,
+                  bounce: null
+                });
               }
             }
             hit = true;

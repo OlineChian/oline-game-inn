@@ -198,8 +198,14 @@ export const Heroes = {
         // 治疗保持后排（靠近基地），缓慢横向移动对准敌人
         const backY = LAYOUT.heroZone.yMax - 20;
         if (Math.abs(h.y - backY) > 10) h.y += Math.sign(backY - h.y) * h.moveSpeed * dt * 0.3;
-      } else if (h.y > LAYOUT.heroZone.yMin) {
-        h.y -= h.moveSpeed * dt * 0.4;
+      } else {
+        // 射手：纵向跟随目标位置，目标在前方则前进、在后方则回防
+        const dy = moveTarget.y - h.y;
+        if (dy < -10 && h.y > LAYOUT.heroZone.yMin) {
+          h.y += Math.sign(dy) * h.moveSpeed * dt * 0.5;   // 目标在前方，前进接近
+        } else if (dy > 10 && h.y < LAYOUT.heroZone.yMax) {
+          h.y += Math.sign(dy) * h.moveSpeed * dt * 0.5;   // 目标在后方（靠近基地），回防
+        }
       }
     } else {
       // 没有敌人：所有非治疗英雄返回靠近基地（yMax 附近），坦克回到守基地位置

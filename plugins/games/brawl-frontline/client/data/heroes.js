@@ -43,7 +43,7 @@ export const HEROES = [
     id: 'jessie', name: '杰西', role: '召唤', rarity: 'rare', faction: '机器人',
     hp: 760, attack: 52, range: 200, attackSpeed: 1.0, moveSpeed: 55,
     projectileSpeed: 360, cost: { tickets: 100 }, color: '#2ec4b6', accent: '#a8e6e0',
-    bounce: { damageRate: 0.5, radius: 60 },
+    bounce: { damageRate: 0.5, radius: 100 },
     // 炮台：持续 5 秒，伤害 = 杰西普攻 ×150% = 78，射程 = 杰西 ×50% = 100，攻速 = 杰西 ×150% = 1.5
     super: { name: '超级技能：炮台召唤', type: 'turret', damage: 78, turretHp: 400, duration: 5, chargePerHit: 0.26 }
   },
