@@ -52,6 +52,14 @@ function registerAdminRoutes(app) {
 
   console.log('[Admin] Route registered: GET /securityoline');
 
+  // 公告管理页面（隐藏 URL /gg，浏览器地址栏直接访问）
+  // GET /gg 返回公告管理页面（页面内通过 API 增删改公告、管理迎新公告）
+  app.get('/gg', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', '..', 'public', 'noticeoline.html'));
+  });
+
+  console.log('[Admin] Route registered: GET /gg');
+
   // 重新从持久化源全量加载存储内存镜像
   // 适用场景：外部直接修改 kv_store 表 / store.json 后，让运行中进程同步更新
   app.post('/admin/storage/reload', async (req, res) => {

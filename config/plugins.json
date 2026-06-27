@@ -1,7 +1,7 @@
 {
-  "_comment": "阶段7.3：卡牌大师塔拉游戏插件已启用；客栈迎新活动插件已启用",
+  "_comment": "阶段7.3：卡牌大师塔拉游戏插件已启用；客栈迎新活动插件已启用；公告系统已启用",
   "_docs": "docs/plugin-spec.md 第 11 节",
-  "enabled": ["user", "leaderboard", "activity", "inn-welcome", "rosa-ember", "8bit-arcade", "test-demo", "belle-challenge", "buster-montage", "tara-cards", "brawl-frontline", "chester-cards"],
+  "enabled": ["user", "leaderboard", "activity", "inn-welcome", "rosa-ember", "8bit-arcade", "test-demo", "belle-challenge", "buster-montage", "tara-cards", "brawl-frontline", "chester-cards", "notice"],
   "disabled": [],
   "configs": {}
 }
