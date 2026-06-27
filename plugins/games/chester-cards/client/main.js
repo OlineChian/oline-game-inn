@@ -20,6 +20,7 @@ import {
 } from './systems/candy-hooks.js';
 import { settleRoundCoins } from './systems/economy.js';
 import { getChoiceCandies } from './systems/shop-system.js';
+import { getCandyById } from './data/candies.js';
 import { renderCandyChoice, hideShop } from './ui/shop-ui.js';
 import { createShopActions } from './systems/shop-actions.js';
 import { submitAndRefresh, submitWithNickname } from './leaderboard-submit.js';
