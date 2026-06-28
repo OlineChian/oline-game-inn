@@ -53,3 +53,14 @@ export function cardChip(card) {
 export function drawCards(deck, n) {
   return deck.splice(0, n);
 }
+
+/** 理牌花色顺序：♣ < ♠ < ♥ < ♦ */
+const SUIT_ORDER = { '♣': 0, '♠': 1, '♥': 2, '♦': 3 };
+
+/** 自动理牌：点数降序（A 最大），同点数按 ♣<♠<♥<♦ */
+export function sortHand(hand) {
+  return [...hand].sort((a, b) => {
+    if (a.value !== b.value) return b.value - a.value;
+    return (SUIT_ORDER[a.suit] ?? 0) - (SUIT_ORDER[b.suit] ?? 0);
+  });
+}

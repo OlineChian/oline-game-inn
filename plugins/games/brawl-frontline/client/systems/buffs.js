@@ -33,14 +33,19 @@ export const Buffs = {
     Game.state.phase = 'wave';
   },
 
-  /** 部分强化需要立即生效（如基地血量）
-   *  基地血量类：加上限的同时按 1.5 倍恢复血量（受新上限约束） */
+  /** 部分强化需要立即生效：
+   *  - base-hp-flat：加上限并按 1.5 倍恢复血量
+   *  - convert-gold-to-tickets：消耗金币按比例转换为英雄券（金币不足按比例） */
   _applyImmediate(buff) {
     if (buff.effect.type === 'base-hp-flat') {
       Game.state.baseMaxHp += buff.effect.value;
-      // 恢复血量 = 强化上限值 × 1.5（不超过新上限）
       const heal = Math.floor(buff.effect.value * 1.5);
       Game.state.baseHp = Math.min(Game.state.baseMaxHp, Game.state.baseHp + heal);
+    } else if (buff.effect.type === 'convert-gold-to-tickets') {
+      const gold = Math.min(Game.state.gold, buff.effect.gold);
+      const tickets = Math.floor(gold * (buff.effect.tickets / buff.effect.gold));
+      Game.state.gold -= gold;
+      Game.state.tickets += tickets;
     }
   },
 

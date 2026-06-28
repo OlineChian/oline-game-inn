@@ -11,6 +11,7 @@ import { Game, LAYOUT } from '../core/game.js';
 import { distance, uid, randomRange, angleTo, clamp } from '../core/utils.js';
 import { Combat } from './combat.js';
 import { Enemies } from './enemies.js';
+import { BoltAI } from './hero-bolt.js';
 
 export const Supers = {
   /** 超能释放入口 */
@@ -21,7 +22,7 @@ export const Supers = {
     switch (def.type) {
       case 'cone': this._cone(h, def); break;
       case 'barrage': this._barrage(h, def); break;
-      case 'slow': this._slow(h, def); break;
+      case 'charge': this._charge(h, def); break;
       case 'turret': this._turret(h, def); break;
       case 'leap': this._leap(h, def); break;
       case 'rocket': this._rocket(h, def); break;
@@ -30,6 +31,7 @@ export const Supers = {
       case 'burst': this._spikeBurst(h, def); break;
       case 'poison': this._poison(h, def); break;
       case 'summon': this._summon(h, def); break;
+      case 'fire-trail': BoltAI.spawnFireZone(h); break;
     }
   },
 
@@ -79,24 +81,59 @@ export const Supers = {
     }
   },
 
-  /** 公牛：威慑怒吼，减缓最近敌人射速 */
-  _slow(h, def) {
+  /** 公牛：蛮牛冲撞——朝最近敌人冲刺，对路径上敌人造成伤害+击退+击晕 */
+  _charge(h, def) {
+    const startX = h.x, startY = h.y;
     let nearest = null, minDist = Infinity;
     Game.entities.enemies.forEach(en => {
       const d = distance(h, en);
-      if (d < def.radius && d < minDist) { minDist = d; nearest = en; }
+      if (d < minDist) { minDist = d; nearest = en; }
     });
-    if (nearest) { nearest.slowTimer = def.duration; nearest.slowRate = def.slowRate; }
+    const dx = nearest ? nearest.x - h.x : 0;
+    const dy = nearest ? nearest.y - h.y : -1;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const endX = clamp(startX + (dx / d) * def.distance, 24, 456);
+    const endY = clamp(startY + (dy / d) * def.distance, LAYOUT.heroZone.yMin, LAYOUT.heroZone.yMax);
+    // 路径粒子轨迹
+    for (let i = 0; i < 12; i++) {
+      const t = i / 12;
+      Game.spawnParticle({
+        x: startX + (endX - startX) * t, y: startY + (endY - startY) * t,
+        vx: 0, vy: 0, life: 0.4, maxLife: 0.4, color: h.accent, size: 5
+      });
+    }
+    h.x = endX; h.y = endY;
+    // 路径附近敌人：伤害 + 击退 + 击晕
+    const segDx = endX - startX, segDy = endY - startY;
+    const segLen2 = segDx * segDx + segDy * segDy || 1;
+    Game.entities.enemies.forEach(en => {
+      const proj = Math.max(0, Math.min(1, ((en.x - startX) * segDx + (en.y - startY) * segDy) / segLen2));
+      const cx = startX + segDx * proj, cy = startY + segDy * proj;
+      if (distance(en, { x: cx, y: cy }) <= def.radius + en.radius) {
+        Enemies.takeDamage(en, def.damage);
+        en.x = clamp(en.x + (dx / d) * def.knockback, 20, 460);
+        en.y = Math.max(40, en.y + (dy / d) * def.knockback);
+        en.stunTimer = def.stunDuration;
+      }
+    });
+    // 终点冲击波特效
+    for (let i = 0; i < 16; i++) {
+      const ang = (i / 16) * Math.PI * 2;
+      Game.spawnParticle({ x: endX, y: endY, vx: Math.cos(ang) * 150, vy: Math.sin(ang) * 150, life: 0.5, maxLife: 0.5, color: h.accent, size: 4 });
+    }
   },
 
-  /** 杰西：召唤炮台
+  /** 杰西：召唤炮台（唯一存在：一个杰西同时只能有一个炮台，血量未清零不消失）
    *  射程 = 杰西 range ×50% = 100，攻速 = 杰西 attackSpeed ×150% = 1.5 */
   _turret(h, def) {
+    // 该杰西已有存活炮台则不再放置
+    if (Game.entities.turrets.some(t => t.ownerId === h.id)) return;
     Game.entities.turrets.push({
       uid: uid('t'), x: h.x, y: h.y - 40,
+      ownerId: h.id,                     // 绑定召唤者，用于唯一性检查
       hp: def.turretHp, maxHp: def.turretHp, damage: def.damage,
-      atkCd: 0, duration: def.duration, color: h.color,
-      range: Math.floor(h.range * 0.5)  // 杰西 range × 50%
+      atkCd: 0, color: h.color,
+      range: Math.floor(h.range * 0.5)   // 杰西 range × 50%
     });
   },
 
@@ -196,7 +233,7 @@ export const Supers = {
     });
   },
 
-  /** 杰西炮台更新：自动攻击射程内敌人，到期消失
+  /** 杰西炮台更新：自动攻击射程内敌人，血量清零才消失（无持续时间限制）
    *  属性：射程 = 杰西 range ×50% = 100，攻速 = 杰西 attackSpeed ×150% = 1.5 */
   updateTurrets(dt) {
     const ts = Game.entities.turrets;
@@ -204,9 +241,8 @@ export const Supers = {
     const TURRET_ASPEED = 1.5;  // 杰西 attackSpeed(1.0) × 150%
     for (let i = ts.length - 1; i >= 0; i--) {
       const t = ts[i];
-      t.duration -= dt;
       t.atkCd = Math.max(0, t.atkCd - dt);
-      if (t.duration <= 0 || t.hp <= 0) { ts.splice(i, 1); continue; }
+      if (t.hp <= 0) { ts.splice(i, 1); continue; }
       if (t.atkCd <= 0) {
         let nearest = null, minDist = Infinity;
         Game.entities.enemies.forEach(en => {

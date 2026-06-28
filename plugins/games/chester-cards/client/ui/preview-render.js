@@ -41,7 +41,7 @@ export function renderLivePreview(state, config) {
     playedCards: played,
     deckUsed: state.deck ? 52 - state.deck.length : 0,
     isLastPlayOfRound: state.playsLeft <= 1,
-    prevRoundHandType: state.prevRoundHandType,
+    prevPlayHandType: state.prevPlayHandType,
     maxCandies: config.maxCandies,
     candyCount: state.candies.length
   };
@@ -62,7 +62,7 @@ export function renderLivePreview(state, config) {
   const normalTriggers = result.triggered.filter(t => !t.isChance);
   const triggersHtml = normalTriggers.length > 0
     ? `<div class="cc-preview-triggers">
-        ${normalTriggers.map(t => `<span class="cc-preview-trigger">${t.candy.emoji} ${t.msg}</span>`).join('')}
+        ${normalTriggers.map(t => `<span class="cc-preview-trigger cc-trigger-${t.candy.rarity}">${t.candy.emoji} ${t.msg}</span>`).join('')}
       </div>`
     : '';
   const levelTag = baseResult.level > 1 ? ` <span class="cc-preview-level">Lv.${baseResult.level}</span>` : '';

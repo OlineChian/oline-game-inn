@@ -126,11 +126,11 @@ export function renderHUD(state, config) {
   setText('ccTarget', target);
   setText('ccCoins', state.coins);
   setText('ccPlays', state.playsLeft);
-  setText('ccPlaysMax', config.playsPerRound);
+  setText('ccPlaysMax', state.playsPerRound);
   setText('ccDiscards', state.discardsLeft);
-  setText('ccDiscardsMax', config.discardsPerRound);
+  setText('ccDiscardsMax', state.discardsPerRound);
   setText('ccSelCount', `${state.selected.size}/${config.maxPlay}`);
-  setText('ccDiscLeft', `${state.discardsLeft}/${config.discardsPerRound}`);
+  setText('ccDiscLeft', `${state.discardsLeft}/${state.discardsPerRound}`);
 
   const playBtn = document.querySelector('.cc-btn-play');
   const discardBtn = document.querySelector('.cc-btn-discard');
@@ -144,7 +144,7 @@ export function showScorePopup(result) {
   if (!popup) return;
   const triggers = result.triggered && result.triggered.length > 0
     ? `<div class="cc-popup-triggers">
-        ${result.triggered.map(t => `<span class="cc-popup-trigger">${t.candy.emoji} ${t.msg}</span>`).join('')}
+        ${result.triggered.map(t => `<span class="cc-popup-trigger cc-trigger-${t.candy.rarity}">${t.candy.emoji} ${t.msg}</span>`).join('')}
       </div>`
     : '';
   popup.innerHTML = `

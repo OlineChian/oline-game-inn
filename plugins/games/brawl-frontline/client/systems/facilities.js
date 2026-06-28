@@ -10,7 +10,8 @@ import { FACILITIES } from '../data/facilities.js';
 import { uid, distance } from '../core/utils.js';
 
 export const Facilities = {
-  /** 在指定建造位建造设施（消耗金币） */
+  /** 在指定建造位建造设施（消耗金币）
+   *  设施血量 = 基地当前血量 × hpRate（attacker=1.0，healer/booster=1.5） */
   build(slotIndex, facilityId) {
     const data = FACILITIES[facilityId];
     if (!data) return { ok: false, msg: '无效设施' };
@@ -19,12 +20,13 @@ export const Facilities = {
     if (Game.state.gold < data.cost) return { ok: false, msg: '金币不足' };
     Game.state.gold -= data.cost;
     const slot = LAYOUT.facilitySlots[slotIndex];
+    const hp = Math.floor(Game.state.baseHp * (data.hpRate || 1));
     Game.buildings.facilities[slotIndex] = {
       uid: uid('f'),
       id: data.id, name: data.name, type: data.type,
       slot: slotIndex,
       x: slot.x, y: slot.y,
-      hp: data.hp, maxHp: data.hp,
+      hp, maxHp: hp,
       damage: data.damage || 0,
       range: data.range || 0,
       attackSpeed: data.attackSpeed || 0,

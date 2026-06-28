@@ -4,9 +4,10 @@
  * 排行榜提交时机：失败或主动退出时提交 totalScore
  */
 
-import { createDeck, shuffle, drawCards } from './core/deck.js';
+import { createDeck, shuffle, drawCards, sortHand } from './core/deck.js';
 import { scoreHand, upgradeHandType } from './core/scoring.js';
 import { getTarget } from './core/targets.js';
+import { getPlaysForRound, getDiscardsForRound } from './data/wave-config.js';
 import {
   renderGame, renderHand, renderHUD, renderCandies,
   renderLivePreview, showScorePopup, renderEndScreen, hideEndScreen, renderStartScreen
@@ -44,10 +45,12 @@ const State = {
   lastCoinGain: 0,
   playsLeft: CONFIG.playsPerRound,
   discardsLeft: CONFIG.discardsPerRound,
+  playsPerRound: CONFIG.playsPerRound,    // 当前关出牌上限（Wave 增长，由 startRound 计算）
+  discardsPerRound: CONFIG.discardsPerRound,  // 当前关弃牌上限
   phase: 'idle',
   candies: [],
   handLevels: {},  // 牌型升级等级表 { HAND_KEY: level }，默认全部 1 级
-  prevRoundHandType: null,  // 上关最后牌型 key（金砖巧克力用）
+  prevPlayHandType: null,  // 本关上一次出牌的牌型 key（金砖巧克力用）
   _firstPlayOfRound: true,  // 本关是否还未出牌（糖果魔术师用）
   shopLevel: 1              // 阶段 8：商店等级（1-5）
 };
@@ -75,7 +78,7 @@ function playSelected() {
     playedCards: played,
     deckUsed: 52 - State.deck.length,
     isLastPlayOfRound: State.playsLeft <= 1,
-    prevRoundHandType: State.prevRoundHandType,
+    prevPlayHandType: State.prevPlayHandType,
     maxCandies: CONFIG.maxCandies,
     candyCount: State.candies.length
   };
@@ -86,19 +89,20 @@ function playSelected() {
 
   // 出牌后钩子：永久状态更新 + 糖果魔术师牌型升级
   handlePlayEnd(State, played, baseResult.handType, upgradeHandType);
+  // 记录本次出牌牌型，供下一次出牌的金砖巧克力检查
+  State.prevPlayHandType = baseResult.handType ? baseResult.handType.key : null;
 
   // 补牌
   const need = State.selected.size;
   State.hand = State.hand.filter(c => !State.selected.has(c.id));
   const fresh = drawCards(State.deck, need);
-  State.hand = State.hand.concat(fresh);
+  State.hand = sortHand(State.hand.concat(fresh));  // 自动理牌
   State.selected.clear();
 
   renderAll();
   showScorePopup(result);
 
   if (State.playsLeft <= 0) {
-    State.prevRoundHandType = baseResult.handType ? baseResult.handType.key : null;
     setTimeout(endRound, 1200);
   }
 }
@@ -114,7 +118,7 @@ function discardSelected() {
   const need = State.selected.size;
   State.hand = State.hand.filter(c => !State.selected.has(c.id));
   const fresh = drawCards(State.deck, need);
-  State.hand = State.hand.concat(fresh);
+  State.hand = sortHand(State.hand.concat(fresh));  // 自动理牌
   State.selected.clear();
   State.discardsLeft--;
   renderAll();
@@ -128,7 +132,7 @@ async function endRound() {
   if (State.roundScore >= target) {
     // 过关 → 糖果工厂产出（获得随机糖果或金币）
     handleRoundEnd(State, CONFIG);
-    const settle = settleRoundCoins(State.roundScore, target);
+    const settle = settleRoundCoins(State.roundScore, target, State.round);
     State.coins += settle.coins;
     State.lastCoinGain = settle.coins;
     State.phase = 'roundWin';
@@ -173,16 +177,21 @@ function closeShop() {
   startRound();
 }
 
-/** 开始一关（应用回合开始钩子 + 每回合糖果效果） */
+/** 开始一关（应用回合开始钩子 + 每回合糖果效果）
+ * 出牌/弃牌次数随关卡增长：关 11+ 每 7 关 +1 出牌，每 13 关 +1 弃牌，关 50 锁定
+ */
 function startRound() {
   State.deck = shuffle(createDeck());
-  State.hand = drawCards(State.deck, CONFIG.handSize);
+  State.hand = sortHand(drawCards(State.deck, CONFIG.handSize));  // 自动理牌
   State.selected = new Set();
   State.roundScore = 0;
-  State.playsLeft = CONFIG.playsPerRound;
-  State.discardsLeft = CONFIG.discardsPerRound;
+  State.playsPerRound = getPlaysForRound(State.round);
+  State.discardsPerRound = getDiscardsForRound(State.round);
+  State.playsLeft = State.playsPerRound;
+  State.discardsLeft = State.discardsPerRound;
   State.phase = 'playing';
   State._firstPlayOfRound = true;
+  State.prevPlayHandType = null;  // 本关出牌牌型记录清空（金砖巧克力用）
   // 糖果机器：回合开始回收右侧糖果
   handleRoundStart(State, CONFIG);
   // 应用每回合糖果效果（金币等）
@@ -200,7 +209,7 @@ function startGame() {
   State.lastCoinGain = 0;
   State.candies = [];
   State.handLevels = {};
-  State.prevRoundHandType = null;
+  State.prevPlayHandType = null;
   State._firstPlayOfRound = true;
   State.shopLevel = 1;  // 阶段 8：重置商店等级
   renderGame(CONFIG);
@@ -250,7 +259,6 @@ function init() {
     onStart: startGame,
     onPickCandy: pickStartingCandy,
     onBuyCandy: shopActions.buyCandy,
-    onDrawRandom: shopActions.drawRandom,
     onSellCandy: shopActions.sellCandy,
     onCloseShop: closeShop,
     onOpenShop: shopActions.openShop,

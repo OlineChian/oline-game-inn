@@ -168,6 +168,11 @@
 .cc-preview-triggers { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; justify-content: center; }
 .cc-preview-trigger { font-family: var(--font-body); font-size: var(--fs-tiny); padding: 2px 8px; background: var(--bg-card-alt); border: 1px solid var(--bg-input-border); color: var(--color-red); }
 .cc-preview-trigger.is-chance { background: var(--bg-card); color: var(--text-muted); border: 1px dashed var(--color-blue); }
+.cc-preview-trigger.cc-trigger-common { color: var(--color-rarity-common); }
+.cc-preview-trigger.cc-trigger-rare { color: var(--color-rarity-rare); }
+.cc-preview-trigger.cc-trigger-epic { color: var(--color-rarity-epic); }
+.cc-preview-trigger.cc-trigger-mythic { color: var(--color-rarity-mythic); }
+.cc-preview-trigger.cc-trigger-legendary { color: var(--color-rarity-legendary); }
 
 /* ---------- 按钮（扁平矩形，红蓝金） ---------- */
 .cc-actions {
@@ -225,6 +230,11 @@
 .cc-popup-formula { font-family: var(--font-number); font-size: var(--fs-body); color: var(--text-secondary); margin-bottom: 6px; }
 .cc-popup-triggers { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin-bottom: 6px; }
 .cc-popup-trigger { font-family: var(--font-body); font-size: var(--fs-tiny); padding: 2px 6px; background: var(--bg-card-alt); border: 1px solid var(--bg-input-border); color: var(--color-red); }
+.cc-popup-trigger.cc-trigger-common { color: var(--color-rarity-common); }
+.cc-popup-trigger.cc-trigger-rare { color: var(--color-rarity-rare); }
+.cc-popup-trigger.cc-trigger-epic { color: var(--color-rarity-epic); }
+.cc-popup-trigger.cc-trigger-mythic { color: var(--color-rarity-mythic); }
+.cc-popup-trigger.cc-trigger-legendary { color: var(--color-rarity-legendary); }
 .cc-popup-score { font-family: var(--font-number); font-size: var(--fs-number-xl); font-weight: 700; color: var(--color-gold-accent); line-height: 1; text-shadow: var(--text-shadow-md); }
 .cc-popup-show { animation: ccPopup 1.2s steps(3); }
 @keyframes ccPopup {

@@ -12,7 +12,7 @@
  *   playedCards: []          出牌列表
  *   deckUsed: 0              牌库已使用张数
  *   isLastPlayOfRound: false 是否本关最后一次出牌
- *   prevRoundHandType: null  上关最后牌型 key
+ *   prevPlayHandType: null   本关上一次出牌的牌型 key
  *   maxCandies: 5            最大槽位
  *   candyCount: 3            当前糖果数
  *   isPreview: false         是否预览模式
@@ -68,7 +68,7 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       if (matched.length === 0) return {};
       const chips = (effect.chips || 0) * matched.length;
       const mult = (effect.mult || 0) * matched.length;
-      const msg = `${matched.length}×${effect.ranks.join('/')} +${chips}筹码+${mult}倍率`;
+      const msg = `${matched.length}×${effect.ranks.join('/')} ${buildBonusText(chips, mult)}`;
       return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg } };
     }
 
@@ -86,7 +86,7 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       const chips = (effect.chips || 0) * matched.length;
       const mult = (effect.mult || 0) * matched.length;
       const label = effect.parity === 'odd' ? '奇数' : '偶数';
-      return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg: `${matched.length}张${label} +${chips}筹码+${mult}倍率` } };
+      return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg: `${matched.length}张${label} ${buildBonusText(chips, mult)}` } };
     }
 
     case 'min_rank_to_mult': {
@@ -120,14 +120,14 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       const emptySlots = Math.max(0, (context.maxCandies || 5) - (context.candyCount || 0));
       if (emptySlots > 0) {
         const total = effect.value * emptySlots;
-        return { multAdd: total, triggered: { candy, msg: `${emptySlots}空槽 +${total} 倍率` } };
+        return { multMul: total, triggered: { candy, msg: `${emptySlots}空槽 ×${total}` } };
       }
       return {};
     }
 
     case 'mult_same_hand': {
-      if (context.prevRoundHandType && handType && handType.key === context.prevRoundHandType) {
-        return { multMul: effect.value, triggered: { candy, msg: `同牌型 ×${effect.value}` } };
+      if (context.prevPlayHandType && handType && handType.key === context.prevPlayHandType) {
+        return { multMul: effect.value, triggered: { candy, msg: `连出同牌型 ×${effect.value}` } };
       }
       return {};
     }
@@ -208,4 +208,12 @@ function isParity(rank, parity) {
   const val = RANK_VALUES[rank];
   if (parity === 'odd') return val % 2 === 1;
   return val % 2 === 0;
+}
+
+/** 构建 +筹码/+倍率 文本（0 值不显示） */
+function buildBonusText(chips, mult) {
+  const parts = [];
+  if (chips > 0) parts.push(`+${chips}筹码`);
+  if (mult > 0) parts.push(`+${mult}倍率`);
+  return parts.join('');
 }

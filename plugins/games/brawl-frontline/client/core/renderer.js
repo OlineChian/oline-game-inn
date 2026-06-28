@@ -157,6 +157,7 @@ export const Renderer = {
 
   _drawEntities() {
     const e = Game.entities;
+    e.fireZones.forEach(z => this._drawFireZone(z));   // 燃烧区域（地面效果，最先渲染）
     e.enemies.forEach(en => this._drawEnemy(en));
     e.heroes.forEach(h => this._drawHero(h));
     e.turrets.forEach(t => this._drawTurret(t));
@@ -252,6 +253,17 @@ export const Renderer = {
     ctx.strokeStyle = COLOR.border; ctx.lineWidth = BW; ctx.stroke();
     drawShape(ctx, t.x, t.y - 2, 10, 'circle', '#2EC4B6');
     drawBar(ctx, t.x - 14, t.y - 22, 28, t.hp / t.maxHp, false);
+  },
+
+  /** 燃烧区域（博尔特超能）：半透明橙红圆形 + 虚线边缘 */
+  _drawFireZone(z) {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(255,107,53,0.25)';
+    ctx.beginPath(); ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,107,53,0.6)'; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
   },
 
   /** 召唤物：菱形 */

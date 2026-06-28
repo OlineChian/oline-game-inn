@@ -32,8 +32,8 @@ export const LAYOUT = {
   heroZone: { yMin: 80, yMax: 560 }               // 英雄活动 y 范围（最远可到红色边界 y=80）
 };
 
-/** 基地初始生命（配合高稀有度英雄数值，避免基地比英雄还脆） */
-const BASE_MAX_HP = 5000;
+/** 基地初始生命（×3 提升，配合高稀有度英雄与高血量设施） */
+const BASE_MAX_HP = 15000;
 
 export const Game = {
   state: null,
@@ -73,7 +73,8 @@ export const Game = {
       projectiles: [],
       particles: [],
       turrets: [],            // 杰西超级技能召唤的炮台
-      summons: []             // 塔拉超级技能召唤的友方单位
+      summons: [],            // 塔拉超级技能召唤的友方单位
+      fireZones: []           // 博尔特超能留下的燃烧区域
     };
     this.buildings = {
       vault: { level: 1, goldAcc: 0 },

@@ -16,8 +16,7 @@
       "sort": "desc",
       "unit": "分",
       "label": "得分",
-      "scoreFloor": 0,
-      "scoreCap": 99999999
+      "scoreFloor": 0
     },
     "endless": true,
     "handSize": 8,

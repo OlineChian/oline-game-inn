@@ -144,48 +144,48 @@ export const Enemies = {
     }
   },
 
-  /** rusher AI：直冲基地，碰到设施攻击设施，抵达基地前线后按优先级攻击：
-   *   1) 射程内守家型英雄（坦克/治疗）—— 承担基地防御，避免基地被秒
-   *   2) 射程内炮台/舰炮
-   *   3) 基地（伤害按 BASE_DAMAGE_RATE 折扣） */
+  /** rusher AI：直冲基地，碰到挡路设施/杰西炮台先打掉，抵达基地前线后按优先级攻击：
+   *   杰西炮台 > 守家英雄（坦克/治疗） > 玩家设施 > 基地（伤害按 BASE_DAMAGE_RATE 折扣） */
   _aiRusher(en, dt) {
-    // 移动中碰到挡路设施：先打掉
+    // 移动中碰到挡路设施或杰西炮台：优先攻击
     for (const f of Game.buildings.facilities) {
-      if (!f) continue;
-      if (distance(en, f) <= en.radius + f.radius) {
-        if (en.atkCd <= 0) {
-          Game.systems.facilities.takeDamage(f, en.attack);
-          en.atkCd = 1 / en.attackSpeed;
-        }
+      if (f && distance(en, f) <= en.radius + f.radius) {
+        if (en.atkCd <= 0) { Game.systems.facilities.takeDamage(f, en.attack); en.atkCd = 1 / en.attackSpeed; }
         return;
       }
     }
-    if (en.y < LAYOUT.baseLine) {
-      en.y += en.moveSpeed * dt;
-      return;
+    for (const t of Game.entities.turrets) {
+      if (distance(en, t) <= en.radius + t.radius + 5) {
+        if (en.atkCd <= 0) { t.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; }
+        return;
+      }
     }
+    if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; return; }
     if (en.atkCd > 0) return;
-    // 优先攻击射程内守家型英雄（坦克/治疗），让他们承担伤害
+    // 抵达基地前线：杰西炮台 > 守家英雄 > 玩家设施 > 基地
+    const turret = this._nearestTurret(en);
+    if (turret) { turret.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; return; }
     const guard = this._nearestGuardHero(en);
-    if (guard) {
-      guard.hp -= en.attack;
-      en.atkCd = 1 / en.attackSpeed;
-      return;
-    }
-    // 其次攻击射程内炮台/舰炮
-    let targetFacility = null, minD = Infinity;
+    if (guard) { guard.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; return; }
+    let tf = null, minD = Infinity;
     for (const f of Game.buildings.facilities) {
       if (!f) continue;
       const d = distance(en, f);
-      const reach = (f.range || 0) + f.radius;
-      if (d <= reach && d < minD) { minD = d; targetFacility = f; }
+      if (d <= (f.range || 0) + f.radius && d < minD) { minD = d; tf = f; }
     }
-    if (targetFacility) {
-      Game.systems.facilities.takeDamage(targetFacility, en.attack);
-    } else {
-      Game.damageBase(en.attack * BASE_DAMAGE_RATE);
-    }
+    if (tf) Game.systems.facilities.takeDamage(tf, en.attack);
+    else Game.damageBase(en.attack * BASE_DAMAGE_RATE);
     en.atkCd = 1 / en.attackSpeed;
+  },
+
+  /** 查找射程内最近的杰西炮台，用于 rusher 优先攻击 */
+  _nearestTurret(en) {
+    let nearest = null, minDist = Infinity;
+    for (const t of Game.entities.turrets) {
+      const d = distance(en, t);
+      if (d <= en.range + t.radius && d < minDist) { minDist = d; nearest = t; }
+    }
+    return nearest;
   },
 
   /** 查找射程内的守家型英雄（坦克/治疗），用于 rusher 优先攻击 */

@@ -15,7 +15,7 @@
 export const RARITY_ORDER = ['starter', 'rare', 'epic', 'mythic', 'legendary'];
 export const RARITY_LABEL = { starter: '初始', rare: '稀有', epic: '史诗', mythic: '神话', legendary: '传奇' };
 export const RARITY_COLOR = { starter: '#95a5a6', rare: '#3498db', epic: '#9b59b6', mythic: '#e74c3c', legendary: '#f1c40f' };
-export const UNLOCK_COST = { epic: 300, mythic: 500, legendary: 800 };
+export const UNLOCK_COST = { epic: 500, mythic: 800, legendary: 1200 };
 
 export const HEROES = [
   // ============ 初始（1）— hp 900 / atk 70 ============
@@ -36,15 +36,16 @@ export const HEROES = [
     id: 'bull', name: '公牛', role: '坦克', rarity: 'rare', faction: '矿场',
     hp: 2400, attack: 138, range: 70, attackSpeed: 0.85, moveSpeed: 50,
     projectileSpeed: 0, cost: { tickets: 100 }, color: '#f4a261', accent: '#ffd9a8',
-    super: { name: '超级技能：威慑怒吼', type: 'slow', radius: 200, slowRate: 0.5, duration: 4, chargePerHit: 0.22 }
+    super: { name: '超级技能：蛮牛冲撞', type: 'charge', damage: 200, distance: 140, radius: 70, knockback: 90, stunDuration: 1.5, chargePerHit: 0.22 }
   },
   {
     id: 'jessie', name: '杰西', role: '召唤', rarity: 'rare', faction: '机器人',
     hp: 1500, attack: 108, range: 200, attackSpeed: 1.0, moveSpeed: 55,
     projectileSpeed: 360, cost: { tickets: 100 }, color: '#2ec4b6', accent: '#a8e6e0',
     bounce: { damageRate: 0.5, radius: 100 },
-    // 炮台：持续 5 秒，伤害 = 杰西普攻 ×150% = 162，射程 = 杰西 ×50% = 100，攻速 = 杰西 ×150% = 1.5
-    super: { name: '超级技能：炮台召唤', type: 'turret', damage: 162, turretHp: 600, duration: 5, chargePerHit: 0.26 }
+    // 炮台：血量未清零不消失，伤害 = 杰西普攻 ×150% = 162，射程 = 杰西 ×50% = 100，攻速 = 杰西 ×150% = 1.5
+    // 一个杰西同时只能存在一个炮台（hero-supers.js 中检查 ownerId）
+    super: { name: '超级技能：炮台召唤', type: 'turret', damage: 162, turretHp: 5000, chargePerHit: 0.26 }
   },
   // ============ 史诗（5）— hp ≥ 2025 / atk ≥ 157 ============
   {
@@ -90,12 +91,20 @@ export const HEROES = [
     projectileSpeed: 300, cost: { tickets: 200 }, color: '#ffd166', accent: '#fff3b0',
     super: { name: '超级技能：音波治疗', type: 'heal', heal: 500, radius: 200, chargePerHit: 0.22 }
   },
-  // ============ 传奇（1）— hp ≥ 4556 / atk ≥ 354 ============
+  // ============ 传奇（2）— hp ≥ 4556 / atk ≥ 354 ============
   {
     id: 'tara', name: '塔拉', role: '射手', rarity: 'legendary', faction: '神秘',
     hp: 4600, attack: 360, range: 220, attackSpeed: 1.1, moveSpeed: 54,
     projectileSpeed: 350, cost: { tickets: 300 }, color: '#6a4c93', accent: '#c5b3e6',
     super: { name: '超级技能：命运召唤', type: 'summon', unitHp: 1500, unitAttack: 200, duration: 8, chargePerHit: 0.26 }
+  },
+  {
+    id: 'bolt', name: '博尔特', role: '坦克', rarity: 'legendary', faction: '神秘',
+    hp: 6500, attack: 400, range: 60, attackSpeed: 1.0, moveSpeed: 130,
+    projectileSpeed: 0, cost: { tickets: 300 }, color: '#ffd166', accent: '#fff3b0',
+    // 碰撞伤害型：沿随机椭圆巡逻，碰到敌人造成大量伤害（AI 在 systems/hero-bolt.js）
+    // 超能：路径留下燃烧区域，伤害 = 博尔特 attack，持续 8 秒
+    super: { name: '超级技能：烈焰路径', type: 'fire-trail', damage: 400, duration: 8, chargePerHit: 0.26 }
   }
 ];
 

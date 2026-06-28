@@ -14,6 +14,7 @@ import { Combat } from './combat.js';
 import { Enemies } from './enemies.js';
 import { Buffs } from './buffs.js';
 import { Supers } from './hero-supers.js';
+import { BoltAI } from './hero-bolt.js';
 
 export const Heroes = {
   /** 招募英雄（必须已解锁） */
@@ -159,6 +160,7 @@ export const Heroes = {
     }
     Supers.updateTurrets(dt);
     Supers.updateSummons(dt);
+    BoltAI.updateFireZones(dt);
   },
 
   /** AI：所有英雄优先锁定"距离基地最近的敌人"作为移动目标
@@ -167,6 +169,12 @@ export const Heroes = {
    *   - 无敌人时所有英雄返回靠近基地（yMax 附近） */
   _ai(h, dt) {
     h.atkCd = Math.max(0, h.atkCd - dt);
+    // 博尔特：椭圆巡逻 AI，不走常规目标选择与移动逻辑
+    if (h.id === 'bolt') {
+      BoltAI.update(h, dt);
+      this._checkSuper(h);
+      return;
+    }
     const isMelee = h.projectileSpeed === 0;
     const isTank = h.role === '坦克';
     const isSupport = h.role === '治疗';
@@ -221,6 +229,11 @@ export const Heroes = {
     }
     h.x = clamp(h.x, 24, VIEW_W - 24);
     h.y = clamp(h.y, LAYOUT.heroZone.yMin, LAYOUT.heroZone.yMax);
+    this._checkSuper(h);
+  },
+
+  /** 超能充能满后自动释放（3 星及以上解锁） */
+  _checkSuper(h) {
     if (h.superCharge >= 1 && h.star >= SUPER_UNLOCK_STAR) {
       Supers.release(h);
       h.superCharge = 0;

@@ -77,3 +77,38 @@ export function getAvailableRarities(round) {
   const weights = getWaveWeights(round);
   return Object.keys(weights).filter(r => weights[r] > 0);
 }
+
+/* ============================================================
+   出牌 / 弃牌次数随关卡增长
+   - Wave 1（关 1-10）：基础 4 出牌 / 2 弃牌
+   - 关 11+：每 7 关 +1 出牌，每 13 关 +1 弃牌
+   - 关 50+：锁定 10 出牌 / 5 弃牌
+   ============================================================ */
+const PLAY_LIMIT   = { base: 4, max: 10, startRound: 11, lockRound: 50, step: 7 };
+const DISCARD_LIMIT = { base: 2, max: 5,  startRound: 11, lockRound: 50, step: 13 };
+
+function getRoundLimit(round, cfg) {
+  if (round < cfg.startRound) return cfg.base;
+  if (round >= cfg.lockRound) return cfg.max;
+  // 关 11 起首次即 +1，之后每 step 关 +1
+  const increments = 1 + Math.floor((round - cfg.startRound) / cfg.step);
+  return Math.min(cfg.max, cfg.base + increments);
+}
+
+/**
+ * 获取指定关卡的出牌次数上限
+ * @param {number} round 当前关卡
+ * @returns {number} 出牌次数（4-10）
+ */
+export function getPlaysForRound(round) {
+  return getRoundLimit(round, PLAY_LIMIT);
+}
+
+/**
+ * 获取指定关卡的弃牌次数上限
+ * @param {number} round 当前关卡
+ * @returns {number} 弃牌次数（2-5）
+ */
+export function getDiscardsForRound(round) {
+  return getRoundLimit(round, DISCARD_LIMIT);
+}

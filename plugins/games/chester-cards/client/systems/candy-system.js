@@ -26,7 +26,7 @@ import { applyEffect } from './candy-effects.js';
  *   playedCards: 出牌列表
  *   deckUsed: 牌库已用张数
  *   isLastPlayOfRound: 是否本关最后一次出牌
- *   prevRoundHandType: 上关最后牌型 key
+ *   prevPlayHandType: 本关上一次出牌的牌型 key
  *   maxCandies: 最大槽位
  *   candyCount: 当前糖果数
  * @returns {Object} 含 finalScore / triggered 列表
