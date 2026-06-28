@@ -29,7 +29,7 @@ export const Hud = {
     if (!st) return;
     const e = this._els;
     if (e.gold) e.gold.textContent = fmtNum(st.gold);
-    if (e.tickets) e.tickets.textContent = st.tickets;
+    if (e.tickets) e.tickets.textContent = fmtNum(st.tickets);
     if (e.wave) e.wave.textContent = st.wave;
     // 强化选择：文本 [已杀敌]-[下次目标]，整体进度条由 --progress 驱动
     const target = st.buffTarget || BUFF_TARGETS[0];

@@ -241,9 +241,9 @@ body {
 .bf-card {
   flex-shrink: 0;
   width: 120px;
-  min-height: 120px;  /* 进一步压缩：减小间距+字号 */
+  min-height: 96px;
   border-radius: var(--bf-r-card);
-  padding: 0 8px 4px;
+  padding: 0 8px 3px;
   cursor: pointer;
   position: relative;
   background-color: var(--bf-card);
@@ -293,15 +293,15 @@ body {
 .bf-stat-dmg { color: var(--bf-enemy); }
 .bf-stat-range { color: var(--bf-primary); }
 .bf-card-super {
-  font-size: 9px; text-align: center; margin-top: 2px;
+  text-align: center; margin-top: 1px;
   padding: 1px 4px; border-radius: var(--bf-r);
-  font-weight: 700;
   border: 2px solid var(--bf-border);
   line-height: 1.1;
 }
 .bf-card-super.locked { color: var(--bf-text-3); background: var(--bf-card-alt); }
 .bf-card-super.unlocked { color: #222; background: var(--bf-gold); }
-.bf-card-super-name { font-size: 9px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.bf-card-super-line1 { font-size: 8px; font-weight: 700; }
+.bf-card-super-line2 { font-size: 11px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* 卡牌右上角星级数量徽章：5星及以下（红）/ 6星（金渐变）/ 7星（紫+火焰） */
 .bf-card-badges {
@@ -939,11 +939,12 @@ body {
   .bf-hud-tab { min-width: 48px; padding: 3px 4px; }
   .bf-hud-tab .bf-hud-label { font-size: 9px; }
   .bf-hud-tab .bf-hud-value { font-size: 12px; }
-  .bf-card { width: 104px; min-height: 112px; padding: 0 6px 4px; }
+  .bf-card { width: 104px; min-height: 90px; padding: 0 6px 3px; }
   .bf-card-name { font-size: 15px; }
   .bf-card-role-bar { font-size: 9px; height: 18px; }
   .bf-card-stats { font-size: 9px; gap: 6px; }
-  .bf-card-super { font-size: 8px; }
+  .bf-card-super-line1 { font-size: 7px; }
+  .bf-card-super-line2 { font-size: 10px; }
   .bf-card-popup { min-width: 170px; }
   .bf-popup-btn { font-size: 12px; padding: 6px 4px; }
   .bf-modal-content:has(.bf-unlock-grid) { max-width: 360px; }

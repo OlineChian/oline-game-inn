@@ -76,7 +76,7 @@ export const Shop = {
           <span class="bf-stat bf-stat-dmg">${SVG_DMG}<span class="bf-stat-val">${atkLabel}</span></span>
           <span class="bf-stat bf-stat-range">${SVG_RANGE}<span class="bf-stat-val">${h.range}</span></span>
         </div>
-        <div class="bf-card-super locked"><div class="bf-card-super-name">${SUPER_UNLOCK_STAR}星解锁</div></div>
+        <div class="bf-card-super locked"><div class="bf-card-super-line1">${SUPER_UNLOCK_STAR}星解锁</div><div class="bf-card-super-line2">超级技能</div></div>
         <div class="bf-card-badges">
           <span class="bf-card-badge bf-badge-7 hidden" data-badge-7></span>
           <span class="bf-card-badge bf-badge-6 hidden" data-badge-6></span>
@@ -256,9 +256,17 @@ export const Shop = {
       if (dmgVal) dmgVal.textContent = atkLabel;
       if (rngVal) rngVal.textContent = data.range;
       const unlocked = star >= SUPER_UNLOCK_STAR;
-      card.querySelector('.bf-card-super').className = `bf-card-super ${unlocked ? 'unlocked' : 'locked'}`;
-      const superName = unlocked ? data.super.name.replace(/^超级技能：/, '') : `${SUPER_UNLOCK_STAR}星解锁`;
-      card.querySelector('.bf-card-super-name').textContent = superName;
+      const superEl = card.querySelector('.bf-card-super');
+      superEl.className = `bf-card-super ${unlocked ? 'unlocked' : 'locked'}`;
+      const line1 = superEl.querySelector('.bf-card-super-line1');
+      const line2 = superEl.querySelector('.bf-card-super-line2');
+      if (unlocked) {
+        line1.textContent = '超级技能';
+        line2.textContent = data.super.name.replace(/^超级技能：/, '');
+      } else {
+        line1.textContent = `${SUPER_UNLOCK_STAR}星解锁`;
+        line2.textContent = '超级技能';
+      }
       const insts = Game.entities.heroes.filter(h => h.id === heroId);
       _setBadge(card, 5, insts.filter(h => h.star < 6).length);
       _setBadge(card, 6, insts.filter(h => h.star === 6).length);

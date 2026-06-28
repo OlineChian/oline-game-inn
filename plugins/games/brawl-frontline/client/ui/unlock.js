@@ -35,7 +35,7 @@ export const Unlock = {
     }
     const cardsHtml = choices.map(h => this._renderCard(h)).join('');
     const html = this._wrapShell(
-      `<div class="bf-unlock-tickets">持有英雄券：<b>${Game.state.tickets}</b></div>` +
+      `<div class="bf-unlock-tickets">持有英雄券：<b>${Math.floor(Game.state.tickets)}</b></div>` +
       `<div class="bf-unlock-grid">${cardsHtml}</div>`
     );
     body.innerHTML = html;
