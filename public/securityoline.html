@@ -441,7 +441,9 @@ function saveThresholds() {
         else failed++;
         if (done + failed === gameIds.length) {
           if (failed === 0) {
-            showStatus('已保存 ' + done + ' 个游戏的参数', true);
+            var totalParams = 0;
+            Object.keys(updates).forEach(function(gid) { totalParams += Object.keys(updates[gid]).length; });
+            showStatus('已保存 ' + done + ' 个游戏，共 ' + totalParams + ' 项参数', true);
             thresholdsData = null;
             loadThresholds();
           } else {
