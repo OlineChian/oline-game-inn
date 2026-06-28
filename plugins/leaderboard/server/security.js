@@ -125,8 +125,9 @@ function verifySubmission(gameId, body) {
  * @param {string} gameId
  * @param {object} body - POST body
  * @param {object} [rules] - 安全规则开关（来自 penalty.getRules），未传则全开
+ * @param {object} [thresholds] - 分游戏阈值（来自 game-thresholds.getThresholds），未传则用默认值
  */
-function verifyAntiCheat(gameId, body, rules) {
+function verifyAntiCheat(gameId, body, rules, thresholds) {
   const extra = body && body.extra;
   const ac = extra && extra.antiCheat;
   if (!ac) return { ok: true };
@@ -134,7 +135,7 @@ function verifyAntiCheat(gameId, body, rules) {
   if (!Number.isFinite(score)) {
     return { ok: false, error: 'score 格式错误', code: 400 };
   }
-  return verifyGameAntiCheat(gameId, score, ac, extra, rules);
+  return verifyGameAntiCheat(gameId, score, ac, extra, rules, thresholds);
 }
 
 

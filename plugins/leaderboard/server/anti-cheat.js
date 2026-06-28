@@ -213,7 +213,7 @@ const BRAWL_MAX_GOLD = 100000;
 const BRAWL_MAX_TICKETS = 100000;
 const BRAWL_AFK_THRESHOLD_MS = 60000;
 const BRAWL_MS_PER_WAVE = 15000;
-const BRAWL_SCORE_TOLERANCE = 5;
+const BRAWL_SCORE_TOLERANCE = 100;  // gold 持续产出需留余量，可由 game-thresholds 覆盖
 const BRAWL_MIN_INPUTS = 1;
 
 function computeBrawlScore(s) {
@@ -223,10 +223,19 @@ function computeBrawlScore(s) {
   );
 }
 
-function verifyBrawlAntiCheat(score, ac, rules) {
+function verifyBrawlAntiCheat(score, ac, rules, t) {
   if (!ac || typeof ac !== 'object') {
     return { ok: false, error: 'antiCheat 字段缺失', code: 400 };
   }
+  // t = thresholds 对象（来自 game-thresholds.js），未传则用默认常量
+  const maxHp = (t && t.baseMaxHp) || BRAWL_BASE_MAX_HP;
+  const maxWave = (t && t.maxWave) || BRAWL_MAX_WAVE;
+  const maxGold = (t && t.maxGold) || BRAWL_MAX_GOLD;
+  const maxTickets = (t && t.maxTickets) || BRAWL_MAX_TICKETS;
+  const afkMs = (t && t.afkThresholdMs) || BRAWL_AFK_THRESHOLD_MS;
+  const msPerWave = (t && t.msPerWave) || BRAWL_MS_PER_WAVE;
+  const scoreTol = (t && t.scoreTolerance != null) ? t.scoreTolerance : BRAWL_SCORE_TOLERANCE;
+  const minIn = (t && t.minInputs != null) ? t.minInputs : BRAWL_MIN_INPUTS;
   const numFields = ['wave', 'kills', 'bossKills', 'heroCount', 'baseHp',
     'gold', 'tickets', 'vaultLevel', 'playedMs', 'inputCount', 'maxNoInputMs'];
   const v = {};
@@ -240,21 +249,19 @@ function verifyBrawlAntiCheat(score, ac, rules) {
     }
   }
   if (on(rules, 'stateIntegrity')) {
-    if (v.wave < 1 || v.wave > BRAWL_MAX_WAVE) {
+    if (v.wave < 1 || v.wave > maxWave) {
       return { ok: false, error: '波数超出合理范围', code: 400 };
     }
     if (v.vaultLevel < 1 || v.vaultLevel > 5) {
       return { ok: false, error: '金库等级非法', code: 400 };
     }
-    if (v.baseHp > BRAWL_BASE_MAX_HP) {
+    if (v.baseHp > maxHp) {
       return { ok: false, error: '基地血量超过上限', code: 400 };
     }
-    // 英雄数量无上限：受 tickets 上限（BRAWL_MAX_TICKETS）间接约束
-    // 原上限 50 在第 20 波后正常玩家即被误封
-    if (v.gold > BRAWL_MAX_GOLD) {
+    if (v.gold > maxGold) {
       return { ok: false, error: '金币数量异常', code: 400 };
     }
-    if (v.tickets > BRAWL_MAX_TICKETS) {
+    if (v.tickets > maxTickets) {
       return { ok: false, error: '英雄券数量异常', code: 400 };
     }
     const maxBoss = Math.floor(v.wave / 5) + 1;
@@ -264,17 +271,17 @@ function verifyBrawlAntiCheat(score, ac, rules) {
   }
   if (on(rules, 'scoreConsistency')) {
     const expected = computeBrawlScore(v);
-    if (Math.abs(score - expected) > BRAWL_SCORE_TOLERANCE) {
+    if (Math.abs(score - expected) > scoreTol) {
       return { ok: false, error: '分数与游戏状态不一致', code: 400 };
     }
   }
-  if (on(rules, 'timeConsistency') && v.playedMs < v.wave * BRAWL_MS_PER_WAVE) {
+  if (on(rules, 'timeConsistency') && v.playedMs < v.wave * msPerWave) {
     return { ok: false, error: '游戏时长与波数不匹配', code: 400 };
   }
-  if (on(rules, 'afkDetection') && v.maxNoInputMs >= BRAWL_AFK_THRESHOLD_MS) {
+  if (on(rules, 'afkDetection') && v.maxNoInputMs >= afkMs) {
     return { ok: false, error: '检测到长时间无操作', code: 400 };
   }
-  if (on(rules, 'inputFrequency') && v.inputCount < BRAWL_MIN_INPUTS) {
+  if (on(rules, 'inputFrequency') && v.inputCount < minIn) {
     return { ok: false, error: '输入次数异常', code: 400 };
   }
   return { ok: true };
@@ -282,7 +289,7 @@ function verifyBrawlAntiCheat(score, ac, rules) {
 
 // ==================== 统一分发器 ====================
 
-function verifyGameAntiCheat(gameId, score, ac, extra, rules) {
+function verifyGameAntiCheat(gameId, score, ac, extra, rules, thresholds) {
   if (gameId === 'buster-montage') {
     return verifyBusterAntiCheat(score, ac, extra, rules);
   }
@@ -290,7 +297,7 @@ function verifyGameAntiCheat(gameId, score, ac, extra, rules) {
     return verifyBelleAntiCheat(score, ac, extra, rules);
   }
   if (gameId === 'brawl-frontline') {
-    return verifyBrawlAntiCheat(score, ac, rules);
+    return verifyBrawlAntiCheat(score, ac, rules, thresholds);
   }
   return verifyDefaultAntiCheat(score, ac, rules);
 }

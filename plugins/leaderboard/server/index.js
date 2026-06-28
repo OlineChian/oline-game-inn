@@ -8,6 +8,7 @@ const { verifySubmission, verifyAntiCheat, checkBan, listBans, unban } = require
 const {
   applyPenalty, getRules, setRules, listHistory, resetViolation, RULE_CATEGORIES
 } = require('./penalty');
+const { getThresholds, getAllThresholdDefs, setThresholds, GAME_NAMES } = require('./game-thresholds');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
@@ -154,9 +155,10 @@ module.exports = function(app, context) {
         return res.status(verification.code).json({ success: false, error: verification.error });
       }
 
-      // L3: 反作弊校验（防 AFK / 状态篡改），传入安全规则开关
+      // L3: 反作弊校验（防 AFK / 状态篡改），传入安全规则开关 + 分游戏阈值
       const rules = getRules(service.storage);
-      const acCheck = verifyAntiCheat(gameId, req.body, rules);
+      const thresholds = getThresholds(service.storage, gameId);
+      const acCheck = verifyAntiCheat(gameId, req.body, rules, thresholds);
       if (!acCheck.ok) {
         // 分级惩罚：第1次警告（成绩不上传）→ 10min → 30min → 2h → 8h → 24h 封顶
         const penalty = applyPenalty(service.storage, ip, acCheck.error, nickname, gameId);
@@ -308,6 +310,27 @@ module.exports = function(app, context) {
       }
       const history = listHistory(service.storage);
       res.json({ success: true, history, total: history.length });
+    });
+
+    // 分游戏反作弊阈值配置
+    // GET /api/security/thresholds - 获取所有游戏阈值定义
+    app.get('/api/security/thresholds', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      res.json({ success: true, thresholds: getAllThresholdDefs(service.storage), gameNames: GAME_NAMES });
+    });
+
+    // PUT /api/security/thresholds/:gameId - 更新某游戏阈值
+    app.put('/api/security/thresholds/:gameId', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const result = setThresholds(service.storage, req.params.gameId, req.body || {});
+      if (!result) return res.status(404).json({ success: false, error: '未知游戏: ' + req.params.gameId });
+      res.json({ success: true, thresholds: result });
     });
   }
   
