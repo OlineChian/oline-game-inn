@@ -5,23 +5,34 @@
  * 地图为纵向固定布局，建筑位坐标在 game.js 的 LAYOUT 中定义
  */
 export const BUILDINGS = {
-  // A：主题季宝库 —— 持续产出金币，指定波数才能升级
+  // A：主题季宝库 —— 持续产出金币 + 6 级解锁英雄合并
   'vault': {
     id: 'vault',
     name: '主题季宝库',
     code: 'A',
     type: 'economy',
-    desc: '持续产出金币，指定波数才能升级',
+    desc: '持续产出金币，6 级解锁英雄合并',
     levels: [
       { level: 1, goldPerSec: 8 },
       { level: 2, goldPerSec: 14 },
       { level: 3, goldPerSec: 21 },
       { level: 4, goldPerSec: 30 },
-      { level: 5, goldPerSec: 42 }
+      { level: 5, goldPerSec: 42 },
+      { level: 6, goldPerSec: 58 },     // 解锁 5→6 合并
+      { level: 7, goldPerSec: 78 },
+      { level: 8, goldPerSec: 105 },
+      { level: 9, goldPerSec: 140 },    // 解锁批量 100 合 50
+      { level: 10, goldPerSec: 180 }    // 解锁 6→7 合并
     ],
-    upgradeCost: [150, 300, 500, 800],   // 1→2, 2→3, 3→4, 4→5
-    upgradeWaves: [1, 5, 10, 20],        // 各等级升级所需波数（第1波/5波/10波/20波）
-    maxLevel: 5,
+    upgradeCost: [150, 300, 500, 800, 1200, 1800, 2600, 3800, 5500],
+    upgradeWaves: [1, 5, 10, 20, 30, 40, 55, 70, 90],
+    maxLevel: 10,
+    // 英雄合并配置
+    merge: {
+      star5to6: { unlockLevel: 6, baseCost: 800 },    // 2 个 5 星 → 1 个 6 星，单次基础花费
+      star6to7: { unlockLevel: 10, baseCost: 3000 },  // 2 个 6 星 → 1 个 7 星
+      batchUnlockLevel: 9                              // 9 级解锁批量 100 合 50
+    },
     color: '#f4a261',
     accent: '#ffd9a8'
   },

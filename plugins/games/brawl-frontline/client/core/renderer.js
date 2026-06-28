@@ -223,11 +223,26 @@ export const Renderer = {
     ctx.font = `bold 13px ${FONT}`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(h.name, h.x, h.y);
-    // 星级（金色）
+    // 星级（金色）：1-5 星用 ★，6/7 星用月牙+数字
     if (h.star > 1) {
       ctx.fillStyle = COLOR.gold;
-      ctx.font = `bold 11px ${FONT}`;
-      ctx.fillText('★'.repeat(h.star), h.x, y - 12);
+      if (h.star >= 6) {
+        // 月牙：外圆弧 + 内偏移圆弧反向（朝右开口）
+        const cx = h.x - 8, cy = y - 14;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 5, Math.PI * 0.3, Math.PI * 1.7);
+        ctx.arc(cx + 2.2, cy, 4, Math.PI * 1.7, Math.PI * 0.3, true);
+        ctx.closePath();
+        ctx.fill();
+        // 数字（6 或 7）
+        ctx.font = `bold 11px ${FONT}`;
+        ctx.textAlign = 'left';
+        ctx.fillText(h.star, h.x + 1, y - 10);
+        ctx.textAlign = 'center';
+      } else {
+        ctx.font = `bold 11px ${FONT}`;
+        ctx.fillText('★'.repeat(h.star), h.x, y - 12);
+      }
     }
     // 血条 8px
     const bw = w + 4;

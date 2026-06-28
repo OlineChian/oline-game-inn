@@ -87,8 +87,10 @@ export const Modals = {
    */
   showRetireConfirm() {
     if (Game.state.phase !== 'wave') return;
+    Game.state.paused = true;
     const st = Game.state;
     const score = Game.calcScore();
+    const bd = Game.scoreBreakdown();
     const body = document.getElementById('bf-modal-body');
     let html = '<div class="bf-modal-title">功成身退</div>';
     html += `<div class="bf-retire-score">当前得分</div>`;
@@ -97,8 +99,9 @@ export const Modals = {
     html += `<div>当前波数</div><div>第 ${st.wave} 波</div>`;
     html += `<div>累计击杀</div><div>${st.kills}</div>`;
     html += `<div>Boss 击杀</div><div>${st.bossKills}</div>`;
-    html += `<div>基地血量</div><div>${Math.floor(st.baseHp)}</div>`;
     html += `<div>英雄数量</div><div>${Game.entities.heroes.length}</div>`;
+    html += `<div>基础分</div><div>${bd.base}</div>`;
+    html += `<div>英雄倍率</div><div>×${(1 + bd.totalMult / 100).toFixed(2)}</div>`;
     html += '</div>';
     html += '<div class="bf-retire-tip">将以当前成绩录入排行榜并结束本局</div>';
     html += '<div class="bf-gameover-btns">';
@@ -109,6 +112,7 @@ export const Modals = {
     document.getElementById('bf-modal').classList.remove('hidden');
     document.getElementById('bf-retire-cancel').addEventListener('click', () => {
       document.getElementById('bf-modal').classList.add('hidden');
+      Game.state.paused = false;
     });
     document.getElementById('bf-retire-ok').addEventListener('click', async () => {
       // 复用 _gameOver 流程：设置 finalScore → phase 切换 → 提交 → 显示结束页
@@ -126,6 +130,7 @@ export const Modals = {
   /** 渲染游戏结束弹窗（onGameOver 与 showRetireConfirm 共用） */
   _renderGameOver(score, result) {
     const st = Game.state;
+    const bd = Game.scoreBreakdown();
     const rank = result && result.success ? `排名 #${result.rank}` : '';
     const body = document.getElementById('bf-modal-body');
     let html = '<div class="bf-modal-title">游戏结束</div>';
@@ -135,8 +140,10 @@ export const Modals = {
     html += `<div>波数 ×100</div><div>${st.wave} × 100 = ${st.wave * 100}</div>`;
     html += `<div>击杀 ×2</div><div>${st.kills} × 2 = ${st.kills * 2}</div>`;
     html += `<div>Boss ×300</div><div>${st.bossKills} × 300 = ${st.bossKills * 300}</div>`;
-    html += `<div>基地血量</div><div>${Math.floor(st.baseHp)}</div>`;
     html += `<div>金币 ÷20</div><div>${Math.floor(st.gold / 20)}</div>`;
+    html += `<div>基础分合计</div><div>${bd.base}</div>`;
+    html += `<div>英雄数量</div><div>${Game.entities.heroes.length}</div>`;
+    html += `<div>英雄倍率</div><div>×${(1 + bd.totalMult / 100).toFixed(2)}</div>`;
     html += '</div>';
     html += '<div class="bf-gameover-btns">';
     html += '<button class="bf-btn-primary" id="bf-restart">再来一局</button>';

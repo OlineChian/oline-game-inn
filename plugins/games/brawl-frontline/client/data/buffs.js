@@ -59,6 +59,16 @@ export const BUFF_POOL = [
     effect: { type: 'kill-gold-flat', value: 2 },
     desc: '每次击杀额外获得 2 金币'
   },
+  {
+    id: 'kill-ticket-1', name: '击杀英雄券 +1', quality: 'rare',
+    effect: { type: 'kill-ticket-flat', value: 1 },
+    desc: '每次击杀额外获得 1 英雄券'
+  },
+  {
+    id: 'kill-ticket-rate-30', name: '击杀英雄券 +30%', quality: 'mythic',
+    effect: { type: 'kill-ticket-rate', value: 0.30 },
+    desc: '击杀掉落的英雄券数量提升 30%'
+  },
   // ---- 神话 ----
   {
     id: 'hero-atk-50', name: '英雄攻击 +50%', quality: 'mythic',

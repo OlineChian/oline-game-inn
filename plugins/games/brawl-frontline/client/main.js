@@ -23,6 +23,9 @@ import { Facilities as FacilitiesUI } from './ui/facilities.js';
 import { Unlock } from './ui/unlock.js';
 import { Modals } from './ui/modals.js';
 import { Leaderboard } from './ui/leaderboard.js';
+import { Settings } from './ui/settings.js';
+import { MergingUI } from './ui/merging.js';
+import { Audio } from './core/audio.js';
 import { AntiCheat } from './core/anti-cheat.js';
 
 function boot() {
@@ -64,23 +67,35 @@ function boot() {
   document.getElementById('bf-lb-modal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) Leaderboard.close();
   });
-  // 功成身退按钮
-  document.getElementById('bf-retire-btn').addEventListener('click', () => Modals.showRetireConfirm());
+  // 设置按钮（含功成身退入口）
+  document.getElementById('bf-settings-btn').addEventListener('click', () => Settings.show());
   // 英雄解锁按钮
   document.getElementById('bf-unlock-btn').addEventListener('click', () => Unlock.show());
+  // 宝库弹窗内"英雄合并"按钮（事件委托，shop.js 渲染按钮后由 main 监听）
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('#bf-vault-merge');
+    if (!btn) return;
+    const vaultModal = document.getElementById('bf-vault-modal');
+    if (vaultModal) vaultModal.remove();
+    MergingUI.show();
+  });
 
   // 6. 反作弊输入追踪：监听全局点击/触屏/按键（捕获玩家真实操作）
   document.addEventListener('mousedown', () => AntiCheat.tap());
   document.addEventListener('touchstart', () => AntiCheat.tap(), { passive: true });
   document.addEventListener('keydown', (e) => { if (!e.repeat) AntiCheat.tap(); });
+  // 用户首次交互后尝试播放（浏览器策略；Audio.enabled 默认 false，仅当已开启时才出声）
+  const tryPlayBgm = () => Audio.play();
+  document.addEventListener('mousedown', tryPlayBgm, { once: true });
+  document.addEventListener('touchstart', tryPlayBgm, { once: true, passive: true });
 
-  // 7. Hook 渲染循环：每帧渲染后同步更新 HUD、面板按钮状态与功成身退按钮可见性
+  // 7. Hook 渲染循环：每帧渲染后同步更新 HUD、面板按钮状态与设置按钮可见性
   const origRender = Game.render.bind(Game);
   Game.render = function () {
     origRender();
     Hud.update();
     Shop.refresh();
-    _updateRetireBtn();
+    _updateSettingsBtn();
   };
 
   // 8. 启动主循环并进入英雄选择
@@ -89,6 +104,28 @@ function boot() {
 
   // 9. 首次进入炮台位置提示（localStorage 记录关闭状态，仅显示一次）
   _initFacilityTip();
+  // 10. 首次进入 BGM 推荐弹窗（有曲目且未关闭过才显示，localStorage 记忆不再推送）
+  _initBgmPrompt();
+}
+
+/** BGM 首次推荐：加载曲目清单后，若未关闭过且有曲目，显示右上角弹窗 */
+function _initBgmPrompt() {
+  const KEY = 'bf:bgm-prompt-closed';
+  try { if (localStorage.getItem(KEY) === '1') return; } catch (e) { return; }
+  Audio.init().then(() => {
+    if (!Audio.hasTracks()) return;  // 无曲目不打扰
+    const el = document.getElementById('bf-bgm-prompt');
+    if (!el) return;
+    el.classList.remove('hidden');
+    const close = (enable) => {
+      el.classList.add('hidden');
+      try { localStorage.setItem(KEY, '1'); } catch (e) {}
+      if (enable) { Audio.enabled = true; Audio.play(); }
+    };
+    document.getElementById('bf-bgm-prompt-on').addEventListener('click', () => close(true));
+    document.getElementById('bf-bgm-prompt-off').addEventListener('click', () => close(false));
+    document.getElementById('bf-bgm-prompt-close').addEventListener('click', () => close(false));
+  });
 }
 
 /** 炮台位置首次提示：未关闭过则显示，X 按钮关闭并记录 */
@@ -106,9 +143,9 @@ function _initFacilityTip() {
   });
 }
 
-/** 功成身退按钮仅在 wave 阶段可见（英雄选择/强化/结束均隐藏） */
-function _updateRetireBtn() {
-  const btn = document.getElementById('bf-retire-btn');
+/** 设置按钮仅在 wave 阶段可见（英雄选择/强化/结束均隐藏） */
+function _updateSettingsBtn() {
+  const btn = document.getElementById('bf-settings-btn');
   if (!btn) return;
   const inWave = Game.state.phase === 'wave';
   btn.classList.toggle('hidden', !inWave);

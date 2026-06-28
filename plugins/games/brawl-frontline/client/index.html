@@ -15,7 +15,7 @@
         <div class="game-header-title">乱斗前线</div>
         <div class="game-header-actions">
             <button class="game-header-btn" id="bf-lb-btn">🏆 排行榜</button>
-            <button class="game-header-btn bf-retire-btn hidden" id="bf-retire-btn" title="以当前成绩录入排行榜并退出">🏳️ 功成身退</button>
+            <button class="game-header-btn bf-settings-btn hidden" id="bf-settings-btn" title="设置与退出">设置</button>
         </div>
     </div>
 
@@ -75,6 +75,17 @@
     <!-- Toast 提示 -->
     <div id="bf-toast" class="bf-toast"></div>
 
+    <!-- BGM 首次推荐弹窗（右上角，仅首次显示，localStorage 记忆后不再推送） -->
+    <div class="bf-bgm-prompt hidden" id="bf-bgm-prompt">
+        <button class="bf-bgm-prompt-close" id="bf-bgm-prompt-close" aria-label="关闭">×</button>
+        <div class="bf-bgm-prompt-title">来听点音乐吧</div>
+        <div class="bf-bgm-prompt-desc">沉浸战场，开启背景音乐</div>
+        <div class="bf-bgm-prompt-btns">
+            <button class="bf-bgm-prompt-on" id="bf-bgm-prompt-on">开启音乐</button>
+            <button class="bf-bgm-prompt-off" id="bf-bgm-prompt-off">暂不</button>
+        </div>
+    </div>
+
     <!-- 通用弹窗（英雄选择/强化/游戏结束） -->
     <div id="bf-modal" class="bf-modal hidden">
         <div class="bf-modal-content">
@@ -92,6 +103,7 @@
     </div>
 
     <script src="/score-signer.js"></script>
+    <script src="/ban-notice.js"></script>
     <script type="module" src="main.js"></script>
 </body>
 </html>

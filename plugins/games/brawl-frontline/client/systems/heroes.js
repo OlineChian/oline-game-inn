@@ -97,7 +97,7 @@ export const Heroes = {
     const hero = {
       uid: uid('h'),
       id: data.id, name: data.name, role: data.role, faction: data.faction,
-      star,
+      rarity: data.rarity, star,
       x: LAYOUT.base.x + randomRange(-50, 50),
       y: LAYOUT.base.y - 80,
       baseHp: data.hp, baseAttack: data.attack,
@@ -135,9 +135,15 @@ export const Heroes = {
     const hpRate = Buffs.heroHpRate();
     const atkRate = Buffs.heroAtkRate();
     const aspdRate = Buffs.heroAspdRate();
-    hero.maxHp = Math.floor(hero.baseHp * Math.pow(STAR_GROWTH.hp, hero.star - 1) * (1 + hpRate));
-    hero.attack = Math.floor(hero.baseAttack * Math.pow(STAR_GROWTH.attack, hero.star - 1) * (1 + atkRate));
-    hero.effectiveAspd = hero.attackSpeed * (1 + aspdRate);
+    // 1-5 星用 STAR_GROWTH 乘算；6/7 星叠加合并倍率（5★×2.5/6★×3.0 血伤，1.5/2.0 攻速）
+    let hpMult = Math.pow(STAR_GROWTH.hp, Math.min(hero.star, 5) - 1);
+    let atkMult = Math.pow(STAR_GROWTH.attack, Math.min(hero.star, 5) - 1);
+    let aspdMult = 1;
+    if (hero.star >= 7) { hpMult *= 2.5 * 3.0; atkMult *= 2.5 * 3.0; aspdMult = 1.5 * 2.0; }
+    else if (hero.star === 6) { hpMult *= 2.5; atkMult *= 2.5; aspdMult = 1.5; }
+    hero.maxHp = Math.floor(hero.baseHp * hpMult * (1 + hpRate));
+    hero.attack = Math.floor(hero.baseAttack * atkMult * (1 + atkRate));
+    hero.effectiveAspd = hero.attackSpeed * aspdMult * (1 + aspdRate);
     hero.hp = hero.maxHp;
   },
 

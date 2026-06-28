@@ -21,12 +21,13 @@ export const Economy = {
     }
   },
 
-  /** 击杀掉落奖励 */
+  /** 击杀掉落奖励：金币 + 英雄券（受 kill-gold-flat / kill-ticket-flat / kill-ticket-rate buff 加成） */
   onKill(enemy) {
-    const extra = this._buffFlat('kill-gold-flat');
-    Game.state.gold += enemy.goldDrop + extra;
-    // 英雄券固定数量掉落（不再是概率）
-    Game.state.tickets += enemy.ticketDrop || 0;
+    Game.state.gold += enemy.goldDrop + this._buffFlat('kill-gold-flat');
+    const base = enemy.ticketDrop || 0;
+    const tFlat = this._buffFlat('kill-ticket-flat');
+    const tRate = this._buffRate('kill-ticket-rate');
+    Game.state.tickets += Math.floor(base * (1 + tRate)) + tFlat;
   },
 
   addGold(n) { Game.state.gold += n; },

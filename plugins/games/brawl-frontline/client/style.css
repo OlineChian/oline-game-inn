@@ -262,27 +262,42 @@ body {
 }
 .bf-card-stat-line { white-space: nowrap; }
 .bf-card-super {
-  font-size: 10px; text-align: center; margin-top: 4px;
-  padding: 3px 4px; border-radius: var(--bf-r);
+  font-size: 9px; text-align: center; margin-top: 4px;
+  padding: 2px 4px; border-radius: var(--bf-r);
   font-weight: 700;
   border: 2px solid var(--bf-border);
+  display: flex; flex-direction: column; gap: 1px;
+  line-height: 1.2;
 }
-.bf-card-super.locked {
-  color: var(--bf-text-3);
-  background: var(--bf-card-alt);
-}
-.bf-card-super.unlocked {
-  color: #222;
-  background: var(--bf-gold);
-}
-.bf-card-count {
+.bf-card-super.locked { color: var(--bf-text-3); background: var(--bf-card-alt); }
+.bf-card-super.unlocked { color: #222; background: var(--bf-gold); }
+.bf-card-super-label { font-size: 8px; opacity: 0.75; letter-spacing: 1px; }
+.bf-card-super-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 卡牌右上角星级数量徽章：5星及以下（红）/ 6星（金渐变）/ 7星（紫+火焰） */
+.bf-card-badges {
   position: absolute; top: 4px; right: 6px;
-  background: var(--bf-enemy); color: #fff;
-  font-size: 10px; font-weight: 900;
-  padding: 1px 8px; border-radius: var(--bf-r-btn);
-  min-width: 20px; text-align: center;
+  display: flex; gap: 3px; z-index: 2;
+}
+.bf-card-badge {
+  font-size: 9px; font-weight: 900;
+  padding: 1px 6px; border-radius: var(--bf-r-btn);
+  min-width: 18px; text-align: center;
   border: 2px solid var(--bf-border);
-  z-index: 2;
+  color: #fff;
+}
+.bf-badge-5 { background: var(--bf-enemy); }
+.bf-badge-6 {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #4a2c00;
+}
+.bf-badge-7 {
+  background: #7c3aed; color: #fff;
+  animation: bf-flame 0.7s ease-in-out infinite alternate;
+}
+@keyframes bf-flame {
+  0%   { box-shadow: 0 0 3px rgba(168,85,247,0.5), 0 0 6px rgba(124,58,237,0.3); }
+  100% { box-shadow: 0 0 7px rgba(216,180,254,0.9), 0 0 12px rgba(168,85,247,0.7); }
 }
 
 /* ============ 卡片操作弹层（招募/升星） ============ */
@@ -447,15 +462,84 @@ body {
   margin-bottom: 14px;
 }
 
-/* ---- 功成身退按钮 + 确认弹窗 ---- */
-.bf-retire-btn {
-  background: var(--bf-upgrade); color: #fff;
+/* ---- 设置面板 ---- */
+.bf-settings-btn {
+  background: var(--bf-card-alt); color: var(--bf-text);
   border: var(--bf-bw) solid var(--bf-border);
   box-shadow: var(--bf-shadow-sm);
 }
-.bf-retire-btn:hover {
-  background: #1ab852;
+.bf-settings-btn:hover { background: #DDDDDD; }
+.bf-setting-label {
+  font-size: 13px; font-weight: 900; color: var(--bf-text-2);
+  letter-spacing: 1px; margin: 10px 0 8px;
 }
+.bf-setting-speed-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.bf-speed-btn {
+  flex: 1; padding: 10px 0;
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn);
+  background: var(--bf-card-alt); color: var(--bf-text);
+  font-weight: 900; cursor: pointer; font-size: 13px;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: var(--bf-font);
+}
+.bf-speed-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--bf-border); }
+.bf-speed-btn.active {
+  background: var(--bf-primary-btn); color: #fff;
+}
+.bf-setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-top: 1px solid #EEE;
+}
+.bf-setting-name {
+  font-size: 14px; font-weight: 700; color: var(--bf-text);
+}
+.bf-toggle-btn {
+  padding: 6px 18px;
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn);
+  font-weight: 900; cursor: pointer; font-size: 13px;
+  box-shadow: var(--bf-shadow-sm); font-family: var(--bf-font);
+  min-width: 60px;
+}
+.bf-toggle-btn.on { background: var(--bf-upgrade); color: #fff; }
+.bf-toggle-btn.off { background: var(--bf-card-alt); color: var(--bf-text-2); }
+.bf-volume-slider {
+  width: 140px; height: 6px; -webkit-appearance: none; appearance: none;
+  background: var(--bf-card-alt); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: 999px; outline: none; cursor: pointer;
+}
+.bf-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px;
+  background: var(--bf-primary-btn); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: 50%; cursor: pointer;
+}
+.bf-volume-slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  background: var(--bf-primary-btn); border: var(--bf-bw) solid var(--bf-border);
+  border-radius: 50%; cursor: pointer;
+}
+.bf-setting-retire-tip {
+  text-align: center; font-size: 12px;
+  color: var(--bf-text-3); margin: 18px 0 8px; font-weight: 600;
+}
+.bf-retire-danger-btn {
+  display: block; width: 100%; padding: 12px;
+  background: var(--bf-enemy); color: #fff;
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn);
+  font-weight: 900; font-size: 14px; cursor: pointer;
+  box-shadow: var(--bf-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: var(--bf-font); letter-spacing: 1px;
+}
+.bf-retire-danger-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--bf-border); }
+.bf-retire-danger-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+/* 功成身退确认弹窗分数显示 */
 .bf-retire-score {
   text-align: center; font-size: 13px;
   color: var(--bf-text-2); margin-top: 4px; font-weight: 600;
@@ -522,6 +606,57 @@ body {
 .bf-vault-title { font-size: 18px; font-weight: 900; color: var(--bf-text); margin-bottom: 10px; letter-spacing: 1px; }
 .bf-vault-info { font-size: 13px; color: var(--bf-text-2); margin-bottom: 14px; line-height: 1.6; font-weight: 600; }
 .bf-vault-maxed { color: var(--bf-upgrade); font-weight: 900; padding: 8px; text-align: center; }
+.bf-vault-locked-tip { font-size: 12px; color: var(--bf-text-3); font-weight: 600; padding: 8px; text-align: center; margin-top: 8px; }
+
+/* ============ 英雄合并弹窗 ============ */
+.bf-merge-modal {
+  position: fixed; inset: 0; background: rgba(34,34,34,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 60; padding: 16px;
+}
+.bf-merge-content {
+  position: relative; background: var(--bf-card);
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r);
+  padding: 20px 18px 16px; max-width: 360px; width: 100%;
+  box-shadow: var(--bf-shadow); max-height: 90vh; overflow-y: auto;
+}
+.bf-merge-tabs { display: flex; gap: 8px; margin: 8px 0 14px; }
+.bf-merge-tab {
+  flex: 1; padding: 10px 6px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn); background: var(--bf-card-alt);
+  font-family: var(--bf-font); font-size: 13px; font-weight: 800; color: var(--bf-text);
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+}
+.bf-merge-tab.active { background: var(--bf-primary-btn); color: #fff; }
+.bf-merge-tab.locked { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.bf-merge-locked-tip, .bf-merge-empty {
+  text-align: center; font-size: 13px; color: var(--bf-text-3);
+  font-weight: 600; padding: 20px 8px;
+}
+.bf-merge-hero-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.bf-merge-hero-card {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: 12px; background: var(--bf-card); cursor: pointer;
+  box-shadow: var(--bf-shadow-sm); font-family: var(--bf-font);
+}
+.bf-merge-hero-card.selected { background: #EAF2FF; border-color: var(--bf-primary-btn); }
+.bf-merge-hero-color { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--bf-border); flex-shrink: 0; }
+.bf-merge-hero-name { flex: 1; text-align: left; font-size: 14px; font-weight: 800; color: var(--bf-text); }
+.bf-merge-hero-count { font-size: 12px; font-weight: 700; color: var(--bf-text-2); }
+.bf-merge-count-row { margin-bottom: 12px; }
+.bf-merge-count-label { font-size: 12px; font-weight: 800; color: var(--bf-text-2); margin-bottom: 6px; }
+.bf-merge-count-btns { display: flex; gap: 6px; }
+.bf-merge-count-btn {
+  flex: 1; padding: 8px 4px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn); background: var(--bf-card-alt);
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+  font-family: var(--bf-font); display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.bf-merge-count-btn.selected { background: var(--bf-gold); border-color: var(--bf-gold-border); }
+.bf-merge-count-btn.disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.bf-merge-count-n { font-size: 14px; font-weight: 900; color: var(--bf-text); }
+.bf-merge-count-cost { font-size: 11px; font-weight: 700; color: var(--bf-text-2); }
 
 /* ============ 未解锁英雄卡片（仅灰度，无锁 emoji） ============ */
 .bf-card.locked {
@@ -653,4 +788,66 @@ body {
   .bf-modal-content:has(.bf-unlock-grid) { max-width: 360px; }
   .bf-unlock-grid { grid-template-columns: 1fr; }
   .bf-card.bf-unlock-card { max-width: 220px; }
+}
+
+/* ============ BGM 首次推荐弹窗（右上角） ============ */
+.bf-bgm-prompt {
+  position: fixed; top: 56px; right: 12px;
+  background: var(--bf-card);
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r);
+  box-shadow: var(--bf-shadow);
+  padding: 14px 16px 12px;
+  z-index: 80; max-width: 220px;
+  animation: bf-bgm-pop 0.3s ease;
+}
+@keyframes bf-bgm-pop {
+  0%   { transform: translateX(24px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+.bf-bgm-prompt-close {
+  position: absolute; top: -10px; right: -10px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bf-enemy); color: #fff;
+  border: var(--bf-bw) solid var(--bf-border);
+  font-size: 16px; font-weight: 900; line-height: 1;
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.bf-bgm-prompt-close:active { transform: translateY(2px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-bgm-prompt-title { font-size: 14px; font-weight: 900; color: var(--bf-text); letter-spacing: 1px; margin-bottom: 2px; }
+.bf-bgm-prompt-desc { font-size: 11px; color: var(--bf-text-2); font-weight: 600; margin-bottom: 10px; }
+.bf-bgm-prompt-btns { display: flex; gap: 6px; }
+.bf-bgm-prompt-on {
+  flex: 1; padding: 7px 4px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn); background: var(--bf-primary-btn); color: #fff;
+  font-family: var(--bf-font); font-size: 12px; font-weight: 900;
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+}
+.bf-bgm-prompt-off {
+  flex: 1; padding: 7px 4px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn); background: var(--bf-card-alt); color: var(--bf-text);
+  font-family: var(--bf-font); font-size: 12px; font-weight: 900;
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+}
+.bf-bgm-prompt-on:active, .bf-bgm-prompt-off:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+
+/* ============ 设置面板：下一曲按钮 + 曲目名 ============ */
+.bf-next-btn {
+  padding: 4px 12px; border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn); background: var(--bf-card-alt);
+  font-family: var(--bf-font); font-size: 11px; font-weight: 800;
+  cursor: pointer; box-shadow: var(--bf-shadow-sm); color: var(--bf-text);
+}
+.bf-next-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.bf-next-btn:not(:disabled):active { transform: translateY(2px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-track-name {
+  flex: 1; min-width: 0; font-size: 10px; color: var(--bf-text-3); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
+}
+
+/* ============ 手机端：canvas 顶部对齐，避免上方英雄被压缩/遮挡 ============ */
+@media (max-width: 640px) {
+  .bf-canvas-wrap { align-items: flex-start; padding-bottom: 8px; }
+  .bf-cards-scroll { padding: 6px 6px; }
 }

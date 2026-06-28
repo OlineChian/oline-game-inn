@@ -1,10 +1,7 @@
 /**
  * 底部英雄卡片系统（手机端友好，横向滑动）
- * - 每个英雄种类一张卡片：英雄色顶条 + 大名字 + 左上星级 + 右上血量 + 属性 + 超能状态
- * - 卡片背景按定位装饰：近战=斜线/射手=靶心/坦克=盾形/召唤=齿轮
- * - 点击卡片选中，弹出招募/升星按钮（并排各占一半，不足时变灰+冷却提示）
- * - 全局升星：升星后所有同种类英雄与新招募英雄都带新星级
- * - 弹层只构建一次 DOM，每帧仅更新 disabled 状态（避免点击丢失）
+ * 每英雄一张卡片：色条+名字+星级+血量+属性+超能+数量徽章
+ * 点击弹出招募/升星按钮；全局升星同步同种类实例
  */
 import { Game } from '../core/game.js';
 import { HEROES, STAR_UPGRADE_COST, STAR_GROWTH, SUPER_UNLOCK_STAR, RARITY_COLOR } from '../data/heroes.js';
@@ -63,19 +60,18 @@ export const Shop = {
       const rarityColor = RARITY_COLOR[h.rarity];
       const unlocked = Game.state.unlockedHeroes.includes(h.id);
       const lockCls = unlocked ? '' : ' locked';
+      const atkLabel = h.percentDamage ? `${Math.round(h.percentDamage.rate * 100)}%` : h.attack;
       return `<div class="bf-card ${roleCls}${lockCls}" data-hero="${h.id}" style="--role-color:${roleColor};--rarity-color:${rarityColor}">
         <div class="bf-card-role-bar">${h.role}</div>
-        <div class="bf-card-top">
-          <span class="bf-card-stars">★</span>
-          <span class="bf-card-hp">血量 ${h.hp}</span>
-        </div>
+        <div class="bf-card-top"><span class="bf-card-stars">★</span><span class="bf-card-hp">${h.hp}</span></div>
         <div class="bf-card-name">${h.name}</div>
-        <div class="bf-card-stats">
-          <div class="bf-card-stat-line">伤害 ${h.attack}</div>
-          <div class="bf-card-stat-line">射程 ${h.range}</div>
+        <div class="bf-card-stats"><div class="bf-card-stat-line">伤害 ${atkLabel}</div><div class="bf-card-stat-line">射程 ${h.range}</div></div>
+        <div class="bf-card-super locked"><div class="bf-card-super-label">超级技能</div><div class="bf-card-super-name">${SUPER_UNLOCK_STAR}星解锁</div></div>
+        <div class="bf-card-badges">
+          <span class="bf-card-badge bf-badge-7 hidden" data-badge-7></span>
+          <span class="bf-card-badge bf-badge-6 hidden" data-badge-6></span>
+          <span class="bf-card-badge bf-badge-5 hidden" data-badge-5></span>
         </div>
-        <div class="bf-card-super locked">${h.super.name}</div>
-        <div class="bf-card-count hidden" data-count></div>
       </div>`;
     }).join('');
     this._els.cards.innerHTML = html;
@@ -114,19 +110,13 @@ export const Shop = {
     const recruitCost = data.cost.tickets || 1;
     const upgCost = curStar >= 5 ? null : STAR_UPGRADE_COST[curStar - 1];
     // 招募按钮
-    const recruitBtn = `<button class="bf-popup-btn recruit" data-act="recruit">
-      <span class="bf-popup-btn-label">招募</span>
-      <span class="bf-popup-btn-cost">🎫${recruitCost}</span>
-    </button>`;
+    const recruitBtn = `<button class="bf-popup-btn recruit" data-act="recruit"><span class="bf-popup-btn-label">招募</span><span class="bf-popup-btn-cost">🎫${recruitCost}</span></button>`;
     // 升星按钮
     let upgBtn;
     if (upgCost === null) {
       upgBtn = `<button class="bf-popup-btn starup" disabled><span class="bf-popup-btn-label">已满星</span></button>`;
     } else {
-      upgBtn = `<button class="bf-popup-btn starup" data-act="star-up">
-        <span class="bf-popup-btn-label">升星 ${curStar}→${curStar + 1}</span>
-        <span class="bf-popup-btn-cost">💰${upgCost}</span>
-      </button>`;
+      upgBtn = `<button class="bf-popup-btn starup" data-act="star-up"><span class="bf-popup-btn-label">升星 ${curStar}→${curStar + 1}</span><span class="bf-popup-btn-cost">💰${upgCost}</span></button>`;
     }
     this._els.popupBtns.innerHTML = recruitBtn + upgBtn;
     this._els.popup.classList.remove('hidden');
@@ -253,17 +243,22 @@ export const Shop = {
       if (!data) return;
       if (card.classList.contains('locked')) return;  // 跳过未解锁英雄
       const star = Game.systems.heroes.getStar(heroId);
-      const hp = Math.floor(data.hp * Math.pow(STAR_GROWTH.hp, star - 1));
-      const atk = Math.floor(data.attack * Math.pow(STAR_GROWTH.attack, star - 1));
-      const count = Game.entities.heroes.filter(h => h.id === heroId).length;
-      card.querySelector('.bf-card-stars').textContent = '★'.repeat(star);
-      card.querySelector('.bf-card-hp').textContent = `血量 ${hp}`;
+      const m6 = star >= 7 ? 2.5 * 3.0 : (star === 6 ? 2.5 : 1);
+      const hp = Math.floor(data.hp * Math.pow(STAR_GROWTH.hp, Math.min(star, 5) - 1) * m6);
+      const atkLabel = data.percentDamage
+        ? `${Math.round(data.percentDamage.rate * 100)}%`
+        : Math.floor(data.attack * Math.pow(STAR_GROWTH.attack, Math.min(star, 5) - 1) * m6);
+      card.querySelector('.bf-card-stars').textContent = star >= 6 ? `☾${star}` : '★'.repeat(star);
+      card.querySelector('.bf-card-hp').textContent = hp;
       const lines = card.querySelectorAll('.bf-card-stat-line');
-      if (lines.length >= 2) { lines[0].textContent = `伤害 ${atk}`; lines[1].textContent = `射程 ${data.range}`; }
-      card.querySelector('.bf-card-super').className = `bf-card-super ${star >= SUPER_UNLOCK_STAR ? 'unlocked' : 'locked'}`;
-      const countEl = card.querySelector('[data-count]');
-      countEl.textContent = `×${count}`;
-      countEl.classList.toggle('hidden', count === 0);
+      if (lines.length >= 2) { lines[0].textContent = `伤害 ${atkLabel}`; lines[1].textContent = `射程 ${data.range}`; }
+      const unlocked = star >= SUPER_UNLOCK_STAR;
+      card.querySelector('.bf-card-super').className = `bf-card-super ${unlocked ? 'unlocked' : 'locked'}`;
+      card.querySelector('.bf-card-super-name').textContent = unlocked ? data.super.name : `${SUPER_UNLOCK_STAR}星解锁`;
+      const insts = Game.entities.heroes.filter(h => h.id === heroId);
+      _setBadge(card, 5, insts.filter(h => h.star < 6).length);
+      _setBadge(card, 6, insts.filter(h => h.star === 6).length);
+      _setBadge(card, 7, insts.filter(h => h.star >= 7).length);
     });
     if (this._selectedHero) {
       this._updatePopupState();
@@ -279,21 +274,20 @@ export const Shop = {
     if (info.isMax) {
       upgBtn = '<div class="bf-vault-maxed">已达最高等级</div>';
     } else if (!info.waveReady) {
-      upgBtn = `<button class="bf-popup-btn starup locked" disabled style="--progress:0%">
-        <span class="bf-popup-btn-label">第${info.requiredWave}波解锁</span></button>`;
+      upgBtn = `<button class="bf-popup-btn starup locked" disabled style="--progress:0%"><span class="bf-popup-btn-label">第${info.requiredWave}波解锁</span></button>`;
     } else {
       const ratio = Math.min(1, Game.state.gold / info.upgradeCost);
-      upgBtn = `<button class="bf-popup-btn starup" id="bf-vault-upg"
-        style="--progress:${ratio * 100}%" ${ratio < 1 ? 'disabled' : ''}>
-        <span class="bf-popup-btn-label">升级 ${info.level}→${info.level + 1}</span>
-        <span class="bf-popup-btn-cost">💰${info.upgradeCost}</span></button>`;
+      upgBtn = `<button class="bf-popup-btn starup" id="bf-vault-upg" style="--progress:${ratio * 100}%" ${ratio < 1 ? 'disabled' : ''}><span class="bf-popup-btn-label">升级 ${info.level}→${info.level + 1}</span><span class="bf-popup-btn-cost">💰${info.upgradeCost}</span></button>`;
     }
     const status = info.isMax ? '已达最高等级' : (info.waveReady ? `需要 💰${info.upgradeCost}` : `第${info.requiredWave}波解锁升级`);
-    const html = `<div class="bf-vault-modal" id="bf-vault-modal">
-      <div class="bf-vault-content">
+    const mergeUnlocked = info.level >= 6;
+    const mergeBtn = mergeUnlocked
+      ? `<button class="bf-popup-btn starup" id="bf-vault-merge" style="margin-top:8px;"><span class="bf-popup-btn-label">英雄合并</span><span class="bf-popup-btn-cost">5★→6★ / 6★→7★</span></button>`
+      : '<div class="bf-vault-locked-tip">宝库 6 级解锁英雄合并</div>';
+    const html = `<div class="bf-vault-modal" id="bf-vault-modal"><div class="bf-vault-content">
         <div class="bf-vault-title">金库 ${info.level}/${info.maxLevel}</div>
         <div class="bf-vault-info">产金 ${info.goldPerSec}/秒<br>${status}</div>
-        ${upgBtn}
+        ${upgBtn}${mergeBtn}
         <button class="bf-btn-secondary" id="bf-vault-close" style="margin-top:10px;">关闭</button>
       </div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
@@ -302,13 +296,11 @@ export const Shop = {
     document.getElementById('bf-vault-close').addEventListener('click', close);
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     const upg = document.getElementById('bf-vault-upg');
-    if (upg) {
-      upg.addEventListener('click', () => {
-        const r = Game.systems.buildings.upgradeVault();
-        if (!r.ok) this._toast(r.msg);
-        close();
-      });
-    }
+    if (upg) upg.addEventListener('click', () => {
+      const r = Game.systems.buildings.upgradeVault();
+      if (!r.ok) this._toast(r.msg);
+      close();
+    });
   },
 
   _toast(msg) {
@@ -320,3 +312,11 @@ export const Shop = {
     this._toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
   }
 };
+
+/** 设置卡牌右上角星级数量徽章（n=0 时隐藏，自动靠右对齐） */
+function _setBadge(card, star, n) {
+  const el = card.querySelector(`[data-badge-${star}]`);
+  if (!el) return;
+  el.textContent = n > 0 ? `×${n}` : '';
+  el.classList.toggle('hidden', n === 0);
+}

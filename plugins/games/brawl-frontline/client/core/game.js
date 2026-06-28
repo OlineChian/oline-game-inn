@@ -61,6 +61,7 @@ export const Game = {
       buffPending: false,
       heroStars: {},          // 全局星级映射 { heroId: starLevel }
       paused: false,
+      speedMultiplier: 1,     // 游戏速度倍率（0.5 / 1 / 2 / 4）
       heroChoices: [],        // 起始 3 选 1
       unlockedHeroes: getStarterHeroIds(),  // 已解锁英雄（开局含初始+稀有）
       unlockChoices: [],      // 当前解锁候选池（3 选 1）
@@ -104,7 +105,7 @@ export const Game = {
       if (!this._running) return;
       const dt = Math.min(0.05, (ts - this._lastTs) / 1000);
       this._lastTs = ts;
-      if (!this.state.paused) this.update(dt);
+      if (!this.state.paused) this.update(dt * (this.state.speedMultiplier || 1));
       this.render();
       this._raf = requestAnimationFrame(loop);
     };
@@ -201,16 +202,34 @@ export const Game = {
     this.entities.projectiles.push(p);
   },
 
-  /** 计算 Score */
+  /** 计算 Score：基础分 × (1 + 英雄总倍率/100)
+   *  基础分 = 波数×100 + 击杀×2 + Boss×300 + 金币/20（去除基地血量）
+   *  单英雄倍率：5 星以下 5-15（星数↑/稀有度↓），6 星 20，7 星 30 */
   calcScore() {
     const st = this.state;
-    return Math.floor(
-      st.wave * 100 +
-      st.kills * 2 +
-      st.bossKills * 300 +
-      Math.max(0, st.baseHp) +
-      st.gold / 20
-    );
+    const base = st.wave * 100 + st.kills * 2 + st.bossKills * 300 + st.gold / 20;
+    const rarityFactor = { starter: 0, rare: -1, epic: -2, mythic: -3, legendary: -4 };
+    let totalMult = 0;
+    this.entities.heroes.forEach(h => {
+      if (h.star >= 7) totalMult += 30;
+      else if (h.star >= 6) totalMult += 20;
+      else totalMult += Math.max(5, Math.min(15, 5 + (h.star - 1) * 2.5 + (rarityFactor[h.rarity] || 0)));
+    });
+    return Math.floor(base * (1 + totalMult / 100));
+  },
+
+  /** 计算英雄倍率明细（用于分数面板展示） */
+  scoreBreakdown() {
+    const st = this.state;
+    const base = st.wave * 100 + st.kills * 2 + st.bossKills * 300 + st.gold / 20;
+    const rarityFactor = { starter: 0, rare: -1, epic: -2, mythic: -3, legendary: -4 };
+    let totalMult = 0;
+    this.entities.heroes.forEach(h => {
+      if (h.star >= 7) totalMult += 30;
+      else if (h.star >= 6) totalMult += 20;
+      else totalMult += Math.max(5, Math.min(15, 5 + (h.star - 1) * 2.5 + (rarityFactor[h.rarity] || 0)));
+    });
+    return { base: Math.floor(base), totalMult, final: Math.floor(base * (1 + totalMult / 100)) };
   },
 
   _gameOver() {
