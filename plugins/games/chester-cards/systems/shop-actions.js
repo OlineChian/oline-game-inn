@@ -54,7 +54,7 @@ export function createShopActions(state, config, renderAll) {
    * - 阶梯价格：第 1 次 0、第 2 次 2、第 3 次 5、第 4 次 10、第 5 次 20
    * - 最多 5 次，每轮（每次打开商店）重置
    * - 阶段 8：Lv5 商店所有刷新免费
-   * - 刷新后重新抽取糖果货架、牌型升级选项、特殊商品
+   * - 刷新仅重新抽取糖果货架与牌型升级选项；特殊商品不随刷新变化
    */
   function refreshShop() {
     if (state.phase !== 'roundWin') return;
@@ -71,7 +71,6 @@ export function createShopActions(state, config, renderAll) {
     const candyCount = getCandyCountForLevel(state.shopLevel || 1);
     state._candyOfferings = getCandyShopOfferings(state.round, candyCount);
     state._upgradeOfferings = getHandUpgradeOfferings(state.round, state.handLevels);
-    state._specialItemOffering = getSpecialItemOffering(state.round);
     renderShop(state, config);
     renderAll();
   }

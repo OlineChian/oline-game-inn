@@ -4,9 +4,8 @@
  *
  * 效果分类：
  *   简单效果（15种）：在 applyEffect 中直接计算
- *   永久状态效果（3种）：读取糖果实例的 _permMult/_permChips
- *   时机钩子效果（5种）：mythic_factory/mythic_machine/mythic_magician/candy_king/hand_modifier
- *     这 5 种在 candy-system.js 的时机钩子中处理，此处返回 null
+ *   永久状态效果（4种）：读取糖果实例的 _permMult/_permChips（含 mythic_machine）
+ *   时机钩子效果（2种）：mythic_factory/mythic_magician 在 candy-hooks.js 中处理，此处返回空
  *
  * context 参数（由调用方传入）：
  *   playedCards: []          出牌列表
@@ -68,7 +67,7 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       if (matched.length === 0) return {};
       const chips = (effect.chips || 0) * matched.length;
       const mult = (effect.mult || 0) * matched.length;
-      const msg = `${matched.length}×${effect.ranks.join('/')} +${chips}筹码+${mult}倍率`;
+      const msg = `${matched.length}×${effect.ranks.join('/')} ${buildBonusText(chips, mult)}`;
       return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg } };
     }
 
@@ -86,7 +85,7 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
       const chips = (effect.chips || 0) * matched.length;
       const mult = (effect.mult || 0) * matched.length;
       const label = effect.parity === 'odd' ? '奇数' : '偶数';
-      return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg: `${matched.length}张${label} +${chips}筹码+${mult}倍率` } };
+      return { chipsAdd: chips, multAdd: mult, triggered: { candy, msg: `${matched.length}张${label} ${buildBonusText(chips, mult)}` } };
     }
 
     case 'min_rank_to_mult': {
@@ -184,14 +183,19 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
 
     // ========== 时机钩子效果（此处不处理，返回空） ==========
     // mythic_factory: 回合结束时处理（candy-hooks.js）
-    // mythic_machine: 回合开始时处理（candy-hooks.js）
     // mythic_magician: 出牌时处理（candy-hooks.js，影响牌型升级）
-    // hand_modifier: evaluateHand 之前处理（待 hand-evaluator 集成）
     case 'mythic_factory':
-    case 'mythic_machine':
     case 'mythic_magician':
-    case 'hand_modifier':
       return {};
+
+    // 糖果机器：钩子在回合开始时回收右侧糖果并累积 _permMult，出牌时应用该倍率
+    case 'mythic_machine': {
+      const permMult = candy._permMult || 0;
+      if (permMult > 0) {
+        return { multAdd: permMult, triggered: { candy, msg: `永久 +${permMult} 倍率` } };
+      }
+      return {};
+    }
 
     // ========== 已有但不在出牌时处理 ==========
     case 'coin_per_round':
@@ -208,4 +212,12 @@ function isParity(rank, parity) {
   const val = RANK_VALUES[rank];
   if (parity === 'odd') return val % 2 === 1;
   return val % 2 === 0;
+}
+
+/** 构建 +筹码/+倍率 文本（0 值不显示） */
+function buildBonusText(chips, mult) {
+  const parts = [];
+  if (chips > 0) parts.push(`+${chips}筹码`);
+  if (mult > 0) parts.push(`+${mult}倍率`);
+  return parts.join('');
 }
