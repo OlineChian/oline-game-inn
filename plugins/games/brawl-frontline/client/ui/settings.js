@@ -90,11 +90,18 @@ export const Settings = {
       this.close();
       Modals.showRetireConfirm();
     });
-    // 点击遮罩关闭
-    document.getElementById('bf-modal').addEventListener('click', this._onMaskClick);
+    // 点击遮罩关闭（仅绑定一次，避免复用 #bf-modal 的强化/英雄选择弹窗被误关）
+    if (!this._maskBound) {
+      document.getElementById('bf-modal').addEventListener('click', this._onMaskClick);
+      this._maskBound = true;
+    }
   },
 
   _onMaskClick(e) {
-    if (e.target === e.currentTarget) Settings.close();
+    if (e.target !== e.currentTarget) return;
+    // 仅设置面板/功成身退确认（wave + 暂停）响应遮罩关闭；
+    // 强化选择(buff-select)/英雄选择(hero-select)/游戏结束(game-over)不响应，避免弹窗被误关后卡死
+    if (Game.state.phase !== 'wave' || !Game.state.paused) return;
+    Settings.close();
   }
 };
