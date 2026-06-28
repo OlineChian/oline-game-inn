@@ -29,7 +29,7 @@ function on(rules, cat) { return !rules || rules[cat] !== false; }
 
 // ==================== 默认校验（跑酷类 8bit-arcade）====================
 
-function verifyDefaultAntiCheat(score, ac, rules) {
+function verifyDefaultAntiCheat(score, ac, rules, t) {
   const inputCount = Number(ac.inputCount);
   const maxNoInputMs = Number(ac.maxNoInputMs);
   const playedMs = Number(ac.playedMs);
@@ -39,13 +39,16 @@ function verifyDefaultAntiCheat(score, ac, rules) {
   if (inputCount < 0 || maxNoInputMs < 0 || playedMs < 0) {
     return { ok: false, error: 'antiCheat 字段非法', code: 400 };
   }
-  if (on(rules, 'timeConsistency') && playedMs < score * 60) {
+  const msPerScore = (t && t.msPerScore) || 60;
+  const inputPerScore = (t && t.inputPerScore) || 30;
+  const afkMs = (t && t.afkThresholdMs) || 10000;
+  if (on(rules, 'timeConsistency') && playedMs < score * msPerScore) {
     return { ok: false, error: '游戏时长与分数不匹配', code: 400 };
   }
-  if (on(rules, 'inputFrequency') && inputCount < Math.floor(score / 30)) {
+  if (on(rules, 'inputFrequency') && inputCount < Math.floor(score / inputPerScore)) {
     return { ok: false, error: '输入次数异常', code: 400 };
   }
-  if (on(rules, 'afkDetection') && maxNoInputMs >= 10000) {
+  if (on(rules, 'afkDetection') && maxNoInputMs >= afkMs) {
     return { ok: false, error: '检测到长时间无操作', code: 400 };
   }
   return { ok: true };
@@ -61,6 +64,9 @@ const BUSTER_CONFIGS = {
 const BUSTER_BRICK_POINTS = [10, 20, 30, 40, 50, 100];
 const BUSTER_MAX_LIVES = 5;
 const BUSTER_WIDE_TOLERANCE = 2.5;
+const BUSTER_MIN_PLAYED_MS = 3000;
+const BUSTER_AFK_THRESHOLD_MS = 15000;
+const BUSTER_MIN_INPUTS = 3;
 
 function computeBusterMaxScore(difficulty, won) {
   const config = BUSTER_CONFIGS[difficulty];
@@ -75,7 +81,7 @@ function computeBusterMaxScore(difficulty, won) {
   return maxBrickScore + maxBonus;
 }
 
-function verifyBusterAntiCheat(score, ac, extra, rules) {
+function verifyBusterAntiCheat(score, ac, extra, rules, t) {
   const difficulty = extra && extra.difficulty;
   if (!difficulty || !BUSTER_CONFIGS[difficulty]) {
     return { ok: false, error: '难度非法或缺失', code: 400 };
@@ -92,6 +98,9 @@ function verifyBusterAntiCheat(score, ac, extra, rules) {
     if (!Number.isFinite(v[f])) return { ok: false, error: 'antiCheat.' + f + ' 字段格式错误', code: 400 };
     if (v[f] < 0) return { ok: false, error: 'antiCheat.' + f + ' 字段非法（负数）', code: 400 };
   }
+  const minPlayedMs = (t && t.minPlayedMs) || BUSTER_MIN_PLAYED_MS;
+  const afkMs = (t && t.afkThresholdMs) || BUSTER_AFK_THRESHOLD_MS;
+  const minIn = (t && t.minInputs != null) ? t.minInputs : BUSTER_MIN_INPUTS;
   if (on(rules, 'stateIntegrity')) {
     if (v.totalBricks !== config.totalBricks) {
       return { ok: false, error: '砖块总数与难度配置不符', code: 400 };
@@ -121,13 +130,13 @@ function verifyBusterAntiCheat(score, ac, extra, rules) {
       return { ok: false, error: '分数超过理论上限', code: 400 };
     }
   }
-  if (on(rules, 'timeConsistency') && v.playedMs < 3000) {
+  if (on(rules, 'timeConsistency') && v.playedMs < minPlayedMs) {
     return { ok: false, error: '游戏时长过短', code: 400 };
   }
-  if (on(rules, 'afkDetection') && v.maxNoInputMs >= 15000) {
+  if (on(rules, 'afkDetection') && v.maxNoInputMs >= afkMs) {
     return { ok: false, error: '检测到长时间无操作', code: 400 };
   }
-  if (on(rules, 'inputFrequency') && v.inputCount < 3) {
+  if (on(rules, 'inputFrequency') && v.inputCount < minIn) {
     return { ok: false, error: '输入次数异常', code: 400 };
   }
   return { ok: true };
@@ -145,7 +154,7 @@ const BELLE_MIN_PLAYED_MS = 500;
 const BELLE_MIN_INPUTS = 3;
 const BELLE_HASH_REGEX = /^[a-f0-9]{64}$/;
 
-function verifyBelleAntiCheat(score, ac, extra, rules) {
+function verifyBelleAntiCheat(score, ac, extra, rules, t) {
   const difficulty = extra && extra.difficulty;
   if (!difficulty || !BELLE_CONFIGS[difficulty]) {
     return { ok: false, error: '难度非法或缺失', code: 400 };
@@ -162,6 +171,9 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
     if (!Number.isFinite(v[f])) return { ok: false, error: 'antiCheat.' + f + ' 字段格式错误', code: 400 };
     if (v[f] < 0) return { ok: false, error: 'antiCheat.' + f + ' 字段非法（负数）', code: 400 };
   }
+  const minPlayedMs = (t && t.minPlayedMs) || BELLE_MIN_PLAYED_MS;
+  const afkMs = (t && t.afkThresholdMs) || BELLE_AFK_THRESHOLD_MS;
+  const minIn = (t && t.minInputs != null) ? t.minInputs : BELLE_MIN_INPUTS;
   if (on(rules, 'stateIntegrity')) {
     if (v.mineCount !== config.mines) {
       return { ok: false, error: '雷数与难度配置不符', code: 400 };
@@ -189,7 +201,7 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
     }
   }
   if (on(rules, 'timeConsistency')) {
-    if (v.playedMs < BELLE_MIN_PLAYED_MS) {
+    if (v.playedMs < minPlayedMs) {
       return { ok: false, error: '游戏时长过短', code: 400 };
     }
     const expectedPlayedMs = score * 1000;
@@ -197,10 +209,10 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
       return { ok: false, error: '游戏时长与用时记录不符', code: 400 };
     }
   }
-  if (on(rules, 'afkDetection') && v.maxNoInputMs >= BELLE_AFK_THRESHOLD_MS) {
+  if (on(rules, 'afkDetection') && v.maxNoInputMs >= afkMs) {
     return { ok: false, error: '检测到长时间无操作', code: 400 };
   }
-  if (on(rules, 'inputFrequency') && v.inputCount < BELLE_MIN_INPUTS) {
+  if (on(rules, 'inputFrequency') && v.inputCount < minIn) {
     return { ok: false, error: '输入次数异常', code: 400 };
   }
   return { ok: true };
@@ -292,17 +304,33 @@ function verifyBrawlAntiCheat(score, ac, rules, t) {
 
 // ==================== 统一分发器 ====================
 
+// 5 个反作弊规则类别（scoreRange 在 POST 路由检查，不在此处分发）
+const ANTICHEAT_RULE_CATEGORIES = ['timeConsistency', 'scoreConsistency', 'afkDetection', 'inputFrequency', 'stateIntegrity'];
+
+/** 检查是否所有 5 个反作弊规则都已关闭（相当于没有反作弊模块） */
+function allAntiCheatRulesOff(rules) {
+  if (!rules) return false;
+  for (const cat of ANTICHEAT_RULE_CATEGORIES) {
+    if (rules[cat] !== false) return false;
+  }
+  return true;
+}
+
 function verifyGameAntiCheat(gameId, score, ac, extra, rules, thresholds) {
+  // 所有反作弊规则都关闭时，相当于没有反作弊模块，直接放行（含基础字段校验也跳过）
+  if (allAntiCheatRulesOff(rules)) {
+    return { ok: true };
+  }
   if (gameId === 'buster-montage') {
-    return verifyBusterAntiCheat(score, ac, extra, rules);
+    return verifyBusterAntiCheat(score, ac, extra, rules, thresholds);
   }
   if (gameId === 'belle-challenge') {
-    return verifyBelleAntiCheat(score, ac, extra, rules);
+    return verifyBelleAntiCheat(score, ac, extra, rules, thresholds);
   }
   if (gameId === 'brawl-frontline') {
     return verifyBrawlAntiCheat(score, ac, rules, thresholds);
   }
-  return verifyDefaultAntiCheat(score, ac, rules);
+  return verifyDefaultAntiCheat(score, ac, rules, thresholds);
 }
 
 module.exports = {

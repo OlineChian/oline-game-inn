@@ -211,27 +211,28 @@ module.exports = function(app, context) {
 
       // L3.5: 分数范围校验（scoreCap/scoreFloor），受 scoreRange 安全规则开关控制
       // 关闭 scoreRange 规则后跳过此校验，允许任意分数上传
+      // 优先使用 game-thresholds 的 scoreCap/scoreFloor（管理后台可配），回退到 site.json config
       if (rules.scoreRange !== false) {
+        const scoreNum = Number(score);
         const gameConfigs = service.getGameConfigs(siteConfig);
-        const config = gameConfigs[gameId];
-        if (config) {
-          const scoreNum = Number(score);
-          if (typeof config.scoreCap === 'number' && scoreNum > config.scoreCap) {
-            recordFailure(service.storage, {
-              gameId, nickname, score, extra, ip,
-              error: '分数超出合理范围（上限 ' + config.scoreCap + '）',
-              status: 400, category: 'service', payload
-            });
-            return res.status(400).json({ success: false, error: '分数超出合理范围' });
-          }
-          if (typeof config.scoreFloor === 'number' && scoreNum < config.scoreFloor) {
-            recordFailure(service.storage, {
-              gameId, nickname, score, extra, ip,
-              error: '分数低于合理范围（下限 ' + config.scoreFloor + '）',
-              status: 400, category: 'service', payload
-            });
-            return res.status(400).json({ success: false, error: '分数低于合理范围' });
-          }
+        const config = gameConfigs[gameId] || {};
+        const cap = (typeof thresholds.scoreCap === 'number') ? thresholds.scoreCap : config.scoreCap;
+        const floor = (typeof thresholds.scoreFloor === 'number') ? thresholds.scoreFloor : config.scoreFloor;
+        if (typeof cap === 'number' && scoreNum > cap) {
+          recordFailure(service.storage, {
+            gameId, nickname, score, extra, ip,
+            error: '分数超出合理范围（上限 ' + cap + '）',
+            status: 400, category: 'service', payload
+          });
+          return res.status(400).json({ success: false, error: '分数超出合理范围' });
+        }
+        if (typeof floor === 'number' && scoreNum < floor) {
+          recordFailure(service.storage, {
+            gameId, nickname, score, extra, ip,
+            error: '分数低于合理范围（下限 ' + floor + '）',
+            status: 400, category: 'service', payload
+          });
+          return res.status(400).json({ success: false, error: '分数低于合理范围' });
         }
       }
 

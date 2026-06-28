@@ -20,6 +20,8 @@
 // anti-cheat.js 在校验时通过 getThresholds(gameId) 读取，优先使用 storage 中的值。
 const GAME_THRESHOLDS = {
   'brawl-frontline': {
+    scoreCap:         { value: 999999, label: '分数上限',       desc: '分数超过此值判定为非法（受 scoreRange 规则开关控制）' },
+    scoreFloor:       { value: 0,      label: '分数下限',       desc: '分数低于此值判定为非法（受 scoreRange 规则开关控制）' },
     scoreTolerance:    { value: 100,    label: '分数容差',      desc: '客户端计算与服务端重算的最大允许差异（gold 持续产出需留余量）' },
     baseMaxHp:        { value: 30000,  label: '基地血量上限',   desc: '基地最大生命值上限（客户端 BASE_MAX_HP=15000 + buff 加成）' },
     maxWave:          { value: 100,    label: '最大波数',       desc: '波数合理范围上限' },
@@ -31,16 +33,22 @@ const GAME_THRESHOLDS = {
     minInputs:        { value: 1,      label: '最少输入次数',    desc: '输入次数低于此值判定异常' }
   },
   'buster-montage': {
+    scoreCap:         { value: 999999, label: '分数上限',       desc: '分数超过此值判定为非法（受 scoreRange 规则开关控制）' },
+    scoreFloor:       { value: 0,      label: '分数下限',       desc: '分数低于此值判定为非法（受 scoreRange 规则开关控制）' },
     minPlayedMs:      { value: 3000,   label: '最短时长(ms)',  desc: '游戏时长低于此值判定异常' },
     afkThresholdMs:   { value: 15000,  label: 'AFK阈值(ms)',   desc: '无操作超过此值判定为挂机' },
     minInputs:        { value: 3,      label: '最少输入次数',    desc: '输入次数低于此值判定异常' }
   },
   'belle-challenge': {
+    scoreCap:         { value: 3600,   label: '分数上限',       desc: '分数超过此值判定为非法（受 scoreRange 规则开关控制）' },
+    scoreFloor:       { value: 1,      label: '分数下限',       desc: '分数低于此值判定为非法（受 scoreRange 规则开关控制）' },
     minPlayedMs:      { value: 500,    label: '最短时长(ms)',  desc: '游戏时长低于此值判定异常' },
     afkThresholdMs:   { value: 30000,  label: 'AFK阈值(ms)',   desc: '无操作超过此值判定为挂机' },
     minInputs:        { value: 3,      label: '最少输入次数',    desc: '输入次数低于此值判定异常' }
   },
   '8bit-arcade': {
+    scoreCap:         { value: 999999, label: '分数上限',       desc: '分数超过此值判定为非法（受 scoreRange 规则开关控制）' },
+    scoreFloor:       { value: 0,      label: '分数下限',       desc: '分数低于此值判定为非法（受 scoreRange 规则开关控制）' },
     msPerScore:       { value: 60,     label: '分秒比(ms/分)',  desc: '时长-分数一致性：playedMs >= score * 此值' },
     inputPerScore:    { value: 30,     label: '输入-分比(次/分)', desc: '输入频率：inputCount >= score / 此值' },
     afkThresholdMs:   { value: 10000,  label: 'AFK阈值(ms)',   desc: '无操作超过此值判定为挂机' }
