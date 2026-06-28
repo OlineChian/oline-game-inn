@@ -102,7 +102,7 @@ export const Game = {
     this.renderer = renderer;
   },
 
-  /** 启动主循环 */
+  /** 启动主循环（update/render 均有 try-catch，防止单帧异常断裂 RAF 循环） */
   start() {
     if (this._running) return;
     this._running = true;
@@ -111,11 +111,24 @@ export const Game = {
       if (!this._running) return;
       const dt = Math.min(0.05, (ts - this._lastTs) / 1000);
       this._lastTs = ts;
-      if (!this.state.paused) this.update(dt * (this.state.speedMultiplier || 1));
+      if (!this.state.paused) {
+        try {
+          this.update(dt * (this.state.speedMultiplier || 1));
+        } catch (e) {
+          console.error('[bf] update error:', e);
+          this.state.paused = true;  // 异常时自动暂停，避免循环崩溃画面冻结
+        }
+      }
       this.render();
       this._raf = requestAnimationFrame(loop);
     };
     this._raf = requestAnimationFrame(loop);
+  },
+
+  /** 切换暂停（仅 wave 阶段有效；其他阶段由 phase 状态机控制） */
+  togglePause() {
+    if (this.state.phase !== 'wave') return;
+    this.state.paused = !this.state.paused;
   },
 
   stop() {

@@ -8,13 +8,15 @@ import { fmtNum } from '../core/utils.js';
 const GAME_ID = 'brawl-frontline';
 
 export const Leaderboard = {
-  /** 显示排行榜弹窗 */
+  /** 显示排行榜弹窗（wave 阶段自动暂停） */
   show() {
+    if (Game.state.phase === 'wave') Game.state.paused = true;
     document.getElementById('bf-lb-modal').classList.remove('hidden');
     this.load();
   },
 
   close() {
+    if (Game.state.phase === 'wave') Game.state.paused = false;
     document.getElementById('bf-lb-modal').classList.add('hidden');
   },
 

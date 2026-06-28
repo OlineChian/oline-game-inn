@@ -33,6 +33,11 @@
             <span class="bf-hud-label">当前</span>
             <span class="bf-hud-value">第<span id="bf-wave">1</span>波</span>
         </div>
+        <!-- 暂停/继续按钮（HUD 正中间，纯 SVG 图标，与所有弹窗联动） -->
+        <button class="bf-hud-pause hidden" id="bf-pause-btn" title="暂停/继续" aria-label="暂停或继续">
+            <svg viewBox="0 0 24 24" class="bf-icon bf-icon-pause"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            <svg viewBox="0 0 24 24" class="bf-icon bf-icon-play hidden"><path d="M8 5v14l11-7z"/></svg>
+        </button>
         <button class="bf-hud-tab buff" id="bf-buff-btn" title="强化选择">
             <span class="bf-hud-label">强化选择</span>
             <span class="bf-hud-value" id="bf-buff-text">0-40</span>

@@ -113,6 +113,33 @@ body {
 /* 强化选择推到右侧：金币/英雄券/波次在左，强化/宝库/解锁在右（全屏通用） */
 .bf-hud-tab.buff { margin-left: auto; }
 
+/* 暂停/继续按钮：HUD 正中间，纯 SVG 图标无文字，圆形扁平 */
+.bf-hud-pause {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: var(--bf-bw) solid var(--bf-border);
+  background: var(--bf-card);
+  box-shadow: var(--bf-shadow-sm);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  z-index: 26;
+}
+.bf-hud-pause:hover { transform: translate(-50%, -50%) scale(1.08); }
+.bf-hud-pause:active { transform: translate(-50%, -50%) scale(0.94); box-shadow: 0 0 0 var(--bf-border); }
+.bf-hud-pause.hidden { display: none; }
+.bf-icon { width: 20px; height: 20px; fill: var(--bf-text); }
+.bf-icon.hidden { display: none; }
+/* 窄屏：缩小暂停按钮 */
+@media (max-width: 480px) {
+  .bf-hud-pause { width: 34px; height: 34px; }
+  .bf-icon { width: 17px; height: 17px; }
+}
+
 /* 窄屏（手机）：压缩 tab 内边距和最小宽度，确保 6 个按钮能放下且 buff 靠右 */
 @media (max-width: 480px) {
   .bf-hud { gap: 3px; padding: 5px 4px; }

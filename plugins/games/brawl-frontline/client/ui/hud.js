@@ -18,7 +18,8 @@ export const Hud = {
       buffBtn: document.getElementById('bf-buff-btn'),
       buffText: document.getElementById('bf-buff-text'),
       vaultLv: document.getElementById('bf-vault-lv'),
-      vaultBtn: document.getElementById('bf-vault-btn')
+      vaultBtn: document.getElementById('bf-vault-btn'),
+      pauseBtn: document.getElementById('bf-pause-btn')
     };
   },
 
@@ -57,6 +58,17 @@ export const Hud = {
         e.vaultBtn.style.setProperty('--progress', `${r * 100}%`);
         if (r >= 1) e.vaultBtn.classList.add('ready');
       }
+    }
+    // 暂停按钮：仅 wave 阶段显示；paused 时显示▶（点击继续），否则显示⏸（点击暂停）
+    // 弹窗打开时（设置/宝库/解锁等设 paused=true）自动联动为▶图标
+    if (e.pauseBtn) {
+      const inWave = st.phase === 'wave';
+      e.pauseBtn.classList.toggle('hidden', !inWave);
+      const showPlay = st.paused;
+      const playIcon = e.pauseBtn.querySelector('.bf-icon-play');
+      const pauseIcon = e.pauseBtn.querySelector('.bf-icon-pause');
+      if (playIcon) playIcon.classList.toggle('hidden', !showPlay);
+      if (pauseIcon) pauseIcon.classList.toggle('hidden', showPlay);
     }
   }
 };

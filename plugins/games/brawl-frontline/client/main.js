@@ -70,6 +70,8 @@ function boot() {
   document.getElementById('bf-settings-btn').addEventListener('click', () => Settings.show());
   // 英雄解锁按钮
   document.getElementById('bf-unlock-btn').addEventListener('click', () => Unlock.show());
+  // 暂停/继续按钮（HUD 正中间，与所有弹窗联动）
+  document.getElementById('bf-pause-btn').addEventListener('click', () => Game.togglePause());
 
   // 6. 反作弊输入追踪：监听全局点击/触屏/按键（捕获玩家真实操作）
   document.addEventListener('mousedown', () => AntiCheat.tap());
