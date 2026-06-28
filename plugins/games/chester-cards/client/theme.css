@@ -1,0 +1,113 @@
+/* ============================================================
+   切斯特牌 - Balatro 主题（仅本游戏生效）
+   设计：墨绿面板 + 白字+文字阴影 + 红蓝金主色 + 高可读字体
+   字号放大 2-3 倍，确保移动端可读性
+   字体通过 index.html <link> 加载
+   ============================================================ */
+
+:root {
+  /* ---- 扑克桌背景层（深绿，无渐变） ---- */
+  --bg-primary-dark: #1a2e2f;
+  --bg-table: #243739;
+  --bg-table-alt: #2f4648;
+
+  /* ---- 面板层（墨绿/灰绿，替代浅灰） ---- */
+  --bg-card: #2f4648;
+  --bg-card-alt: #3a5456;
+  --bg-card-hover: #456568;
+  --bg-input: #1f3032;
+  --bg-input-border: #5a7577;
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+  --bg-glass: #2f4648;
+
+  /* ---- 文字层（白色为主，配深色阴影提升可读性） ---- */
+  --text-white: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #D8E0E0;
+  --text-muted: #A8B8B8;
+  --text-on-dark: #FFFFFF;
+  --text-on-light: #FFFFFF;
+
+  /* ---- 主色（红/蓝/金，无紫粉） ---- */
+  --color-orange-main: #E6B84A;
+  --color-gold-accent: #E6B84A;
+  --color-gold-bright: #F5C95E;
+  --color-dark-bg: #1a2e2f;
+  --color-red: #E94A3C;
+  --color-blue: #4DB8E8;
+  --color-green: #5DD86E;
+
+  /* ---- 功能色（更亮，确保在墨绿背景上可读） ---- */
+  --color-success: #5DD86E;
+  --color-danger: #FF6B5B;
+  --color-info: #4DB8E8;
+
+  /* ---- 圆角（接近直角） ---- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-round: 2px;
+
+  /* ---- 阴影（1px 偏移无模糊，像素感） ---- */
+  --shadow-card: 3px 3px 0 #0a1818;
+  --shadow-card-hover: 3px 3px 0 #0a1818;
+  --shadow-btn: 3px 3px 0 #0a1818;
+  --shadow-modal: 6px 6px 0 #0a1818;
+  --glow-gold: none;
+  --glow-gold-strong: none;
+
+  /* ---- 文字阴影（白字在墨绿上的可读性保障） ---- */
+  --text-shadow-sm: 1px 1px 0 #0a1818;
+  --text-shadow-md: 2px 2px 0 #0a1818;
+  --text-shadow-lg: 3px 3px 0 #0a1818;
+
+  /* ---- 字体（高可读开源字体，OFL 协议） ---- */
+  --font-display: 'Russo One', 'Arial Black', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --font-number: 'JetBrains Mono', 'Courier New', monospace;
+  /* 保留旧变量名兼容 */
+  --font-pixel: 'Russo One', 'Arial Black', sans-serif;
+
+  /* ---- 字号（放大 2-3 倍） ---- */
+  --fs-title: 28px;
+  --fs-heading: 22px;
+  --fs-large: 20px;
+  --fs-body: 17px;
+  --fs-small: 15px;
+  --fs-tiny: 13px;
+  --fs-label: 13px;
+  --fs-number-xl: 36px;
+  --fs-number-lg: 28px;
+  --fs-number-md: 22px;
+
+  /* ---- 扑克牌色板（白底深字） ---- */
+  --color-medal-silver: #B8B8B8;
+  --color-medal-bronze: #B87333;
+  --color-card-bg: #FFFFFF;
+  --color-card-bg-red: #FFFFFF;
+  --color-card-red: #E94A3C;
+  --color-card-pink: #E94A3C;
+  --color-card-white: #111111;
+  --color-card-black: #111111;
+  --color-candy-bg: #2f4648;
+
+  /* ---- 稀有度色板（更亮确保可读） ---- */
+  --color-rarity-common: #B8C8C8;
+  --color-rarity-rare: #4DB8E8;
+  --color-rarity-epic: #C77DFF;
+  --color-rarity-mythic: #FF6B5B;
+  --color-rarity-legendary: #E6B84A;
+  --shadow-rarity-rare: 0 0 0 2px #4DB8E8;
+  --shadow-rarity-epic: 0 0 0 2px #C77DFF;
+  --shadow-rarity-mythic: 0 0 0 2px #FF6B5B;
+  --shadow-rarity-legendary: 0 0 0 2px #E6B84A;
+
+  /* ---- 边框 ---- */
+  --border-gold: 2px solid #E6B84A;
+  --border-red: 2px solid #E94A3C;
+  --border-blue: 2px solid #4DB8E8;
+  --border-light: 2px solid #5a7577;
+  --border-dark: 2px solid #0a1818;
+  --border-panel: 2px solid #5a7577;
+}
