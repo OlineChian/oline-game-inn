@@ -66,6 +66,10 @@ export const Leaderboard = {
           timestamp: sig.timestamp, nonce: sig.nonce, signature: sig.signature
         })
       });
+      // 优先处理安全事件（封禁/警告弹窗），已弹窗则中止
+      if (window.BanNotice && await window.BanNotice.handleSecurityEvent(res)) {
+        return null;
+      }
       const data = await res.json();
       if (data.success) {
         console.log(`[BF] 成绩提交成功，排名 ${data.rank}/${data.total}`);
