@@ -82,6 +82,31 @@
 '.notice-btn-secondary{background:transparent;color:var(--text-secondary,rgba(255,255,255,.65));border:1px solid var(--bg-card-alt,#333)}' +
 '.notice-btn-secondary:hover{background:rgba(255,255,255,.05)}' +
 '.notice-icon{flex-shrink:0}' +
+'.notice-date{font-size:12px;color:var(--text-secondary,rgba(255,255,255,.55));font-weight:400;margin-left:8px}' +
+'.notice-merged-body{padding:8px 24px;max-height:60vh;overflow-y:auto}' +
+'.notice-card{padding:18px 0;border-bottom:1px solid var(--bg-card-alt,#1a1a1a)}' +
+'.notice-card:first-child{padding-top:6px}' +
+'.notice-card:last-child{border-bottom:none}' +
+'.notice-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}' +
+'.notice-card-title{font-size:15px;font-weight:700;flex:1;line-height:1.4}' +
+'.notice-card-date{font-size:11px;color:var(--text-secondary,rgba(255,255,255,.5));white-space:nowrap}' +
+'.notice-card-content{font-size:14px;line-height:1.8;word-break:break-word;color:var(--text-primary,rgba(255,255,255,.9))}' +
+'.notice-card-content p{margin:0 0 8px}' +
+'.notice-card-content p:last-child{margin-bottom:0}' +
+'.notice-card-content h1{font-size:18px;font-weight:700;margin:10px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bg-card-alt,#1a1a1a)}' +
+'.notice-card-content h2{font-size:16px;font-weight:700;margin:10px 0 6px}' +
+'.notice-card-content h3{font-size:14px;font-weight:600;margin:8px 0 4px}' +
+'.notice-card-content ul,.notice-card-content ol{margin:4px 0 8px;padding-left:20px}' +
+'.notice-card-content li{margin:2px 0}' +
+'.notice-card-content blockquote{margin:6px 0;padding:4px 10px;border-left:3px solid var(--bg-card-alt,#333);background:rgba(255,255,255,.03);color:var(--text-secondary,rgba(255,255,255,.7));font-style:italic}' +
+'.notice-card-content code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px;font-family:Consolas,Monaco,monospace;font-size:12px}' +
+'.notice-card-content hr{border:none;border-top:1px solid var(--bg-card-alt,#1a1a1a);margin:10px 0}' +
+'.notice-card-content a{color:var(--accent,#ED7526);text-decoration:underline}' +
+'.notice-card-content strong{font-weight:700;color:#fff}' +
+'.notice-card-signature{text-align:right;margin-top:10px;font-size:12px;color:var(--text-secondary,rgba(255,255,255,.6));font-style:italic}' +
+'.notice-load-more{display:block;margin:14px auto 4px;padding:8px 24px;border:1px dashed var(--bg-card-alt,#333);border-radius:6px;background:transparent;color:var(--text-secondary,rgba(255,255,255,.7));font-size:13px;cursor:pointer;transition:background .15s;font-family:inherit}' +
+'.notice-load-more:hover{background:rgba(255,255,255,.05);color:var(--text-primary,rgba(255,255,255,.9))}' +
+'.notice-merged-summary{text-align:center;font-size:12px;color:var(--text-secondary,rgba(255,255,255,.55));margin:0 0 8px}' +
 '@keyframes notice-fade{from{opacity:0}to{opacity:1}}' +
 '@keyframes notice-slide{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}';
     document.head.appendChild(style);
@@ -92,6 +117,16 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
     });
+  }
+
+  // 格式化发布日期：仅展示年-月-日
+  function formatDate(ts) {
+    var n = Number(ts);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    var d = new Date(n);
+    if (isNaN(d.getTime())) return '';
+    var pad = function (x) { return x < 10 ? '0' + x : String(x); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
 
   // 校验颜色值：只允许 #hex 或字母（防止样式注入）
@@ -224,7 +259,7 @@
     if (modalEl) { modalEl.remove(); modalEl = null; }
   }
 
-  // 展示公告弹窗。onClose 关闭后的回调（用于链式展示下一条）
+  // 展示单条公告弹窗（迎新公告专用）。onClose 关闭后的回调（用于链式展示）
   function showModal(notice, isWelcome, onClose) {
     injectStyle();
     closeModal();
@@ -233,6 +268,7 @@
     var title = notice.title || '公告';
     var content = notice.content || '';
     var signature = notice.signature || '';
+    var dateStr = formatDate(notice.createdAt);
 
     modalEl = document.createElement('div');
     modalEl.className = 'notice-overlay';
@@ -242,7 +278,9 @@
         '<div class="notice-header">' +
           typeIcon(colors.accent) +
           '<span class="notice-badge" style="background:' + colors.accent + '">' + escapeHtml(colors.label) + '</span>' +
-          '<div class="notice-title">' + escapeHtml(title) + '</div>' +
+          '<div class="notice-title">' + escapeHtml(title) +
+            (dateStr ? '<span class="notice-date">' + escapeHtml(dateStr) + '</span>' : '') +
+          '</div>' +
         '</div>' +
         '<div class="notice-body">' +
           '<div class="notice-content">' + renderMarkdown(content) + '</div>' +
@@ -255,8 +293,115 @@
       '</div>';
     document.body.appendChild(modalEl);
 
-    // 统一关闭处理：触发回调
     var handleClose = function () {
+      closeModal();
+      if (typeof onClose === 'function') {
+        try { onClose(); } catch (e) { if (global.console && console.debug) console.debug('[notice] onClose error:', e); }
+      }
+    };
+    var closeBtn = modalEl.querySelector('.notice-btn-secondary');
+    var okBtn = modalEl.querySelector('.notice-btn-primary');
+    if (closeBtn) closeBtn.onclick = handleClose;
+    if (okBtn) okBtn.onclick = handleClose;
+    modalEl.addEventListener('click', function (e) {
+      if (e.target === modalEl) handleClose();
+    });
+  }
+
+  /**
+   * 合并展示多条公告（除迎新外的普通公告）
+   * - 初始渲染前 3 条未读公告
+   * - "查看更多"按钮每次追加 3 条
+   * - 关闭时将所有已展示公告标记为已读
+   * @param {Array} notices - 全部未读公告（已按 createdAt 倒序）
+   * @param {Function} [onClose] - 关闭回调
+   */
+  function showMergedModal(notices, onClose) {
+    injectStyle();
+    closeModal();
+    if (!notices || notices.length === 0) {
+      if (typeof onClose === 'function') onClose();
+      return;
+    }
+    var PAGE_SIZE = 3;
+    var shown = []; // 已渲染的公告（关闭时统一标记已读）
+    var cursor = 0;
+
+    modalEl = document.createElement('div');
+    modalEl.className = 'notice-overlay';
+    modalEl.style.setProperty('--accent', TYPE_COLORS.info.accent);
+    modalEl.innerHTML =
+      '<div class="notice-box">' +
+        '<div class="notice-header">' +
+          typeIcon(TYPE_COLORS.info.accent) +
+          '<span class="notice-badge" style="background:' + TYPE_COLORS.info.accent + '">公告</span>' +
+          '<div class="notice-title">你有 ' + notices.length + ' 条未读公告</div>' +
+        '</div>' +
+        '<div class="notice-merged-body" id="notice-merged-body"></div>' +
+        '<div class="notice-footer">' +
+          '<button class="notice-btn notice-btn-secondary" type="button">关闭</button>' +
+          '<button class="notice-btn notice-btn-primary" type="button">我已知晓</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modalEl);
+
+    var bodyEl = modalEl.querySelector('#notice-merged-body');
+
+    function renderCard(notice) {
+      var type = notice.type || 'info';
+      var colors = TYPE_COLORS[type] || TYPE_COLORS.info;
+      var dateStr = formatDate(notice.createdAt);
+      var card = document.createElement('div');
+      card.className = 'notice-card';
+      card.style.setProperty('--accent', colors.accent);
+      card.innerHTML =
+        '<div class="notice-card-header">' +
+          '<span class="notice-badge" style="background:' + colors.accent + '">' + escapeHtml(colors.label) + '</span>' +
+          '<div class="notice-card-title">' + escapeHtml(notice.title || '公告') + '</div>' +
+          (dateStr ? '<div class="notice-card-date">' + escapeHtml(dateStr) + '</div>' : '') +
+        '</div>' +
+        '<div class="notice-card-content">' + renderMarkdown(notice.content || '') + '</div>' +
+        (notice.signature ? '<div class="notice-card-signature">— ' + escapeHtml(notice.signature) + ' —</div>' : '');
+      return card;
+    }
+
+    function renderLoadMore() {
+      var remaining = notices.length - cursor;
+      if (remaining <= 0) return null;
+      var btn = document.createElement('button');
+      btn.className = 'notice-load-more';
+      btn.type = 'button';
+      btn.textContent = '查看更多（还有 ' + remaining + ' 条未读）';
+      btn.onclick = function () {
+        btn.remove();
+        renderNextPage();
+      };
+      return btn;
+    }
+
+    function renderNextPage() {
+      var end = Math.min(cursor + PAGE_SIZE, notices.length);
+      for (var i = cursor; i < end; i++) {
+        bodyEl.appendChild(renderCard(notices[i]));
+        shown.push(notices[i]);
+      }
+      cursor = end;
+      var more = renderLoadMore();
+      if (more) bodyEl.appendChild(more);
+      // 自动滚动到底部新加载的位置
+      setTimeout(function () {
+        var last = bodyEl.lastElementChild;
+        if (last && last.classList.contains('notice-load-more')) {
+          last.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, 50);
+    }
+
+    renderNextPage();
+
+    var handleClose = function () {
+      // 关闭时将所有已展示公告标记为已读
+      shown.forEach(function (n) { markRead(n.id); });
       closeModal();
       if (typeof onClose === 'function') {
         try { onClose(); } catch (e) { if (global.console && console.debug) console.debug('[notice] onClose error:', e); }
@@ -292,7 +437,9 @@
     try { localStorage.setItem(WELCOMED_KEY, '1'); } catch (_) {}
   }
 
-  // ===== 主入口：检查并展示公告（支持链式：迎新关闭后接普通公告） =====
+  // ===== 主入口：检查并展示公告 =====
+  // 迎新公告：首次访问单独弹窗，关闭后接合并展示未读普通公告
+  // 普通公告：合并展示，每次渲染 3 条，"查看更多"按钮继续加载
   function checkAndShow() {
     fetch('/api/notice/active')
       .then(function (r) { return r.json(); })
@@ -302,36 +449,25 @@
         var notices = data.notices || [];
         var readList = getReadList();
 
-        // 找到第一条未读普通公告
-        var nextNotice = null;
-        for (var i = 0; i < notices.length; i++) {
-          if (readList.indexOf(notices[i].id) < 0) {
-            nextNotice = notices[i];
-            break;
-          }
-        }
+        // 收集所有未读普通公告（已按 createdAt 倒序）
+        var unread = notices.filter(function (n) {
+          return readList.indexOf(n.id) < 0;
+        });
 
         // 优先：迎新公告（仅首次访问展示）
         if (welcome && !hasBeenWelcomed()) {
           markWelcomed();
-          if (nextNotice) {
-            // 先标记未读公告为已读，避免链式调用后重复展示
-            markRead(nextNotice.id);
-            // 链式：迎新公告关闭后，立即展示最新未读公告
-            showModal(welcome, true, function () {
-              showModal(nextNotice, false);
-            });
-          } else {
-            showModal(welcome, true);
-          }
+          // 迎新关闭后接合并展示未读普通公告
+          showModal(welcome, true, function () {
+            if (unread.length > 0) showMergedModal(unread);
+          });
           return;
         }
         markWelcomed(); // 即使无迎新公告也标记，避免每次检查
 
-        // 普通公告：展示最新一条未读
-        if (nextNotice) {
-          markRead(nextNotice.id);
-          showModal(nextNotice, false);
+        // 普通公告：合并展示所有未读
+        if (unread.length > 0) {
+          showMergedModal(unread);
         }
       })
       .catch(function (e) {
@@ -343,6 +479,7 @@
   global.Notice = {
     checkAndShow: checkAndShow,
     showModal: showModal,
+    showMergedModal: showMergedModal,
     closeModal: closeModal,
     // 暴露 Markdown 渲染器供管理员页面预览使用
     renderMarkdown: renderMarkdown

@@ -90,6 +90,7 @@
     <button class="tab" data-tab="history" onclick="switchTab('history')">惩罚历史</button>
     <button class="tab" data-tab="rules" data-once="0" onclick="switchTab('rules')">安全规则</button>
     <button class="tab" data-tab="thresholds" data-once="0" onclick="switchTab('thresholds')">游戏参数</button>
+    <button class="tab" data-tab="failed" data-once="0" onclick="switchTab('failed')">失败提交</button>
   </div>
 
   <!-- Tab 1: 封禁列表 -->
@@ -131,7 +132,30 @@
     </div>
   </div>
 
+  <!-- Tab 5: 失败提交（管理员重新上传） -->
+  <div class="tab-pane" id="pane-failed">
+    <div class="toolbar" style="margin-bottom:12px">
+      <select id="failedFilter" onchange="SecurityFailed.setFilter(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:14px">
+        <option value="">全部类别</option>
+        <option value="signature">签名失败</option>
+        <option value="security">反作弊拦截</option>
+        <option value="service">业务错误</option>
+        <option value="unknown">其他</option>
+      </select>
+      <label style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="failedHideUploaded" onchange="SecurityFailed.setHideUploaded(this.checked)"> 隐藏已上传
+      </label>
+    </div>
+    <div class="summary" id="failedSummary">加载中...</div>
+    <table>
+      <thead><tr><th>时间</th><th>游戏</th><th>昵称</th><th>分数</th><th>IP</th><th>失败原因</th><th>类别</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="failedBody"><tr><td colspan="9" class="empty">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
   <div class="status" id="status"></div>
+
+<script src="/security-failed.js"></script>
 
 <script>
 var adminToken = '';
@@ -192,6 +216,7 @@ function switchTab(name) {
   else if (name === 'history') loadHistory();
   else if (name === 'rules') loadRules();
   else if (name === 'thresholds') loadThresholds();
+  else if (name === 'failed') SecurityFailed.load();
 }
 function refreshActive() { switchTab(activeTab); }
 
