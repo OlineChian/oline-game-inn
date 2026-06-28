@@ -63,6 +63,14 @@
   .switch input:checked + .slider { background:var(--success); }
   .switch input:checked + .slider:before { transform:translateX(18px); }
   .rules-actions { margin-top:20px; display:flex; gap:8px; }
+  .threshold-group { background:var(--card); border-radius:8px; padding:16px 20px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .threshold-group-title { font-size:15px; font-weight:600; margin-bottom:12px; color:var(--primary); }
+  .threshold-item { display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .threshold-item:last-child { border-bottom:none; }
+  .threshold-info { flex:1; }
+  .threshold-name { font-weight:500; font-size:13px; }
+  .threshold-desc { font-size:11px; color:var(--muted); margin-top:2px; }
+  .threshold-input { width:100px; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-size:13px; text-align:right; background:var(--bg); color:var(--text); }
 </style>
 </head>
 <body>
@@ -81,6 +89,7 @@
     <button class="tab active" data-tab="bans" onclick="switchTab('bans')">封禁列表</button>
     <button class="tab" data-tab="history" onclick="switchTab('history')">惩罚历史</button>
     <button class="tab" data-tab="rules" data-once="0" onclick="switchTab('rules')">安全规则</button>
+    <button class="tab" data-tab="thresholds" data-once="0" onclick="switchTab('thresholds')">游戏参数</button>
   </div>
 
   <!-- Tab 1: 封禁列表 -->
@@ -108,6 +117,17 @@
     </div>
     <div class="rules-actions">
       <button class="primary" onclick="saveRules()">保存规则</button>
+    </div>
+  </div>
+
+  <!-- Tab 4: 游戏参数（分游戏阈值配置） -->
+  <div class="tab-pane" id="pane-thresholds">
+    <div class="summary" id="thresholdsSummary">加载中...</div>
+    <div id="thresholdsList">
+      <div class="empty">加载中...</div>
+    </div>
+    <div class="rules-actions">
+      <button class="primary" onclick="saveThresholds()">保存游戏参数</button>
     </div>
   </div>
 
@@ -171,6 +191,7 @@ function switchTab(name) {
   if (name === 'bans') loadBans();
   else if (name === 'history') loadHistory();
   else if (name === 'rules') loadRules();
+  else if (name === 'thresholds') loadThresholds();
 }
 function refreshActive() { switchTab(activeTab); }
 
@@ -323,6 +344,93 @@ function saveRules() {
       else showStatus(data.error || '保存失败', false);
     })
     .catch(function(err) { showStatus('保存失败: ' + err.message, false); });
+}
+
+// ===== 游戏参数（分游戏阈值配置） =====
+var thresholdsData = null;
+function loadThresholds() {
+  if (thresholdsData) { renderThresholds(thresholdsData); return; }
+  fetch('/api/security/thresholds', { headers: authHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { showStatus(data.error || '加载失败', false); return; }
+      thresholdsData = data;
+      renderThresholds(data);
+    })
+    .catch(function(err) { showStatus('加载失败: ' + err.message, false); });
+}
+function renderThresholds(data) {
+  var list = document.getElementById('thresholdsList');
+  var summary = document.getElementById('thresholdsSummary');
+  var thresholds = data.thresholds || {};
+  var gameNames = data.gameNames || {};
+  var gameIds = Object.keys(thresholds);
+  if (gameIds.length === 0) {
+    list.innerHTML = '<div class="empty">暂无可配置游戏</div>';
+    summary.textContent = '共 0 个游戏';
+    return;
+  }
+  summary.textContent = '共 ' + gameIds.length + ' 个游戏，修改后点击"保存游戏参数"';
+  var html = '';
+  gameIds.forEach(function(gameId) {
+    var params = thresholds[gameId];
+    var paramKeys = Object.keys(params);
+    html += '<div class="threshold-group">';
+    html += '<div class="threshold-group-title">' + escapeHtml(gameNames[gameId] || gameId) + ' <span style="color:var(--muted);font-size:12px;font-weight:400">(' + escapeHtml(gameId) + ')</span></div>';
+    paramKeys.forEach(function(key) {
+      var p = params[key];
+      html += '<div class="threshold-item">';
+      html += '<div class="threshold-info">';
+      html += '<div class="threshold-name">' + escapeHtml(p.label || key) + '</div>';
+      html += '<div class="threshold-desc">' + escapeHtml(p.desc || '') + '</div>';
+      html += '</div>';
+      html += '<input class="threshold-input" type="number" data-game="' + escapeAttr(gameId) + '" data-key="' + escapeAttr(key) + '" value="' + escapeAttr(p.value) + '" min="0">';
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+function saveThresholds() {
+  var updates = {};
+  document.querySelectorAll('.threshold-input').forEach(function(input) {
+    var gameId = input.dataset.game;
+    var key = input.dataset.key;
+    var val = Number(input.value);
+    if (!Number.isFinite(val) || val < 0) val = 0;
+    if (!updates[gameId]) updates[gameId] = {};
+    updates[gameId][key] = val;
+  });
+  var gameIds = Object.keys(updates);
+  var done = 0;
+  var failed = 0;
+  gameIds.forEach(function(gameId) {
+    fetch('/api/security/thresholds/' + encodeURIComponent(gameId), {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify(updates[gameId])
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) done++;
+        else failed++;
+        if (done + failed === gameIds.length) {
+          if (failed === 0) {
+            showStatus('已保存 ' + done + ' 个游戏的参数', true);
+            thresholdsData = null;
+            loadThresholds();
+          } else {
+            showStatus('保存完成：成功 ' + done + ' 个，失败 ' + failed + ' 个', false);
+          }
+        }
+      })
+      .catch(function(err) {
+        failed++;
+        if (done + failed === gameIds.length) {
+          showStatus('保存失败: ' + err.message, false);
+        }
+      });
+  });
 }
 
 // 启动：自动加载封禁列表
