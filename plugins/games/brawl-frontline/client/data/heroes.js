@@ -67,10 +67,11 @@ export const HEROES = [
     super: { name: '超级技能：刺球爆发', type: 'burst', damage: 160, count: 6, chargePerHit: 0.25 }
   },
   {
-    id: 'crow', name: '乌鸦', role: '近战', rarity: 'epic', faction: '沙漠',
-    hp: 2200, attack: 158, range: 75, attackSpeed: 1.5, moveSpeed: 82,
-    projectileSpeed: 0, cost: { tickets: 150 }, color: '#9b5de5', accent: '#d8b4fe',
-    super: { name: '超级技能：毒云蔓延', type: 'poison', dps: 80, radius: 120, duration: 4, chargePerHit: 0.23 }
+    id: 'colette', name: '科莱特', role: '射手', rarity: 'epic', faction: '沙漠',
+    hp: 2200, attack: 0, range: 190, attackSpeed: 3.0, moveSpeed: 60,
+    projectileSpeed: 400, cost: { tickets: 150 }, color: '#e76f51', accent: '#f4a261',
+    percentDamage: { rate: 0.34, min: 400, max: 1200 },
+    super: { name: '超级技能：横扫冲撞', type: 'dash', distance: 300, rate: 0.34, min: 400, max: 1200, chargePerHit: 0.23 }
   },
   {
     id: 'pam', name: '帕姆', role: '治疗', rarity: 'epic', faction: '机器人',
@@ -93,10 +94,10 @@ export const HEROES = [
   },
   // ============ 传奇（2）— hp ≥ 4556 / atk ≥ 354 ============
   {
-    id: 'tara', name: '塔拉', role: '射手', rarity: 'legendary', faction: '神秘',
+    id: 'tara', name: '塔拉', role: '召唤', rarity: 'legendary', faction: '神秘',
     hp: 4600, attack: 360, range: 220, attackSpeed: 1.1, moveSpeed: 54,
     projectileSpeed: 350, cost: { tickets: 300 }, color: '#6a4c93', accent: '#c5b3e6',
-    super: { name: '超级技能：命运召唤', type: 'summon', unitHp: 1500, unitAttack: 200, duration: 8, chargePerHit: 0.26 }
+    super: { name: '超级技能：命运召唤', type: 'summon', unitHp: 1500, unitAttack: 200, unitHeal: 200, duration: 8, chargePerHit: 0.26 }
   },
   {
     id: 'bolt', name: '博尔特', role: '坦克', rarity: 'legendary', faction: '神秘',

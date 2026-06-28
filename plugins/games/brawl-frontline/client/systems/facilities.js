@@ -76,7 +76,7 @@ export const Facilities = {
       switch (f.type) {
         case 'attacker': this._updateAttacker(f); break;
         case 'healer': this._updateHealer(f); break;
-        // booster 光环在 getDamageBoost 实时计算，无需更新
+        case 'booster': this._updateBooster(f); break;
       }
     });
   },
@@ -117,5 +117,17 @@ export const Facilities = {
       }
     });
     if (healed) f.atkCd = 1 / f.attackSpeed;
+  },
+
+  /** 加伤台：周期性在范围内英雄上方生成红色粒子（光环效果在 getDamageBoost 实时计算） */
+  _updateBooster(f) {
+    if (f.atkCd > 0) return;
+    Game.entities.heroes.forEach(h => {
+      if (h.hp <= 0) return;
+      if (distance(f, h) <= f.range) {
+        Game.spawnParticle({ x: h.x, y: h.y - 10, vx: 0, vy: -20, life: 0.6, maxLife: 0.6, color: '#f72585', size: 3 });
+      }
+    });
+    f.atkCd = 0.5;
   }
 };

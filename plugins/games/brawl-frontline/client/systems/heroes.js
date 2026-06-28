@@ -107,6 +107,7 @@ export const Heroes = {
       radius: 16,
       superDef: data.super,
       bounce: data.bounce || null,
+      percentDamage: data.percentDamage || null,
       superCharge: 0, atkCd: 0,
       hp: data.hp, maxHp: data.hp, attack: data.attack,
       superFlash: 0
@@ -158,6 +159,7 @@ export const Heroes = {
         heroes.splice(i, 1);
       }
     }
+    Combat.separateHeroes();
     Supers.updateTurrets(dt);
     Supers.updateSummons(dt);
     BoltAI.updateFireZones(dt);
@@ -183,7 +185,7 @@ export const Heroes = {
     if (h.atkCd <= 0) {
       target = this._findEnemy(h);
       if (target) {
-        this._attack(h, target);
+        Combat.heroAttack(h, target);
         h.atkCd = 1 / h.effectiveAspd;
         h._targetUid = target.uid;            // 记录锁定目标，持续 1 个攻击周期
         h._targetTimer = 1 / h.effectiveAspd;
@@ -259,18 +261,9 @@ export const Heroes = {
     list.sort((a, b) => Math.abs(a.d - b.d) <= 10 ? a.xD - b.xD : a.d - b.d);
     for (const item of list) {
       const large = item.en.isBoss || item.en.maxHp >= 2500;
-      if (large || this._lockCountOf(item.en.uid) < 3) return item.en;
+      if (large || Combat.lockCountOf(item.en.uid) < 3) return item.en;
     }
     return list[0].en;
-  },
-
-  /** 统计当前锁定指定敌人的英雄数（跨帧跟踪，_targetTimer>0 视为锁定中） */
-  _lockCountOf(enUid) {
-    let cnt = 0;
-    for (const h of Game.entities.heroes) {
-      if (h._targetTimer > 0 && h._targetUid === enUid) cnt++;
-    }
-    return cnt;
   },
 
   /** 通用：在敌人列表中找最近者，距离相近（容差 10）时优先 x 距离更近的，避免左右偏向 */
@@ -298,23 +291,6 @@ export const Heroes = {
 
   _nearestEnemy(h) {
     return this._nearestOf(h, h.x, Game.entities.enemies);
-  },
-
-  _attack(h, target) {
-    h.superCharge = Math.min(1, h.superCharge + h.superDef.chargePerHit * (1 + Buffs.superChargeRate()));
-    // 伤害放大器光环加成
-    const boost = Game.systems.facilities ? Game.systems.facilities.getDamageBoost(h) : 0;
-    const damage = Math.floor(h.attack * (1 + boost));
-    if (h.projectileSpeed > 0) {
-      const dir = Combat.dirTo(h, target, h.projectileSpeed);
-      Combat.spawnProjectile({
-        x: h.x, y: h.y, vx: dir.vx, vy: dir.vy,
-        damage, color: h.accent, radius: 5, life: 1.5,
-        bounce: h.bounce || null
-      });
-    } else {
-      Enemies.takeDamage(target, damage);
-    }
   }
 };
 

@@ -132,8 +132,8 @@ export const Renderer = {
     LAYOUT.facilitySlots.forEach((slot, i) => {
       const f = Game.buildings.facilities[i];
       if (f) {
-        // 攻击范围：浅色 + 低透明度 + 虚线
-        if (f.type === 'booster' || f.type === 'attacker') {
+        // 攻击/作用范围：浅色 + 低透明度 + 虚线（所有有 range 的设施都显示）
+        if (f.range) {
           ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5;
           ctx.setLineDash([4, 4]);
           ctx.beginPath(); ctx.arc(slot.x, slot.y, f.range, 0, Math.PI * 2); ctx.stroke();

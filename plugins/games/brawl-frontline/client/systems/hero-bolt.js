@@ -19,7 +19,13 @@ export const BoltAI = {
     const e = h._ellipse;
     e.t += dt * (h.moveSpeed / 200);      // 角速度与移速挂钩
     e.timer = (e.timer || 0) + dt;
-    if (e.timer > 6) h._ellipse = this._genEllipse();   // 每 6 秒重生成，偏向敌人密集区
+    if (e.timer > 6) {
+      // 每 6 秒重生成椭圆，但保持位置连续：计算当前位置在新椭圆上对应的角度
+      const next = this._genEllipse();
+      const dx = h.x - next.cx, dy = h.y - next.cy;
+      next.t = Math.atan2(dy / next.ry, dx / next.rx);
+      h._ellipse = next;
+    }
     // 沿椭圆移动
     h.x = clamp(e.cx + e.rx * Math.cos(e.t), 30, VIEW_W - 30);
     h.y = clamp(e.cy + e.ry * Math.sin(e.t), LAYOUT.heroZone.yMin, LAYOUT.heroZone.yMax);

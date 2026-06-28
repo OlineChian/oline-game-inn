@@ -161,8 +161,8 @@ export const Enemies = {
         return;
       }
     }
-    if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; return; }
-    // 抵达基地前线：杰西炮台 > 守家英雄 > 玩家设施 > 基地
+    if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; }
+    // 全程搜索炮台/守家英雄：发现就主动靠近攻击（不等到抵达基地前线）
     const prio = this._nearestTurret(en) || this._nearestGuardHero(en);
     if (prio) {
       const d = distance(en, prio);
@@ -176,6 +176,7 @@ export const Enemies = {
       }
       return;
     }
+    if (en.y < LAYOUT.baseLine) return;
     if (en.atkCd > 0) return;
     let tf = null, minD = Infinity;
     for (const f of Game.buildings.facilities) {

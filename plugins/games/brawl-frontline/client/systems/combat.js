@@ -114,5 +114,52 @@ export const Combat = {
     const dy = to.y - from.y;
     const d = Math.sqrt(dx * dx + dy * dy) || 1;
     return { vx: (dx / d) * speed, vy: (dy / d) * speed };
+  },
+
+  /** 英雄攻击（从 heroes.js 移入，支持百分比伤害：科莱特） */
+  heroAttack(h, target) {
+    const buffs = Game.systems.buffs;
+    h.superCharge = Math.min(1, h.superCharge + h.superDef.chargePerHit * (1 + (buffs ? buffs.superChargeRate() : 0)));
+    const boost = Game.systems.facilities ? Game.systems.facilities.getDamageBoost(h) : 0;
+    let damage;
+    if (h.percentDamage) {
+      const pd = h.percentDamage;
+      damage = Math.floor(Math.max(pd.min, Math.min(pd.max, Math.floor(target.hp * pd.rate))) * (1 + boost));
+    } else {
+      damage = Math.floor(h.attack * (1 + boost));
+    }
+    if (h.projectileSpeed > 0) {
+      const dir = this.dirTo(h, target, h.projectileSpeed);
+      this.spawnProjectile({ x: h.x, y: h.y, vx: dir.vx, vy: dir.vy, damage, color: h.accent, radius: 5, life: 1.5, bounce: h.bounce || null });
+    } else {
+      Enemies.takeDamage(target, damage);
+    }
+  },
+
+  /** 英雄间碰撞分离（防止堆叠，视觉间距约 radius×1.3） */
+  separateHeroes() {
+    const hs = Game.entities.heroes;
+    for (let i = 0; i < hs.length; i++) {
+      for (let j = i + 1; j < hs.length; j++) {
+        const a = hs[i], b = hs[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const minDist = (a.radius + b.radius) * 1.3;
+        if (d < minDist) {
+          const push = (minDist - d) / 2;
+          a.x -= (dx / d) * push; a.y -= (dy / d) * push;
+          b.x += (dx / d) * push; b.y += (dy / d) * push;
+        }
+      }
+    }
+  },
+
+  /** 统计当前锁定指定敌人的英雄数（跨帧分散火力） */
+  lockCountOf(enUid) {
+    let cnt = 0;
+    for (const h of Game.entities.heroes) {
+      if (h._targetTimer > 0 && h._targetUid === enUid) cnt++;
+    }
+    return cnt;
   }
 };
