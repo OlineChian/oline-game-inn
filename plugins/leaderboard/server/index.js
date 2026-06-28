@@ -9,6 +9,7 @@ const {
   applyPenalty, getRules, setRules, listHistory, resetViolation, RULE_CATEGORIES
 } = require('./penalty');
 const { getThresholds, getAllThresholdDefs, setThresholds, GAME_NAMES } = require('./game-thresholds');
+const { recordFailure, listFailed, getFailed, markUploaded, deleteFailed } = require('./failed-submissions');
 const { checkAdminAuth } = require('../../../core/server/admin-routes');
 const fs = require('fs');
 const path = require('path');
@@ -133,10 +134,21 @@ module.exports = function(app, context) {
       const gameId = req.params.game;
       const { nickname, score, extra } = req.body;
       const ip = getClientIp(req);
+      // 原始签名数据，失败时一并存档（审计 + 管理员人工重新上传）
+      const payload = {
+        timestamp: req.body && req.body.timestamp,
+        nonce: req.body && req.body.nonce,
+        signature: req.body && req.body.signature
+      };
 
       // L4: 封禁检查（作弊者封禁期内禁止提交）
       const ban = checkBan(service.storage, ip);
       if (ban.banned) {
+        recordFailure(service.storage, {
+          gameId, nickname, score, extra, ip,
+          error: 'IP 已被封禁：' + (ban.reason || '作弊行为'),
+          status: 403, category: 'security', payload
+        });
         // 返回 ban 详情供客户端弹窗展示（提示玩家联系管理员，而非误以为是 bug）
         return res.status(403).json({
           success: false,
@@ -152,6 +164,11 @@ module.exports = function(app, context) {
       // L1+L2: HMAC 签名 + 时间窗口 + nonce 防重放
       const verification = verifySubmission(gameId, req.body);
       if (!verification.ok) {
+        recordFailure(service.storage, {
+          gameId, nickname, score, extra, ip,
+          error: verification.error,
+          status: verification.code, category: 'signature', payload
+        });
         return res.status(verification.code).json({ success: false, error: verification.error });
       }
 
@@ -162,6 +179,13 @@ module.exports = function(app, context) {
       if (!acCheck.ok) {
         // 分级惩罚：第1次警告（成绩不上传）→ 10min → 30min → 2h → 8h → 24h 封顶
         const penalty = applyPenalty(service.storage, ip, acCheck.error, nickname, gameId);
+        // 失败提交统一记录（含 antiCheat 数据），管理员可在管理后台重新上传
+        recordFailure(service.storage, {
+          gameId, nickname, score, extra, ip,
+          error: acCheck.error,
+          status: penalty.action === 'warn' ? 200 : 403,
+          category: 'security', payload
+        });
         if (penalty.action === 'warn') {
           // 警告：本次成绩不上传，不封禁 IP，玩家可继续游戏
           return res.status(200).json({
@@ -189,9 +213,17 @@ module.exports = function(app, context) {
       const result = service.submitScore(gameId, { nickname, score, extra, ip }, siteConfig);
 
       if (result.code === 404) {
+        recordFailure(service.storage, {
+          gameId, nickname, score, extra, ip,
+          error: result.error, status: 404, category: 'service', payload
+        });
         return res.status(404).json({ success: false, error: result.error });
       }
       if (result.code === 400) {
+        recordFailure(service.storage, {
+          gameId, nickname, score, extra, ip,
+          error: result.error, status: 400, category: 'service', payload
+        });
         return res.status(400).json({ success: false, error: result.error });
       }
 
@@ -331,6 +363,61 @@ module.exports = function(app, context) {
       const result = setThresholds(service.storage, req.params.gameId, req.body || {});
       if (!result) return res.status(404).json({ success: false, error: '未知游戏: ' + req.params.gameId });
       res.json({ success: true, thresholds: result });
+    });
+
+    // ===== 失败提交记录（管理员重新上传）=====
+
+    // 列出全部失败提交
+    // GET /api/security/failed-submissions?category=signature&uploaded=false
+    app.get('/api/security/failed-submissions', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const opts = {};
+      if (req.query.category) opts.category = String(req.query.category);
+      if (req.query.uploaded === 'true') opts.uploaded = true;
+      if (req.query.uploaded === 'false') opts.uploaded = false;
+      const list = listFailed(service.storage, opts);
+      res.json({ success: true, failed: list, total: list.length });
+    });
+
+    // 管理员重新上传某条失败提交的成绩
+    // POST /api/security/failed-submissions/:id/retry
+    // 绕过签名与反作弊校验（管理员人工审核后放行，恢复玩家丢失成绩）
+    app.post('/api/security/failed-submissions/:id/retry', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const rec = getFailed(service.storage, req.params.id);
+      if (!rec) {
+        return res.status(404).json({ success: false, error: '未找到该失败提交记录' });
+      }
+      // 直接调用 service.submitScore，绕过 verifySubmission/verifyAntiCheat
+      const result = service.submitScore(rec.gameId, {
+        nickname: rec.nickname,
+        score: rec.score,
+        extra: rec.extra,
+        ip: rec.ip
+      }, siteConfig);
+      if (result.code === 404 || result.code === 400) {
+        return res.status(result.code).json({ success: false, error: result.error });
+      }
+      markUploaded(service.storage, rec.id);
+      res.json({ success: true, result: result, uploaded: true });
+    });
+
+    // 删除某条失败提交记录
+    // DELETE /api/security/failed-submissions/:id
+    app.delete('/api/security/failed-submissions/:id', (req, res) => {
+      const auth = checkAdminAuth(req);
+      if (!auth.ok) {
+        return res.status(401).json({ success: false, error: auth.error });
+      }
+      const ok = deleteFailed(service.storage, req.params.id);
+      if (!ok) return res.status(404).json({ success: false, error: '未找到该失败提交记录' });
+      res.json({ success: true });
     });
   }
   
