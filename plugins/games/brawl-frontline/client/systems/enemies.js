@@ -145,7 +145,8 @@ export const Enemies = {
   },
 
   /** rusher AI：直冲基地，碰到挡路设施/杰西炮台先打掉，抵达基地前线后按优先级攻击：
-   *   杰西炮台 > 守家英雄（坦克/治疗） > 玩家设施 > 基地（伤害按 BASE_DAMAGE_RATE 折扣） */
+   *   杰西炮台 > 守家英雄（坦克/治疗） > 玩家设施 > 基地（伤害按 BASE_DAMAGE_RATE 折扣）
+   *   搜索范围 120（rusher 原射程仅 50，需扩大以实现"优先攻击炮台/守家英雄"） */
   _aiRusher(en, dt) {
     // 移动中碰到挡路设施或杰西炮台：优先攻击
     for (const f of Game.buildings.facilities) {
@@ -161,12 +162,21 @@ export const Enemies = {
       }
     }
     if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; return; }
-    if (en.atkCd > 0) return;
     // 抵达基地前线：杰西炮台 > 守家英雄 > 玩家设施 > 基地
-    const turret = this._nearestTurret(en);
-    if (turret) { turret.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; return; }
-    const guard = this._nearestGuardHero(en);
-    if (guard) { guard.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; return; }
+    const prio = this._nearestTurret(en) || this._nearestGuardHero(en);
+    if (prio) {
+      const d = distance(en, prio);
+      if (d <= en.range + prio.radius) {
+        if (en.atkCd <= 0) { prio.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; }
+      } else {
+        // 目标在搜索范围内但不在攻击范围：主动靠近
+        const dx = prio.x - en.x, dy = prio.y - en.y, dd = Math.sqrt(dx * dx + dy * dy) || 1;
+        en.x += (dx / dd) * en.moveSpeed * dt;
+        en.y += (dy / dd) * en.moveSpeed * dt;
+      }
+      return;
+    }
+    if (en.atkCd > 0) return;
     let tf = null, minD = Infinity;
     for (const f of Game.buildings.facilities) {
       if (!f) continue;
@@ -178,24 +188,26 @@ export const Enemies = {
     en.atkCd = 1 / en.attackSpeed;
   },
 
-  /** 查找射程内最近的杰西炮台，用于 rusher 优先攻击 */
+  /** 查找 120 范围内最近的杰西炮台，用于 rusher 优先攻击 */
   _nearestTurret(en) {
+    const AGGRO = 120;
     let nearest = null, minDist = Infinity;
     for (const t of Game.entities.turrets) {
       const d = distance(en, t);
-      if (d <= en.range + t.radius && d < minDist) { minDist = d; nearest = t; }
+      if (d <= AGGRO + t.radius && d < minDist) { minDist = d; nearest = t; }
     }
     return nearest;
   },
 
-  /** 查找射程内的守家型英雄（坦克/治疗），用于 rusher 优先攻击 */
+  /** 查找 120 范围内的守家型英雄（坦克/治疗），用于 rusher 优先攻击 */
   _nearestGuardHero(en) {
+    const AGGRO = 120;
     let nearest = null, minDist = Infinity;
     for (const h of Game.entities.heroes) {
       if (h.hp <= 0) continue;
       if (h.role !== '坦克' && h.role !== '治疗') continue;
       const d = distance(en, h);
-      if (d <= en.range + h.radius && d < minDist) { minDist = d; nearest = h; }
+      if (d <= AGGRO + h.radius && d < minDist) { minDist = d; nearest = h; }
     }
     return nearest;
   },

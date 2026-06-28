@@ -126,11 +126,11 @@ export const Supers = {
   /** 杰西：召唤炮台（唯一存在：一个杰西同时只能有一个炮台，血量未清零不消失）
    *  射程 = 杰西 range ×50% = 100，攻速 = 杰西 attackSpeed ×150% = 1.5 */
   _turret(h, def) {
-    // 该杰西已有存活炮台则不再放置
-    if (Game.entities.turrets.some(t => t.ownerId === h.id)) return;
+    // 该杰西实例已有存活炮台则不再放置（用 uid 区分同类型多个杰西）
+    if (Game.entities.turrets.some(t => t.ownerId === h.uid)) return;
     Game.entities.turrets.push({
       uid: uid('t'), x: h.x, y: h.y - 40,
-      ownerId: h.id,                     // 绑定召唤者，用于唯一性检查
+      ownerId: h.uid,                    // 绑定召唤者实例，用于唯一性检查
       hp: def.turretHp, maxHp: def.turretHp, damage: def.damage,
       atkCd: 0, color: h.color,
       range: Math.floor(h.range * 0.5)   // 杰西 range × 50%

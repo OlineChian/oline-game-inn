@@ -142,9 +142,9 @@ export const Heroes = {
 
   update(dt) {
     const heroes = Game.entities.heroes;
-    this._lockCount = {};   // 每帧重置目标锁定计数 { enemyUid: count }，用于分散火力
     for (let i = heroes.length - 1; i >= 0; i--) {
       const h = heroes[i];
+      if (h._targetTimer > 0) h._targetTimer -= dt;   // 衰减目标锁定计时（跨帧分散火力）
       this._ai(h, dt);
       if (h.superFlash > 0) h.superFlash = Math.max(0, h.superFlash - dt);
       if (h.hp <= 0) {
@@ -185,6 +185,8 @@ export const Heroes = {
       if (target) {
         this._attack(h, target);
         h.atkCd = 1 / h.effectiveAspd;
+        h._targetUid = target.uid;            // 记录锁定目标，持续 1 个攻击周期
+        h._targetTimer = 1 / h.effectiveAspd;
       }
     }
     // 所有英雄优先锁定"距离基地最近的敌人"作为移动目标
@@ -243,7 +245,7 @@ export const Heroes = {
   },
 
   /** 查找射程内最近敌人，遵循"分散火力"规则：
-   *  - 同一敌人最多被 3 个英雄锁定，第 4 个改选第二近的
+   *  - 同一敌人最多被 3 个英雄锁定，第 4 个改选第二近的（跨帧跟踪，_targetTimer>0 视为锁定中）
    *  - 大型/高血量敌人（isBoss 或 maxHp≥2500）不受限制，可继续集火
    *  - 距离相近（容差 10）时优先 x 距离更近的，避免左右两边都有时总打一边 */
   _findEnemy(h) {
@@ -257,14 +259,18 @@ export const Heroes = {
     list.sort((a, b) => Math.abs(a.d - b.d) <= 10 ? a.xD - b.xD : a.d - b.d);
     for (const item of list) {
       const large = item.en.isBoss || item.en.maxHp >= 2500;
-      const cnt = this._lockCount[item.en.uid] || 0;
-      if (large || cnt < 3) {
-        this._lockCount[item.en.uid] = cnt + 1;
-        return item.en;
-      }
+      if (large || this._lockCountOf(item.en.uid) < 3) return item.en;
     }
-    this._lockCount[list[0].en.uid] = (this._lockCount[list[0].en.uid] || 0) + 1;
     return list[0].en;
+  },
+
+  /** 统计当前锁定指定敌人的英雄数（跨帧跟踪，_targetTimer>0 视为锁定中） */
+  _lockCountOf(enUid) {
+    let cnt = 0;
+    for (const h of Game.entities.heroes) {
+      if (h._targetTimer > 0 && h._targetUid === enUid) cnt++;
+    }
+    return cnt;
   },
 
   /** 通用：在敌人列表中找最近者，距离相近（容差 10）时优先 x 距离更近的，避免左右偏向 */

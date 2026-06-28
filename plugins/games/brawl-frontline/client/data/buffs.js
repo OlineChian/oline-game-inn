@@ -72,19 +72,19 @@ export const BUFF_POOL = [
   },
   // ---- 经济转换（立即生效：消耗金币获得英雄券）----
   {
-    id: 'convert-g-t-200', name: '200 金币 → 80 英雄券', quality: 'common',
-    effect: { type: 'convert-gold-to-tickets', gold: 200, tickets: 80 },
-    desc: '立即消耗 200 金币，获得 80 英雄券（金币不足按比例转换）'
-  },
-  {
-    id: 'convert-g-t-500', name: '500 金币 → 200 英雄券', quality: 'rare',
+    id: 'convert-g-t-500', name: '500 金币 → 200 英雄券', quality: 'common',
     effect: { type: 'convert-gold-to-tickets', gold: 500, tickets: 200 },
     desc: '立即消耗 500 金币，获得 200 英雄券（金币不足按比例转换）'
   },
   {
-    id: 'convert-g-t-1000', name: '1000 金币 → 450 英雄券', quality: 'epic',
+    id: 'convert-g-t-1000', name: '1000 金币 → 450 英雄券', quality: 'rare',
     effect: { type: 'convert-gold-to-tickets', gold: 1000, tickets: 450 },
     desc: '立即消耗 1000 金币，获得 450 英雄券（金币不足按比例转换）'
+  },
+  {
+    id: 'convert-g-t-5000', name: '5000 金币 → 2500 英雄券', quality: 'epic',
+    effect: { type: 'convert-gold-to-tickets', gold: 5000, tickets: 2500 },
+    desc: '立即消耗 5000 金币，获得 2500 英雄券（金币不足按比例转换）'
   }
 ];
 
