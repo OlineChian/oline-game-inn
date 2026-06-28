@@ -116,10 +116,9 @@ export const Game = {
           this.update(dt * (this.state.speedMultiplier || 1));
         } catch (e) {
           console.error('[bf] update error:', e);
-          this.state.paused = true;  // 异常时自动暂停，避免循环崩溃画面冻结
         }
       }
-      this.render();
+      try { this.render(); } catch (e) { console.error('[bf] render error:', e); }
       this._raf = requestAnimationFrame(loop);
     };
     this._raf = requestAnimationFrame(loop);
@@ -136,29 +135,29 @@ export const Game = {
     cancelAnimationFrame(this._raf);
   },
 
-  /** 每帧更新：按状态机调度各系统 */
+  /** 每帧更新：按状态机调度各系统（每个子系统独立 try-catch，单系统异常不影响其他） */
   update(dt) {
     const s = this.systems;
-    switch (this.state.phase) {
-      case 'wave':
-        s.wave.update(dt);
-        s.heroes.update(dt);
-        s.enemies.update(dt);
-        s.combat.update(dt);
-        s.economy.update(dt);
-        s.buildings.update(dt);
-        s.facilities.update(dt);
-        s.merging.updateAutoMerge(dt);
-        this._updateParticles(dt);
-        this._checkPhaseTrans();
-        break;
-      case 'buff-select':
-      case 'hero-select':
-      case 'game-over':
-        // 待 UI 操作，仅更新粒子
-        this._updateParticles(dt);
-        break;
+    if (this.state.phase === 'wave') {
+      const tasks = [
+        ['wave', () => s.wave.update(dt)],
+        ['heroes', () => s.heroes.update(dt)],
+        ['enemies', () => s.enemies.update(dt)],
+        ['combat', () => s.combat.update(dt)],
+        ['economy', () => s.economy.update(dt)],
+        ['buildings', () => s.buildings.update(dt)],
+        ['facilities', () => s.facilities.update(dt)],
+        ['merging', () => s.merging.updateAutoMerge(dt)],
+        ['particles', () => this._updateParticles(dt)],
+        ['phaseTrans', () => this._checkPhaseTrans()]
+      ];
+      for (const [name, fn] of tasks) {
+        try { fn(); } catch (e) { console.error('[bf] update[' + name + ']:', e); }
+      }
+      return;
     }
+    // hero-select / buff-select / game-over：待 UI 操作，仅更新粒子
+    this._updateParticles(dt);
   },
 
   /** 阶段转换检查 */
