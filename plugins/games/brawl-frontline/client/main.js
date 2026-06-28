@@ -24,7 +24,6 @@ import { Unlock } from './ui/unlock.js';
 import { Modals } from './ui/modals.js';
 import { Leaderboard } from './ui/leaderboard.js';
 import { Settings } from './ui/settings.js';
-import { MergingUI } from './ui/merging.js';
 import { Audio } from './core/audio.js';
 import { AntiCheat } from './core/anti-cheat.js';
 
@@ -71,14 +70,6 @@ function boot() {
   document.getElementById('bf-settings-btn').addEventListener('click', () => Settings.show());
   // 英雄解锁按钮
   document.getElementById('bf-unlock-btn').addEventListener('click', () => Unlock.show());
-  // 宝库弹窗内"英雄合并"按钮（事件委托，shop.js 渲染按钮后由 main 监听）
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('#bf-vault-merge');
-    if (!btn) return;
-    const vaultModal = document.getElementById('bf-vault-modal');
-    if (vaultModal) vaultModal.remove();
-    MergingUI.show();
-  });
 
   // 6. 反作弊输入追踪：监听全局点击/触屏/按键（捕获玩家真实操作）
   document.addEventListener('mousedown', () => AntiCheat.tap());
@@ -93,9 +84,13 @@ function boot() {
   const origRender = Game.render.bind(Game);
   Game.render = function () {
     origRender();
-    Hud.update();
-    Shop.refresh();
-    _updateSettingsBtn();
+    try {
+      Hud.update();
+      Shop.refresh();
+      _updateSettingsBtn();
+    } catch (e) {
+      console.error('[bf] UI refresh error:', e);
+    }
   };
 
   // 8. 启动主循环并进入英雄选择

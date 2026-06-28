@@ -40,10 +40,12 @@ export const Modals = {
   _onHeroChosen(heroId) {
     Heroes.recruitStarter(heroId);
     document.getElementById('bf-modal').classList.add('hidden');
+    Game.state.paused = false;  // 确保恢复（防止异常残留 paused=true）
     Wave.startWave(1);
   },
 
-  /** 强化三选一（Game.systems.ui.showBuffSelect 回调） */
+  /** 强化三选一（Game.systems.ui.showBuffSelect 回调）
+   *  两步操作：先点选高亮 → 再点确认按钮 */
   showBuffSelect(choices) {
     const body = document.getElementById('bf-modal-body');
     let html = '<div class="bf-modal-title">选择强化</div>';
@@ -57,13 +59,23 @@ export const Modals = {
       </div>`;
     });
     html += '</div>';
+    html += '<div class="bf-buff-confirm-bar"><button class="bf-buff-confirm-btn" id="bf-buff-confirm" disabled>确认选择</button></div>';
     body.innerHTML = html;
     document.getElementById('bf-modal').classList.remove('hidden');
+    let selectedBuff = null;
+    const confirmBtn = document.getElementById('bf-buff-confirm');
     body.querySelectorAll('.bf-buff-card').forEach(card => {
       card.addEventListener('click', () => {
-        Buffs.choose(card.dataset.buff);
-        document.getElementById('bf-modal').classList.add('hidden');
+        body.querySelectorAll('.bf-buff-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedBuff = card.dataset.buff;
+        confirmBtn.disabled = false;
       });
+    });
+    confirmBtn.addEventListener('click', () => {
+      if (!selectedBuff) return;
+      Buffs.choose(selectedBuff);
+      document.getElementById('bf-modal').classList.add('hidden');
     });
   },
 

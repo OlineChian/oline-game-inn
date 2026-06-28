@@ -214,9 +214,9 @@ body {
 .bf-card {
   flex-shrink: 0;
   width: 120px;
-  min-height: 138px;  /* 单行属性 + 精简超能 → 高度下降 */
+  min-height: 120px;  /* 进一步压缩：减小间距+字号 */
   border-radius: var(--bf-r-card);
-  padding: 0 8px 6px;
+  padding: 0 8px 4px;
   cursor: pointer;
   position: relative;
   background-color: var(--bf-card);
@@ -231,15 +231,15 @@ body {
 .bf-card:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
 .bf-card.selected { border-color: var(--bf-gold); }
 
-/* 顶部定位色条：突破 padding+border，撑到卡片边缘（保留用户确定：坦克黄/射手蓝/召唤青/近战红/治疗绿） */
+/* 顶部定位色条 */
 .bf-card-role-bar {
-  height: 22px;
-  margin: calc(-1 * var(--bf-bw)) calc(-1 * (var(--bf-bw) + 8px)) 3px;
+  height: 20px;
+  margin: calc(-1 * var(--bf-bw)) calc(-1 * (var(--bf-bw) + 8px)) 2px;
   padding: 0 calc(var(--bf-bw) + 8px);
   display: flex; align-items: center; justify-content: center;
   background: var(--role-color, #888);
   color: #fff;
-  font-size: 11px; font-weight: 900;
+  font-size: 10px; font-weight: 900;
   letter-spacing: 2px;
   border-bottom: var(--bf-bw) solid var(--bf-border);
 }
@@ -247,34 +247,34 @@ body {
 /* 卡片内容 */
 .bf-card-top {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 11px;
+  font-size: 10px;
 }
 .bf-card-stars { color: var(--bf-gold-border); font-weight: 900; }
 .bf-card-hp { color: var(--bf-upgrade); font-weight: 700; }
 .bf-card-name {
-  font-size: 17px; font-weight: 900; text-align: center;
-  margin: 2px 0 2px 0; color: var(--bf-text); letter-spacing: 0.5px;
+  font-size: 16px; font-weight: 900; text-align: center;
+  margin: 1px 0 1px 0; color: var(--bf-text); letter-spacing: 0.5px;
 }
 /* 单行属性：伤害红 / 射程蓝，前置 SVG 小图标 */
 .bf-card-stats {
   display: flex; flex-direction: row; justify-content: center; align-items: center;
   gap: 8px;
-  font-size: 10px; font-weight: 800; line-height: 1.2;
+  font-size: 10px; font-weight: 800; line-height: 1.1;
 }
 .bf-stat { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
 .bf-stat-icon { flex-shrink: 0; }
 .bf-stat-dmg { color: var(--bf-enemy); }
 .bf-stat-range { color: var(--bf-primary); }
 .bf-card-super {
-  font-size: 10px; text-align: center; margin-top: 3px;
-  padding: 2px 4px; border-radius: var(--bf-r);
+  font-size: 9px; text-align: center; margin-top: 2px;
+  padding: 1px 4px; border-radius: var(--bf-r);
   font-weight: 700;
   border: 2px solid var(--bf-border);
-  line-height: 1.2;
+  line-height: 1.1;
 }
 .bf-card-super.locked { color: var(--bf-text-3); background: var(--bf-card-alt); }
 .bf-card-super.unlocked { color: #222; background: var(--bf-gold); }
-.bf-card-super-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.bf-card-super-name { font-size: 9px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 /* 卡牌右上角星级数量徽章：5星及以下（红）/ 6星（金渐变）/ 7星（紫+火焰） */
 .bf-card-badges {
@@ -447,6 +447,38 @@ body {
 .bf-buff-quality { font-size: 11px; font-weight: 900; }
 .bf-buff-name { font-size: 15px; font-weight: 900; margin: 4px 0; }
 .bf-buff-desc { font-size: 12px; color: var(--bf-text-2); font-weight: 600; }
+/* 选中高亮：金色描边 + 轻微上抬 */
+.bf-buff-card.selected {
+  border-color: var(--bf-gold-border);
+  box-shadow: 0 5px 0 var(--bf-gold-border);
+  transform: translateY(-2px);
+}
+/* 确认按钮条：右对齐，与三个选项底部贴合 */
+.bf-buff-confirm-bar {
+  display: flex; justify-content: flex-end;
+  margin-top: 14px;
+}
+.bf-buff-confirm-btn {
+  padding: 10px 28px;
+  border: var(--bf-bw) solid var(--bf-border);
+  border-radius: var(--bf-r-btn);
+  background: var(--bf-gold);
+  color: #222;
+  font-family: var(--bf-font);
+  font-size: 15px; font-weight: 900; letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bf-buff-confirm-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 var(--bf-border); }
+.bf-buff-confirm-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-buff-confirm-btn:disabled {
+  background: var(--bf-card-alt);
+  color: var(--bf-text-3);
+  cursor: not-allowed;
+  box-shadow: var(--bf-shadow-sm);
+  opacity: 0.6;
+}
 
 /* ---- 游戏结束 ---- */
 .bf-gameover-score {
@@ -880,11 +912,11 @@ body {
   .bf-hud-tab { min-width: 48px; padding: 3px 4px; }
   .bf-hud-tab .bf-hud-label { font-size: 9px; }
   .bf-hud-tab .bf-hud-value { font-size: 12px; }
-  .bf-card { width: 104px; min-height: 128px; padding: 0 6px 5px; }
-  .bf-card-name { font-size: 16px; }
-  .bf-card-role-bar { font-size: 10px; height: 18px; }
+  .bf-card { width: 104px; min-height: 112px; padding: 0 6px 4px; }
+  .bf-card-name { font-size: 15px; }
+  .bf-card-role-bar { font-size: 9px; height: 18px; }
   .bf-card-stats { font-size: 9px; gap: 6px; }
-  .bf-card-super { font-size: 9px; }
+  .bf-card-super { font-size: 8px; }
   .bf-card-popup { min-width: 170px; }
   .bf-popup-btn { font-size: 12px; padding: 6px 4px; }
   .bf-modal-content:has(.bf-unlock-grid) { max-width: 360px; }

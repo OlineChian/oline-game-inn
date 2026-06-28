@@ -18,10 +18,10 @@ export const BUILDINGS = {
       { level: 3, goldPerSec: 21 },
       { level: 4, goldPerSec: 30 },
       { level: 5, goldPerSec: 42 },
-      { level: 6, goldPerSec: 58 },     // 解锁 5→6 合并
+      { level: 6, goldPerSec: 58 },     // 解锁 5→6 合并 + 批量招募 + 批量合并
       { level: 7, goldPerSec: 78 },
       { level: 8, goldPerSec: 105 },
-      { level: 9, goldPerSec: 140 },    // 解锁批量 100 合 50
+      { level: 9, goldPerSec: 140 },
       { level: 10, goldPerSec: 180 }    // 解锁 6→7 合并
     ],
     upgradeCost: [150, 300, 500, 800, 1200, 1800, 2600, 3800, 5500],
@@ -31,7 +31,7 @@ export const BUILDINGS = {
     merge: {
       star5to6: { unlockLevel: 6, baseCost: 800 },    // 2 个 5 星 → 1 个 6 星，单次基础花费
       star6to7: { unlockLevel: 10, baseCost: 3000 },  // 2 个 6 星 → 1 个 7 星
-      batchUnlockLevel: 9                              // 9 级解锁批量 100 合 50
+      batchUnlockLevel: 6                              // 6 级解锁批量招募
     },
     color: '#f4a261',
     accent: '#ffd9a8'
