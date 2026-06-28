@@ -207,7 +207,7 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
 
 // ==================== Brawl Frontline 校验（塔防）====================
 
-const BRAWL_BASE_MAX_HP = 1500;
+const BRAWL_BASE_MAX_HP = 30000;  // 客户端 BASE_MAX_HP=15000 + buff 加成空间
 const BRAWL_MAX_WAVE = 100;
 const BRAWL_MAX_GOLD = 100000;
 const BRAWL_MAX_TICKETS = 100000;
