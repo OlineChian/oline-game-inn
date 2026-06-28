@@ -116,7 +116,7 @@
         "unit": "分",
         "label": "得分",
         "scoreFloor": 0,
-        "scoreCap": 50000
+        "scoreCap": 
       }
     },
     {
@@ -134,7 +134,7 @@
         "unit": "分",
         "label": "得分",
         "scoreFloor": 0,
-        "scoreCap": 999999
+        "scoreCap":
       }
     }
   ],
