@@ -312,6 +312,44 @@ class LeaderboardService {
   }
 
   /**
+   * 强制插入成绩（管理员人工恢复，绕过所有校验）
+   * 不检查游戏配置、不检查分数范围、不检查昵称格式
+   * 直接写入排行榜存储，用于恢复因误判或服务异常丢失的成绩
+   */
+  forceInsertScore(gameId, data, siteConfig) {
+    const key = `${gameId}:${this.boardKey}`;
+    const board = this.getBoard(gameId);
+
+    const record = {
+      nickname: String(data.nickname || '').slice(0, 20),
+      score: Number(data.score) || 0,
+      extra: data.extra || {},
+      ip: data.ip || '',
+      timestamp: Date.now()
+    };
+
+    board.push(record);
+    this.storage.set(key, board);
+
+    // 尝试计算排名（需要 config）；无 config 时跳过排名计算
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    const config = gameConfigs[gameId];
+    let rank = null;
+    if (config) {
+      const sorted = this.sortBoard(board, config.sort);
+      rank = sorted.findIndex(r => r.timestamp === record.timestamp) + 1;
+    }
+
+    return {
+      success: true,
+      rank,
+      total: board.length,
+      record,
+      forced: true
+    };
+  }
+
+  /**
    * 排序排行榜
    */
   sortBoard(board, sortType) {

@@ -209,6 +209,7 @@ function verifyBelleAntiCheat(score, ac, extra, rules) {
 
 const BRAWL_BASE_MAX_HP = 30000;  // 客户端 BASE_MAX_HP=15000 + buff 加成空间
 const BRAWL_MAX_WAVE = 100;
+const BRAWL_VAULT_MAX_LEVEL = 5;  // 金库等级上限（可由 game-thresholds 覆盖）
 const BRAWL_MAX_GOLD = 100000;
 const BRAWL_MAX_TICKETS = 100000;
 const BRAWL_AFK_THRESHOLD_MS = 60000;
@@ -230,6 +231,7 @@ function verifyBrawlAntiCheat(score, ac, rules, t) {
   // t = thresholds 对象（来自 game-thresholds.js），未传则用默认常量
   const maxHp = (t && t.baseMaxHp) || BRAWL_BASE_MAX_HP;
   const maxWave = (t && t.maxWave) || BRAWL_MAX_WAVE;
+  const maxVault = (t && t.vaultMaxLevel) || BRAWL_VAULT_MAX_LEVEL;
   const maxGold = (t && t.maxGold) || BRAWL_MAX_GOLD;
   const maxTickets = (t && t.maxTickets) || BRAWL_MAX_TICKETS;
   const afkMs = (t && t.afkThresholdMs) || BRAWL_AFK_THRESHOLD_MS;
@@ -252,7 +254,7 @@ function verifyBrawlAntiCheat(score, ac, rules, t) {
     if (v.wave < 1 || v.wave > maxWave) {
       return { ok: false, error: '波数超出合理范围', code: 400 };
     }
-    if (v.vaultLevel < 1 || v.vaultLevel > 5) {
+    if (v.vaultLevel < 1 || v.vaultLevel > maxVault) {
       return { ok: false, error: '金库等级非法', code: 400 };
     }
     if (v.baseHp > maxHp) {

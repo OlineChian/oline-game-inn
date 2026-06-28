@@ -384,7 +384,7 @@ module.exports = function(app, context) {
 
     // 管理员重新上传某条失败提交的成绩
     // POST /api/security/failed-submissions/:id/retry
-    // 绕过签名与反作弊校验（管理员人工审核后放行，恢复玩家丢失成绩）
+    // 强制上传：绕过签名、反作弊、scoreCap 等所有校验，直接写入排行榜
     app.post('/api/security/failed-submissions/:id/retry', (req, res) => {
       const auth = checkAdminAuth(req);
       if (!auth.ok) {
@@ -394,16 +394,13 @@ module.exports = function(app, context) {
       if (!rec) {
         return res.status(404).json({ success: false, error: '未找到该失败提交记录' });
       }
-      // 直接调用 service.submitScore，绕过 verifySubmission/verifyAntiCheat
-      const result = service.submitScore(rec.gameId, {
+      // 调用 forceInsertScore，绕过所有校验（签名/反作弊/scoreCap/scoreFloor/游戏配置）
+      const result = service.forceInsertScore(rec.gameId, {
         nickname: rec.nickname,
         score: rec.score,
         extra: rec.extra,
         ip: rec.ip
       }, siteConfig);
-      if (result.code === 404 || result.code === 400) {
-        return res.status(result.code).json({ success: false, error: result.error });
-      }
       markUploaded(service.storage, rec.id);
       res.json({ success: true, result: result, uploaded: true });
     });

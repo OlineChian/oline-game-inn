@@ -23,6 +23,7 @@ const GAME_THRESHOLDS = {
     scoreTolerance:    { value: 100,    label: '分数容差',      desc: '客户端计算与服务端重算的最大允许差异（gold 持续产出需留余量）' },
     baseMaxHp:        { value: 30000,  label: '基地血量上限',   desc: '基地最大生命值上限（客户端 BASE_MAX_HP=15000 + buff 加成）' },
     maxWave:          { value: 100,    label: '最大波数',       desc: '波数合理范围上限' },
+    vaultMaxLevel:    { value: 10,     label: '金库等级上限',   desc: '金库等级最大值（客户端默认 5 级，可扩展至更高）' },
     maxGold:          { value: 100000, label: '金币上限',       desc: '金币数量上限' },
     maxTickets:       { value: 100000, label: '英雄券上限',     desc: '英雄券数量上限' },
     afkThresholdMs:   { value: 60000,  label: 'AFK阈值(ms)',   desc: '无操作超过此值判定为挂机' },
