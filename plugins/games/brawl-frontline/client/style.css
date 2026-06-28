@@ -214,9 +214,9 @@ body {
 .bf-card {
   flex-shrink: 0;
   width: 120px;
-  min-height: 160px;  /* 3:4 比例 */
+  min-height: 138px;  /* 单行属性 + 精简超能 → 高度下降 */
   border-radius: var(--bf-r-card);
-  padding: 0 8px 8px;
+  padding: 0 8px 6px;
   cursor: pointer;
   position: relative;
   background-color: var(--bf-card);
@@ -233,13 +233,13 @@ body {
 
 /* 顶部定位色条：突破 padding+border，撑到卡片边缘（保留用户确定：坦克黄/射手蓝/召唤青/近战红/治疗绿） */
 .bf-card-role-bar {
-  height: 24px;
-  margin: calc(-1 * var(--bf-bw)) calc(-1 * (var(--bf-bw) + 8px)) 4px;
+  height: 22px;
+  margin: calc(-1 * var(--bf-bw)) calc(-1 * (var(--bf-bw) + 8px)) 3px;
   padding: 0 calc(var(--bf-bw) + 8px);
   display: flex; align-items: center; justify-content: center;
   background: var(--role-color, #888);
   color: #fff;
-  font-size: 12px; font-weight: 900;
+  font-size: 11px; font-weight: 900;
   letter-spacing: 2px;
   border-bottom: var(--bf-bw) solid var(--bf-border);
 }
@@ -252,27 +252,29 @@ body {
 .bf-card-stars { color: var(--bf-gold-border); font-weight: 900; }
 .bf-card-hp { color: var(--bf-upgrade); font-weight: 700; }
 .bf-card-name {
-  font-size: 18px; font-weight: 900; text-align: center;
-  margin: 4px 0 2px 0; color: var(--bf-text); letter-spacing: 1px;
+  font-size: 17px; font-weight: 900; text-align: center;
+  margin: 2px 0 2px 0; color: var(--bf-text); letter-spacing: 0.5px;
 }
+/* 单行属性：伤害红 / 射程蓝，前置 SVG 小图标 */
 .bf-card-stats {
-  display: flex; flex-direction: column; gap: 1px;
-  font-size: 10px; color: var(--bf-text-2);
-  text-align: center; line-height: 1.3; font-weight: 600;
+  display: flex; flex-direction: row; justify-content: center; align-items: center;
+  gap: 8px;
+  font-size: 10px; font-weight: 800; line-height: 1.2;
 }
-.bf-card-stat-line { white-space: nowrap; }
+.bf-stat { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.bf-stat-icon { flex-shrink: 0; }
+.bf-stat-dmg { color: var(--bf-enemy); }
+.bf-stat-range { color: var(--bf-primary); }
 .bf-card-super {
-  font-size: 9px; text-align: center; margin-top: 4px;
+  font-size: 10px; text-align: center; margin-top: 3px;
   padding: 2px 4px; border-radius: var(--bf-r);
   font-weight: 700;
   border: 2px solid var(--bf-border);
-  display: flex; flex-direction: column; gap: 1px;
   line-height: 1.2;
 }
 .bf-card-super.locked { color: var(--bf-text-3); background: var(--bf-card-alt); }
 .bf-card-super.unlocked { color: #222; background: var(--bf-gold); }
-.bf-card-super-label { font-size: 8px; opacity: 0.75; letter-spacing: 1px; }
-.bf-card-super-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bf-card-super-name { font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 /* 卡牌右上角星级数量徽章：5星及以下（红）/ 6星（金渐变）/ 7星（紫+火焰） */
 .bf-card-badges {
@@ -356,7 +358,7 @@ body {
 .bf-popup-btn:disabled::before { opacity: 0.4; }
 /* 招募=蓝色（英雄券色） */
 .bf-popup-btn.recruit { --btn-color: var(--bf-primary); }
-/* 升星/金库=金色（金币色） */
+/* 升星/宝库=金色（金币色） */
 .bf-popup-btn.starup { --btn-color: var(--bf-gold); }
 /* 锁定状态（波数未到） */
 .bf-popup-btn.locked { --progress: 0%; opacity: 0.5; }
@@ -607,6 +609,15 @@ body {
 .bf-vault-info { font-size: 13px; color: var(--bf-text-2); margin-bottom: 14px; line-height: 1.6; font-weight: 600; }
 .bf-vault-maxed { color: var(--bf-upgrade); font-weight: 900; padding: 8px; text-align: center; }
 .bf-vault-locked-tip { font-size: 12px; color: var(--bf-text-3); font-weight: 600; padding: 8px; text-align: center; margin-top: 8px; }
+/* 宝库弹窗内按钮全宽居中（避免右侧空白） */
+.bf-vault-content .bf-popup-btn { width: 100%; box-sizing: border-box; margin-top: 8px; }
+.bf-popup-btn-sub { display: block; font-size: 10px; font-weight: 700; opacity: 0.85; margin-top: 2px; }
+/* 英雄合并按钮：紫色渐变上色 */
+.bf-vault-merge-btn {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%) !important;
+  color: #fff !important;
+}
+.bf-vault-merge-btn .bf-popup-btn-cost, .bf-vault-merge-btn .bf-popup-btn-sub { color: #fff; }
 
 /* ============ 英雄合并弹窗 ============ */
 .bf-merge-modal {
@@ -772,16 +783,107 @@ body {
 .bf-facility-desc { font-size: 11px; color: var(--bf-text-2); font-weight: 600; }
 .bf-facility-cost { font-size: 12px; font-weight: 900; color: var(--bf-gold-border); }
 
+/* 炮塔数值预览（建造/回收弹窗通用） */
+.bf-facility-stats {
+  display: flex; flex-wrap: wrap; gap: 4px 8px;
+  margin: 6px 0; padding: 6px 8px;
+  background: var(--bf-card); border-radius: var(--bf-r-btn);
+  border: 2px solid var(--bf-border);
+}
+.bf-facility-stat {
+  font-size: 11px; font-weight: 800; color: var(--bf-text);
+  white-space: nowrap;
+}
+/* 强化等级徽章（回收后建造价格/属性提升） */
+.bf-facility-tier {
+  display: inline-block; padding: 1px 6px;
+  border-radius: var(--bf-r-btn); background: var(--bf-upgrade);
+  color: #fff; font-size: 10px; font-weight: 900;
+  margin-left: 4px; letter-spacing: 0.5px;
+}
+/* 回收弹窗：返还信息 + 操作按钮 */
+.bf-facility-recycle-info {
+  font-size: 12px; color: var(--bf-text-2); font-weight: 600;
+  line-height: 1.6; text-align: center;
+  margin: 10px 0; padding: 8px;
+  background: var(--bf-card-alt); border-radius: var(--bf-r-btn);
+}
+.bf-facility-recycle-btns {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.bf-facility-recycle-btns .bf-btn-secondary { flex: 1; }
+.bf-facility-recycle {
+  flex: 1; padding: 10px;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r-btn);
+  background: var(--bf-enemy); color: #fff;
+  font-family: var(--bf-font); font-size: 14px; font-weight: 900;
+  cursor: pointer; box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.bf-facility-recycle:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--bf-border); }
+.bf-facility-recycle:active { transform: translateY(3px); box-shadow: 0 0 0 var(--bf-border); }
+
+/* ============ 批量招募面板（弹层顶部，宝库 6 级解锁） ============ */
+.bf-batch-panel {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; margin-bottom: 6px;
+  background: var(--bf-card-alt); border-radius: var(--bf-r-btn);
+  border: 2px solid var(--bf-border);
+}
+.bf-batch-label {
+  font-size: 10px; font-weight: 900; color: var(--bf-text-2);
+  letter-spacing: 0.5px; flex-shrink: 0;
+}
+.bf-batch-btns { display: flex; gap: 4px; flex: 1; }
+.bf-batch-btn {
+  flex: 1; padding: 4px 2px;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: var(--bf-r-btn);
+  background: var(--bf-card); cursor: pointer;
+  font-family: var(--bf-font);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  box-shadow: var(--bf-shadow-sm);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.bf-batch-btn:hover:not(.disabled) { background: #DDDDDD; transform: translateY(-1px); }
+.bf-batch-btn:active:not(.disabled) { transform: translateY(2px); box-shadow: 0 0 0 var(--bf-border); }
+.bf-batch-btn.disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+.bf-batch-n { font-size: 12px; font-weight: 900; color: var(--bf-text); line-height: 1; }
+.bf-batch-cost { font-size: 9px; font-weight: 700; color: var(--bf-text-2); line-height: 1; }
+
+/* ============ 自动合并开关（卡片右侧，宝库 7 级解锁） ============ */
+.bf-auto-merge-toggle {
+  position: absolute; right: 4px; bottom: 4px; z-index: 3;
+  width: 32px; height: 18px; padding: 0;
+  border: var(--bf-bw) solid var(--bf-border); border-radius: 9px;
+  background: var(--bf-card-alt); cursor: pointer;
+  box-shadow: var(--bf-shadow-sm);
+  transition: background 0.2s ease;
+}
+.bf-auto-merge-toggle .bf-auto-merge-knob {
+  position: absolute; top: 1px; left: 1px;
+  width: 12px; height: 12px;
+  border-radius: 50%; background: var(--bf-text-3);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.bf-auto-merge-toggle.on {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-color: #5b21b6;
+}
+.bf-auto-merge-toggle.on .bf-auto-merge-knob {
+  transform: translateX(14px);
+  background: #fff;
+}
+
 /* ============ 手机端适配 ============ */
 @media (max-width: 640px) {
   .bf-hud { font-size: 12px; gap: 3px; padding: 4px 5px; }
   .bf-hud-tab { min-width: 48px; padding: 3px 4px; }
   .bf-hud-tab .bf-hud-label { font-size: 9px; }
   .bf-hud-tab .bf-hud-value { font-size: 12px; }
-  .bf-card { width: 104px; min-height: 148px; padding: 0 6px 6px; }
-  .bf-card-name { font-size: 17px; }
+  .bf-card { width: 104px; min-height: 128px; padding: 0 6px 5px; }
+  .bf-card-name { font-size: 16px; }
   .bf-card-role-bar { font-size: 10px; height: 18px; }
-  .bf-card-stats { font-size: 9px; }
+  .bf-card-stats { font-size: 9px; gap: 6px; }
   .bf-card-super { font-size: 9px; }
   .bf-card-popup { min-width: 170px; }
   .bf-popup-btn { font-size: 12px; padding: 6px 4px; }

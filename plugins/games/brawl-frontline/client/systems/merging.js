@@ -5,6 +5,7 @@
  * - 合并花费金币，宝库等级越高花费越低（最低 50%）
  * - 9 级解锁批量 100 合 50
  * - 合并后保留主体实例（hp 恢复满），消耗客体实例
+ * - 宝库 7 级解锁自动合并（每英雄独立开关，2 秒检查一次）
  */
 import { Game } from '../core/game.js';
 import { BUILDINGS } from '../data/buildings.js';
@@ -12,12 +13,21 @@ import { Heroes } from './heroes.js';
 
 const STAR5TO6 = 'star5to6';
 const STAR6TO7 = 'star6to7';
+const AUTO_MERGE_INTERVAL = 2;     // 自动合并检查间隔（秒）
+const AUTO_MERGE_UNLOCK_LEVEL = 7; // 自动合并解锁宝库等级
 
 export const Merging = {
+  _autoTimer: 0,
+
   /** 检查指定合并类型是否已解锁 */
   isUnlocked(type) {
     const cfg = BUILDINGS['vault'].merge[type];
     return Game.buildings.vault.level >= cfg.unlockLevel;
+  },
+
+  /** 宝库 7 级解锁自动合并开关 */
+  isAutoMergeUnlocked() {
+    return Game.buildings.vault.level >= AUTO_MERGE_UNLOCK_LEVEL;
   },
 
   /** 9 级解锁批量 100 合 50 */
@@ -79,6 +89,30 @@ export const Merging = {
       produced++;
     }
     Game.state.gold -= cost;
+    // 记录合并数量用于分数结算
+    if (!Game.state.totalMerged[heroId]) Game.state.totalMerged[heroId] = {};
+    const key = type === STAR5TO6 ? 's6' : 's7';
+    Game.state.totalMerged[heroId][key] = (Game.state.totalMerged[heroId][key] || 0) + produced;
     return { ok: true, produced, cost };
+  },
+
+  /** 自动合并：每 2 秒检查一次，遍历开启开关的英雄自动执行可合并类型 */
+  updateAutoMerge(dt) {
+    if (!this.isAutoMergeUnlocked()) return;
+    this._autoTimer += dt;
+    if (this._autoTimer < AUTO_MERGE_INTERVAL) return;
+    this._autoTimer = 0;
+    const flags = Game.state.autoMerge || {};
+    Object.keys(flags).forEach(heroId => {
+      if (!flags[heroId]) return;
+      // 优先 6→7，再 5→6（每次只合 1 组，避免瞬间耗光金币）
+      for (const type of [STAR6TO7, STAR5TO6]) {
+        if (!this.isUnlocked(type)) continue;
+        const list = this.getMergeableHeroes(type).filter(g => g.id === heroId);
+        if (!list.length) continue;
+        const r = this.merge(type, heroId, 1);
+        if (r.ok) break;
+      }
+    });
   }
 };

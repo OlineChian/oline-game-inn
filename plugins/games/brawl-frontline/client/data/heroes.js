@@ -49,7 +49,7 @@ export const HEROES = [
   },
   // ============ 史诗（5）— hp ≥ 2025 / atk ≥ 157 ============
   {
-    id: 'el-primo', name: '艾尔普里莫', role: '近战', rarity: 'epic', faction: 'Starr Force',
+    id: 'el-primo', name: '普里莫', role: '近战', rarity: 'epic', faction: 'Starr Force',
     hp: 3000, attack: 170, range: 80, attackSpeed: 1.0, moveSpeed: 70,
     projectileSpeed: 0, cost: { tickets: 150 }, color: '#e63946', accent: '#ffb4b4',
     super: { name: '超级技能：飞身重压', type: 'leap', damage: 340, radius: 110, stunDuration: 1.0, chargePerHit: 0.26 }

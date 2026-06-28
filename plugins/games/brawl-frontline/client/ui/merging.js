@@ -13,9 +13,9 @@ export const MergingUI = {
   _heroId: null,
   _count: 1,
 
-  show() {
+  show(type = 'star5to6') {
     Game.state.paused = true;
-    this._type = 'star5to6';
+    this._type = type;
     this._heroId = null;
     this._count = 1;
     this._render();

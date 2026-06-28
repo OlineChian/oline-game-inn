@@ -1,6 +1,6 @@
 /**
  * 建筑数据（Phase 1：A 主题季宝库 + B 星妙之路）
- * C 战场设施（炮台/舰炮/治疗台/伤害放大器）预留 2 个建造位，Phase 2 实装
+ * C 炮塔（速射/狙击/治疗/加伤）预留 2 个建造位
  *
  * 地图为纵向固定布局，建筑位坐标在 game.js 的 LAYOUT 中定义
  */
@@ -48,25 +48,25 @@ export const BUILDINGS = {
   }
 };
 
-/** C 类战场设施（Phase 2 实装，此处仅定义数据预留） */
+/** C 类炮塔（旧 Phase 1 占位数据，实际使用 data/facilities.js） */
 export const FACILITIES = {
   'turret': {
-    id: 'turret', name: '炮台', code: 'C', cost: 120, duration: 60,
+    id: 'turret', name: '速射炮塔', code: 'C', cost: 120, duration: 60,
     desc: '快速攻击，中距离，单体', color: '#e76f51',
-    enabled: false   // Phase 2 启用
+    enabled: false
   },
   'cannon': {
-    id: 'cannon', name: '舰炮', code: 'C', cost: 220, duration: 4,
+    id: 'cannon', name: '狙击炮塔', code: 'C', cost: 220, duration: 4,
     desc: '慢速高伤，超远距离，留火焰', color: '#e63946',
     enabled: false
   },
   'healer': {
-    id: 'healer', name: '治疗台', code: 'C', cost: 180,
+    id: 'healer', name: '治疗炮塔', code: 'C', cost: 180,
     desc: '圆形范围回血+提高生命上限', color: '#06d6a0',
     enabled: false
   },
   'amplifier': {
-    id: 'amplifier', name: '伤害放大器', code: 'C', cost: 200, duration: 90,
+    id: 'amplifier', name: '加伤炮塔', code: 'C', cost: 200, duration: 90,
     desc: '英雄攻击+30%，结束自动报废', color: '#9b5de5',
     enabled: false
   }

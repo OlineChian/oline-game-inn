@@ -112,7 +112,7 @@ export const Supers = {
     });
   },
 
-  /** 艾尔普里莫：跳跃到最近敌人位置，造成范围伤害 + 眩晕 */
+  /** 普里莫：跳跃到最近敌人位置，造成范围伤害 + 眩晕 */
   _leap(h, def) {
     let nearest = null, minDist = Infinity;
     Game.entities.enemies.forEach(en => {

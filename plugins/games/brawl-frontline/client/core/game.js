@@ -15,7 +15,7 @@
  */
 import { clamp } from './utils.js';
 import { BUFF_TARGETS } from '../data/enemies.js';
-import { getStarterHeroIds } from '../data/heroes.js';
+import { getStarterHeroIds, HEROES } from '../data/heroes.js';
 
 /** 逻辑画布尺寸（渲染时按容器缩放） */
 export const VIEW = { w: 480, h: 720 };
@@ -60,6 +60,11 @@ export const Game = {
       buffTargetIdx: 0,       // 当前目标在 BUFF_TARGETS 中的索引
       buffPending: false,
       heroStars: {},          // 全局星级映射 { heroId: starLevel }
+      autoMerge: {},          // 每英雄自动合并开关 { heroId: boolean }（宝库 7 级解锁）
+      totalGoldEarned: 0,     // 累计获取金币（含已消耗，用于分数结算）
+      totalTicketsEarned: 0,  // 累计获取英雄券（含已消耗）
+      totalRecruited: {},     // 累计招募次数 { heroId: count }
+      totalMerged: {},        // 累计合并次数 { heroId: { s6: n, s7: n } }
       paused: false,
       speedMultiplier: 1,     // 游戏速度倍率（0.5 / 1 / 2 / 4）
       heroChoices: [],        // 起始 3 选 1
@@ -80,7 +85,8 @@ export const Game = {
     this.buildings = {
       vault: { level: 1, goldAcc: 0 },
       starRoad: {},
-      facilities: [null, null] // 2 个 C 建造位
+      facilities: [null, null], // 2 个 C 建造位
+      facilityTier: 0          // 全局炮塔回收等级（每次回收 +1，影响后续建造价格/属性）
     };
     this.buffs = [];          // 已激活强化
     this._running = false;
@@ -129,6 +135,7 @@ export const Game = {
         s.economy.update(dt);
         s.buildings.update(dt);
         s.facilities.update(dt);
+        s.merging.updateAutoMerge(dt);
         this._updateParticles(dt);
         this._checkPhaseTrans();
         break;
@@ -202,34 +209,46 @@ export const Game = {
     this.entities.projectiles.push(p);
   },
 
-  /** 计算 Score：基础分 × (1 + 英雄总倍率/100)
-   *  基础分 = 波数×100 + 击杀×2 + Boss×300 + 金币/20（去除基地血量）
-   *  单英雄倍率：5 星以下 5-15（星数↑/稀有度↓），6 星 20，7 星 30 */
+  /** 计算 Score（纯加和公式，详见 scoreBreakdown） */
   calcScore() {
-    const st = this.state;
-    const base = st.wave * 100 + st.kills * 2 + st.bossKills * 300 + st.gold / 20;
-    const rarityFactor = { starter: 0, rare: -1, epic: -2, mythic: -3, legendary: -4 };
-    let totalMult = 0;
-    this.entities.heroes.forEach(h => {
-      if (h.star >= 7) totalMult += 30;
-      else if (h.star >= 6) totalMult += 20;
-      else totalMult += Math.max(5, Math.min(15, 5 + (h.star - 1) * 2.5 + (rarityFactor[h.rarity] || 0)));
-    });
-    return Math.floor(base * (1 + totalMult / 100));
+    return this.scoreBreakdown().total;
   },
 
-  /** 计算英雄倍率明细（用于分数面板展示） */
+  /** 分数明细（全部加和，无倍率）：
+   *  波数×100 + 击杀×2 + Boss×300 + 累计金币×0.2 + 累计英雄券×0.5
+   *  + 已解锁英雄星级和×200 + 累计招募(基础/传奇×15 史诗神话×10)
+   *  + 累计合并(6★基础传奇×30/史诗神话×20, 7★基础传奇×100/史诗神话×80) */
   scoreBreakdown() {
     const st = this.state;
-    const base = st.wave * 100 + st.kills * 2 + st.bossKills * 300 + st.gold / 20;
-    const rarityFactor = { starter: 0, rare: -1, epic: -2, mythic: -3, legendary: -4 };
-    let totalMult = 0;
-    this.entities.heroes.forEach(h => {
-      if (h.star >= 7) totalMult += 30;
-      else if (h.star >= 6) totalMult += 20;
-      else totalMult += Math.max(5, Math.min(15, 5 + (h.star - 1) * 2.5 + (rarityFactor[h.rarity] || 0)));
+    const waveScore = st.wave * 100;
+    const killScore = st.kills * 2;
+    const bossScore = st.bossKills * 300;
+    const goldScore = Math.floor((st.totalGoldEarned || 0) * 0.2);
+    const ticketScore = Math.floor((st.totalTicketsEarned || 0) * 0.5);
+    // 英雄星级：已解锁英雄的当前星级（默认1）× 200
+    let starScore = 0;
+    st.unlockedHeroes.forEach(id => { starScore += (st.heroStars[id] || 1) * 200; });
+    // 累计招募：基础(初始+稀有)/传奇 ×15，史诗/神话 ×10
+    let recruitScore = 0;
+    const rec = st.totalRecruited || {};
+    Object.entries(rec).forEach(([id, n]) => {
+      const h = HEROES.find(x => x.id === id);
+      if (!h) return;
+      const isEpicMythic = h.rarity === 'epic' || h.rarity === 'mythic';
+      recruitScore += n * (isEpicMythic ? 10 : 15);
     });
-    return { base: Math.floor(base), totalMult, final: Math.floor(base * (1 + totalMult / 100)) };
+    // 累计合并：6★基础/传奇×30 史诗神话×20；7★基础/传奇×100 史诗神话×80
+    let mergeScore = 0;
+    const mg = st.totalMerged || {};
+    Object.entries(mg).forEach(([id, c]) => {
+      const h = HEROES.find(x => x.id === id);
+      if (!h) return;
+      const isEpicMythic = h.rarity === 'epic' || h.rarity === 'mythic';
+      mergeScore += (c.s6 || 0) * (isEpicMythic ? 20 : 30);
+      mergeScore += (c.s7 || 0) * (isEpicMythic ? 80 : 100);
+    });
+    const total = waveScore + killScore + bossScore + goldScore + ticketScore + starScore + recruitScore + mergeScore;
+    return { waveScore, killScore, bossScore, goldScore, ticketScore, starScore, recruitScore, mergeScore, total };
   },
 
   _gameOver() {

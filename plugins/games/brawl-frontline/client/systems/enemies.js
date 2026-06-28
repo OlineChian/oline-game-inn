@@ -47,7 +47,7 @@ export const Enemies = {
       damageReduction: data.damageReduction || 0,
       slowTimer: 0,        // 减速剩余时间（公牛超能）
       slowRate: 1,         // 减速比例（1=正常，0.5=射速减半）
-      stunTimer: 0,        // 眩晕剩余时间（弗兰肯/艾尔普里莫超能）
+      stunTimer: 0,        // 眩晕剩余时间（弗兰肯/普里莫超能）
       poisonTimer: 0,      // 中毒剩余时间（乌鸦超能）
       poisonDps: 0,        // 中毒每秒伤害
       shieldHp: 0,         // 护盾吸收量（护盾Boss技能）

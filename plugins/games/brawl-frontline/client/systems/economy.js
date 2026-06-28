@@ -17,17 +17,22 @@ export const Economy = {
     if (vault.goldAcc >= 1) {
       const g = Math.floor(vault.goldAcc);
       Game.state.gold += g;
+      Game.state.totalGoldEarned += g;
       vault.goldAcc -= g;
     }
   },
 
   /** 击杀掉落奖励：金币 + 英雄券（受 kill-gold-flat / kill-ticket-flat / kill-ticket-rate buff 加成） */
   onKill(enemy) {
-    Game.state.gold += enemy.goldDrop + this._buffFlat('kill-gold-flat');
+    const goldGain = enemy.goldDrop + this._buffFlat('kill-gold-flat');
+    Game.state.gold += goldGain;
+    Game.state.totalGoldEarned += goldGain;
     const base = enemy.ticketDrop || 0;
     const tFlat = this._buffFlat('kill-ticket-flat');
     const tRate = this._buffRate('kill-ticket-rate');
-    Game.state.tickets += Math.floor(base * (1 + tRate)) + tFlat;
+    const ticketGain = Math.floor(base * (1 + tRate)) + tFlat;
+    Game.state.tickets += ticketGain;
+    Game.state.totalTicketsEarned += ticketGain;
   },
 
   addGold(n) { Game.state.gold += n; },

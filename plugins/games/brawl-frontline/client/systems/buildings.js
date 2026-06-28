@@ -19,6 +19,8 @@ export const Buildings = {
     if (Game.state.gold < cost) return { ok: false, msg: '金币不足' };
     Game.state.gold -= cost;
     vault.level += 1;
+    // 通知 UI：宝库升级（批量招募/自动合并解锁态可能变化）
+    document.dispatchEvent(new CustomEvent('bf-vault-upgraded'));
     return { ok: true, level: vault.level };
   },
 

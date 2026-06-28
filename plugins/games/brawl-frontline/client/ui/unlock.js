@@ -20,8 +20,9 @@ const ROLE_COLOR = {
 };
 
 export const Unlock = {
-  /** 显示解锁弹窗 */
+  /** 显示解锁弹窗（暂停游戏） */
   show() {
+    Game.state.paused = true;
     const choices = Heroes.generateUnlockChoices();
     const body = document.getElementById('bf-modal-body');
     if (choices.length === 0) {
@@ -97,6 +98,7 @@ export const Unlock = {
 
   close() {
     document.getElementById('bf-modal').classList.add('hidden');
+    Game.state.paused = false;
   },
 
   _toast(msg) {

@@ -1,12 +1,6 @@
-/**
- * 英雄系统：招募、升级星级、AI、超级技能释放调度
- * - 全局升星：同种类英雄共享星级（state.heroStars[id]），新招募即带当前星级
- * - 超级技能：3 星及以上解锁，满充能自动释放（具体效果在 hero-supers.js 实现）
- * - 坦克（role='坦克'）守在基地前方，不主动追击
- * - 近战（projectileSpeed=0）主动追击敌人
- * - 射手横向移动对准敌人
- * - 治疗（role='治疗'）保持后排，远程弱攻击 + 超能治疗
- */
+/** 英雄系统：招募/升星/AI/超能调度
+ * 全局升星(state.heroStars[id])；超能3星解锁满能自动释放(hero-supers.js)
+ * 坦克守基地/近战追击/射手横向/治疗后排 */
 import { Game, LAYOUT } from '../core/game.js';
 import { HEROES, STAR_UPGRADE_COST, STAR_GROWTH, SUPER_UNLOCK_STAR, UNLOCK_COST, getUnlockableHeroes } from '../data/heroes.js';
 import { distance, uid, randomRange, clamp, pickN } from '../core/utils.js';
@@ -25,6 +19,7 @@ export const Heroes = {
     if (Game.state.tickets < (data.cost.tickets || 1)) return false;
     Game.state.tickets -= data.cost.tickets || 1;
     Game.entities.heroes.push(this._create(data));
+    Game.state.totalRecruited[heroId] = (Game.state.totalRecruited[heroId] || 0) + 1;
     return true;
   },
 
@@ -89,6 +84,7 @@ export const Heroes = {
     if (!data) return false;
     Game.entities.heroes.push(this._create(data));
     Game.state.selectedHero = heroId;
+    Game.state.totalRecruited[heroId] = (Game.state.totalRecruited[heroId] || 0) + 1;
     return true;
   },
 

@@ -13,9 +13,9 @@ import { rollBuffs, QUALITY_COLORS } from '../data/buffs.js';
 export const Buffs = {
   _choices: [],
 
-  /** 触发三选一面板 */
+  /** 触发三选一面板（波数推进时 value 放大，wave≥15 过滤普通） */
   open() {
-    this._choices = rollBuffs(3);
+    this._choices = rollBuffs(3, Game.state.wave);
     if (Game.systems.ui && Game.systems.ui.showBuffSelect) {
       Game.systems.ui.showBuffSelect(this._choices);
     }
@@ -46,6 +46,7 @@ export const Buffs = {
       const tickets = Math.floor(gold * (buff.effect.tickets / buff.effect.gold));
       Game.state.gold -= gold;
       Game.state.tickets += tickets;
+      Game.state.totalTicketsEarned += tickets;
     }
   },
 
@@ -61,6 +62,14 @@ export const Buffs = {
   },
   superChargeRate() {
     return this._sum('super-charge-rate');
+  },
+  /** 炮塔生命加成倍率总和 */
+  facilityHpRate() {
+    return this._sum('turret-hp-rate');
+  },
+  /** 炮塔伤害加成倍率总和 */
+  facilityDamageRate() {
+    return this._sum('turret-damage-rate');
   },
 
   _sum(type) {

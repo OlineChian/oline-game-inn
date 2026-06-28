@@ -1,9 +1,9 @@
 /**
- * 强化数据池（Phase 1：基础强化）
+ * 强化数据池
  * 击杀达 40 触发三选一，品质分普通/稀有/史诗/神话/传奇
  *
  * effect 字段定义强化效果，由 systems/buffs.js 的 apply 方法消费
- * Phase 1 简化为 4 种品质，Phase 2 扩充为 5 品质 + 设施相关强化
+ * 波数推进时：value 按 waveMult 放大；wave≥15 后不再刷新普通品质
  */
 export const BUFF_POOL = [
   // ---- 普通 ----
@@ -43,6 +43,16 @@ export const BUFF_POOL = [
     effect: { type: 'base-hp-flat', value: 200 },
     desc: '基地最大生命值 +200，并恢复 300 点生命'
   },
+  {
+    id: 'turret-hp-20', name: '炮塔生命 +20%', quality: 'rare',
+    effect: { type: 'turret-hp-rate', value: 0.20 },
+    desc: '所有炮塔最大生命提升 20%'
+  },
+  {
+    id: 'turret-dmg-20', name: '炮塔伤害 +20%', quality: 'rare',
+    effect: { type: 'turret-damage-rate', value: 0.20 },
+    desc: '所有炮塔伤害提升 20%'
+  },
   // ---- 史诗 ----
   {
     id: 'hero-atk-30', name: '英雄攻击 +30%', quality: 'epic',
@@ -63,6 +73,16 @@ export const BUFF_POOL = [
     id: 'kill-ticket-1', name: '击杀英雄券 +1', quality: 'rare',
     effect: { type: 'kill-ticket-flat', value: 1 },
     desc: '每次击杀额外获得 1 英雄券'
+  },
+  {
+    id: 'turret-hp-35', name: '炮塔生命 +35%', quality: 'epic',
+    effect: { type: 'turret-hp-rate', value: 0.35 },
+    desc: '所有炮塔最大生命提升 35%'
+  },
+  {
+    id: 'turret-dmg-35', name: '炮塔伤害 +35%', quality: 'epic',
+    effect: { type: 'turret-damage-rate', value: 0.35 },
+    desc: '所有炮塔伤害提升 35%'
   },
   {
     id: 'kill-ticket-rate-30', name: '击杀英雄券 +30%', quality: 'mythic',
@@ -115,12 +135,23 @@ export const QUALITY_COLORS = {
   legendary: '#ffd700'
 };
 
-/** 从池中随机抽 3 个不同强化（按品质权重） */
-export function rollBuffs(count = 3) {
-  const pool = [...BUFF_POOL];
+/** 普通品质过滤的波数阈值 */
+export const COMMON_FILTER_WAVE = 15;
+
+/** 波数缩放倍率：每 10 波 +15% 数值 */
+export function waveMultiplier(wave) {
+  return 1 + Math.floor((wave || 0) / 10) * 0.15;
+}
+
+/** 从池中随机抽 3 个不同强化（按品质权重；wave≥15 过滤普通；value 随波数缩放） */
+export function rollBuffs(count = 3, wave = 0) {
+  const mult = waveMultiplier(wave);
+  const filterCommon = wave >= COMMON_FILTER_WAVE;
+  const pool = filterCommon
+    ? BUFF_POOL.filter(b => b.quality !== 'common')
+    : [...BUFF_POOL];
   const result = [];
   for (let i = 0; i < count && pool.length > 0; i++) {
-    // 按品质权重选一个品质，再从该品质中随机
     const totalWeight = pool.reduce((s, b) => s + (QUALITY_WEIGHTS[b.quality] || 0), 0);
     let r = Math.random() * totalWeight;
     let picked = 0;
@@ -128,7 +159,15 @@ export function rollBuffs(count = 3) {
       r -= (QUALITY_WEIGHTS[pool[j].quality] || 0);
       if (r <= 0) { picked = j; break; }
     }
-    result.push(pool.splice(picked, 1)[0]);
+    const buff = pool.splice(picked, 1)[0];
+    // 缩放带 value 的数值类强化（rate/flat），convert 类不缩放
+    if (buff.effect.value !== undefined) {
+      const scaled = { ...buff };
+      scaled.effect = { ...buff.effect, value: Math.round(buff.effect.value * mult * 100) / 100 };
+      result.push(scaled);
+    } else {
+      result.push(buff);
+    }
   }
   return result;
 }
