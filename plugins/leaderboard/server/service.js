@@ -252,13 +252,8 @@ class LeaderboardService {
       return { error: '分数格式错误', code: 400 };
     }
 
-    // 分数合理性校验：挡住明显离谱的伪造高分（scoreCap/scoreFloor 来自 config）
-    if (typeof config.scoreCap === 'number' && scoreNum > config.scoreCap) {
-      return { error: '分数超出合理范围', code: 400 };
-    }
-    if (typeof config.scoreFloor === 'number' && scoreNum < config.scoreFloor) {
-      return { error: '分数低于合理范围', code: 400 };
-    }
+    // 分数范围校验（scoreCap/scoreFloor）已移至 POST 路由，由 scoreRange 安全规则开关控制
+    // submitScore 仅负责成绩存储与排名，不再做业务范围校验
 
     const key = `${gameId}:${this.boardKey}`;
     const board = this.getBoard(gameId);

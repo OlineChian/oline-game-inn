@@ -5,13 +5,13 @@
  *   1. 违规计数（按 IP 永久累加，管理员可手动重置）
  *   2. 惩罚等级表（警告 → 10min → 30min → 2h → 8h → 24h 封顶）
  *   3. 惩罚历史记录（永久保存全部事件）
- *   4. 安全规则开关（5 个全局类别，默认全开）
+ *   4. 安全规则开关（6 个全局类别，默认全开）
  *   5. applyPenalty：组合上述，供 POST 路由在反作弊失败时调用
  *
  * 存储结构（均在 leaderboard partitioned store）：
  *   violation:ip:{ip} → { count, lastAt }
  *   penalty:log        → [{ at, ip, nickname, reason, level, action, gameId, durationMs }]
- *   security:rules     → { timeConsistency, scoreConsistency, afkDetection, inputFrequency, stateIntegrity }
+ *   security:rules     → { timeConsistency, scoreConsistency, afkDetection, inputFrequency, stateIntegrity, scoreRange }
  *
  * 依赖：security.js 的 flagCheater（写 ban 记录 + purge 标记）
  */
@@ -83,12 +83,13 @@ function listHistory(storage) {
 
 // ==================== 安全规则开关 ====================
 //
-// 5 个全局类别，作用于所有游戏的反作弊校验：
+// 6 个全局类别，作用于所有游戏的反作弊校验：
 //   timeConsistency  — 时长与分数/波数/timer 的一致性
 //   scoreConsistency — 分数重算一致性（防孤立篡改 score 字段）
 //   afkDetection     — 长时间无操作检测
 //   inputFrequency   — 输入次数频率检测
 //   stateIntegrity   — 游戏状态完整性（雷数/格数/砖块数/通关状态等）
+//   scoreRange       — 分数范围校验（scoreCap/scoreFloor 上下限）
 //
 // 默认全开；管理后台可单独关闭某类。关闭后该类规则在校验时跳过。
 
@@ -98,7 +99,8 @@ const RULE_CATEGORIES = [
   { id: 'scoreConsistency', label: '分数一致性', desc: '分数与游戏状态重算结果是否一致' },
   { id: 'afkDetection',     label: 'AFK检测',   desc: '长时间无操作检测（挂机/脚本）' },
   { id: 'inputFrequency',   label: '输入频率',   desc: '输入次数是否低于合理下限' },
-  { id: 'stateIntegrity',   label: '状态完整性', desc: '雷数/格数/砖块数/通关状态等是否被篡改' }
+  { id: 'stateIntegrity',   label: '状态完整性', desc: '雷数/格数/砖块数/通关状态等是否被篡改' },
+  { id: 'scoreRange',       label: '分数范围',   desc: '分数是否超出 scoreCap/scoreFloor 合理上下限' }
 ];
 
 /** 读取规则开关（未配置则全部默认开启） */

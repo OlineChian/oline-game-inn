@@ -10,12 +10,13 @@
  *   - verifyBelleAntiCheat：扫雷（belle-challenge），雷数/格数/揭开数一致性 + 布局哈希
  *   - verifyBrawlAntiCheat：塔防（brawl-frontline），状态快照 + 分数重算一致性 + 时长/AFK
  *
- * 安全规则开关（rules 参数，5 个类别，默认全开）：
+ * 安全规则开关（rules 参数，6 个类别，默认全开）：
  *   timeConsistency  — 时长与分数/波数/timer 一致性
  *   scoreConsistency — 分数重算一致性
  *   afkDetection     — 长时间无操作检测
  *   inputFrequency   — 输入次数频率
  *   stateIntegrity   — 游戏状态完整性（雷数/格数/砖块数/通关状态等）
+ *   scoreRange       — 分数范围校验（scoreCap/scoreFloor，在 POST 路由执行）
  *
  * 设计原则：
  *   1. 无 antiCheat 字段时跳过（向后兼容未接入游戏）

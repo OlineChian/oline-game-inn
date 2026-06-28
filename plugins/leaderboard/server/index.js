@@ -209,6 +209,32 @@ module.exports = function(app, context) {
         });
       }
 
+      // L3.5: 分数范围校验（scoreCap/scoreFloor），受 scoreRange 安全规则开关控制
+      // 关闭 scoreRange 规则后跳过此校验，允许任意分数上传
+      if (rules.scoreRange !== false) {
+        const gameConfigs = service.getGameConfigs(siteConfig);
+        const config = gameConfigs[gameId];
+        if (config) {
+          const scoreNum = Number(score);
+          if (typeof config.scoreCap === 'number' && scoreNum > config.scoreCap) {
+            recordFailure(service.storage, {
+              gameId, nickname, score, extra, ip,
+              error: '分数超出合理范围（上限 ' + config.scoreCap + '）',
+              status: 400, category: 'service', payload
+            });
+            return res.status(400).json({ success: false, error: '分数超出合理范围' });
+          }
+          if (typeof config.scoreFloor === 'number' && scoreNum < config.scoreFloor) {
+            recordFailure(service.storage, {
+              gameId, nickname, score, extra, ip,
+              error: '分数低于合理范围（下限 ' + config.scoreFloor + '）',
+              status: 400, category: 'service', payload
+            });
+            return res.status(400).json({ success: false, error: '分数低于合理范围' });
+          }
+        }
+      }
+
       // 排行榜只存储成绩与排名；挑战积分由活动中心 Session 流程独立结算
       const result = service.submitScore(gameId, { nickname, score, extra, ip }, siteConfig);
 
