@@ -116,6 +116,7 @@
         "unit": "分",
         "label": "得分",
         "scoreFloor": 0,
+        "scoreCap": 50000
       }
     },
     {
@@ -132,11 +133,11 @@
         "sort": "desc",
         "unit": "分",
         "label": "得分",
-        "scoreFloor": 0,
+        "scoreFloor": 0
       }
     }
   ],
-  
+
   "challenges": {
     "belle-challenge": {
       "target": 1,
