@@ -46,6 +46,10 @@ export async function submitScoreToLeaderboard(state, nickname) {
         signature: sig.signature
       })
     });
+    // 优先处理安全事件（封禁/警告弹窗），已弹窗则中止
+    if (window.BanNotice && await window.BanNotice.handleSecurityEvent(response)) {
+      return false;
+    }
     const data = await response.json();
     if (!data.success) {
       console.warn('[chester] 成绩提交失败:', data.error);
