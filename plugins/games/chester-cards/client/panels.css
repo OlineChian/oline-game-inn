@@ -15,7 +15,7 @@
 
 /* ---------- 2. 糖果面板（移动端侧滑，<768px） ---------- */
 .cc-candy-panel {
-    position: fixed; top: 0; bottom: 0; left: 0;
+    position: fixed; top: 48px; bottom: 0; left: 0;
     width: 50vw; max-width: 360px;
     background: var(--bg-card);
     border-right: var(--border-panel);
@@ -28,6 +28,18 @@
 }
 .cc-candy-panel.is-open { transform: translateX(0); }
 .cc-candy-panel.hidden { display: none; }
+
+/* 糖果面板遮罩（移动端，覆盖背景 + 点击关闭面板） */
+.cc-candy-mask {
+    position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+    background: var(--bg-overlay);
+    z-index: 170;
+    cursor: pointer;
+}
+.cc-candy-mask.hidden { display: none; }
+@media (min-width: 768px) {
+    .cc-candy-mask { display: none !important; }
+}
 
 /* ---------- 3. 糖果侧栏（电脑端常驻，≥768px） ---------- */
 .cc-candy-sidebar { display: none; }

@@ -60,17 +60,21 @@ export function createSessionActions(state, config, renderAll, helpers) {
   }
 
   /** 切换糖果面板显隐（仅移动端生效，电脑端侧栏常驻）
-   *  同步管理 hidden 与 is-open：开启时先移除 hidden 再加 is-open 触发滑入；
-   *  关闭时先移除 is-open 触发滑出，动画结束后再加 hidden
+   *  同步管理遮罩、hidden 与 is-open：
+   *    开启时：移除 mask/panel 的 hidden，reflow 后加 is-open 触发滑入
+   *    关闭时：移除 is-open 触发滑出，动画结束后加 mask/panel 的 hidden
    */
   function toggleCandyPanel() {
     const panel = document.getElementById('ccCandyPanel');
+    const mask = document.getElementById('ccCandyMask');
     if (!panel) return;
     if (panel.classList.contains('is-open')) {
       panel.classList.remove('is-open');
+      if (mask) mask.classList.add('hidden');
       setTimeout(() => panel.classList.add('hidden'), 200);
     } else {
       panel.classList.remove('hidden');
+      if (mask) mask.classList.remove('hidden');
       void panel.offsetWidth;  // 强制 reflow，确保 transition 生效
       panel.classList.add('is-open');
     }

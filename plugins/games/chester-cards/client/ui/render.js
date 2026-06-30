@@ -26,7 +26,7 @@ export function renderGame(config) {
       <div class="cc-hud-row cc-hud-row-main">
         <div class="cc-hud-pill cc-pill-round" data-action="toggle-candy-panel">
           <span class="cc-hud-label">点击查看糖果</span>
-          <span class="cc-round-num">第 <span id="ccRoundCurrent">1</span> 关</span>
+          <span class="cc-round-num">第 <span class="cc-round-current" id="ccRoundCurrent">1</span> 关</span>
         </div>
         <div class="cc-hud-pill cc-pill-score">
           <span class="cc-score-label" id="ccScoreLabel">目标分</span>
@@ -58,6 +58,7 @@ export function renderGame(config) {
       </div>
     </section>
 
+    <div class="cc-candy-mask hidden" id="ccCandyMask" data-action="toggle-candy-panel"></div>
     <aside class="cc-candy-panel hidden" id="ccCandyPanel"></aside>
     <aside class="cc-candy-sidebar hidden" id="ccCandySidebar"></aside>
 

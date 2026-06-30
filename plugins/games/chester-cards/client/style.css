@@ -84,7 +84,7 @@
 }
 .cc-pill-round:hover { filter: brightness(1.15); }
 .cc-round-num { display: inline-flex; align-items: baseline; gap: 2px; }
-.cc-round-current { font-family: var(--font-number); font-size: var(--fs-number-lg); font-weight: 700; color: var(--color-red); line-height: 1; text-shadow: var(--text-shadow-sm); }
+.cc-round-current { font-family: var(--font-number); font-size: var(--fs-number-xl); font-weight: 700; color: var(--color-red); line-height: 1; text-shadow: var(--text-shadow-sm); }
 
 /* 分数胶囊（三态显示，左对齐 + 大字号） */
 .cc-pill-score {
