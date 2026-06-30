@@ -66,14 +66,13 @@
         padding: 10px;
         box-shadow: var(--shadow-card);
     }
-    /* .cc-main 占据剩余空间，主内容在其中居中，右侧自动留白 */
+    /* .cc-main 固定 760px 紧贴 sidebar 右侧，右侧自动留白 = sidebar 宽度 */
     .cc-main {
-        flex: 1 1 auto;
-        align-items: center;  /* HUD/预览/牌桌在 .cc-main 内水平居中 */
+        flex: 0 0 760px;
     }
     .cc-hud, .cc-preview, .cc-table {
         width: 100%;
-        max-width: 760px;
+        max-width: none;
     }
     .cc-candy-panel { display: none !important; }
 }

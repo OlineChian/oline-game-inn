@@ -120,11 +120,12 @@
     word-break: break-all;
 }
 
-/* 设置齿轮按钮（高度自动拉伸对齐 HUD） */
+/* 设置齿轮按钮（正方形，高度跟随 HUD，宽度=高度） */
 .cc-hud-settings {
-    flex: 0 0 auto; width: 44px;
+    flex: 0 0 auto;
+    width: auto;
+    aspect-ratio: 1 / 1;
     align-self: stretch;
-    height: 100%;
     box-sizing: border-box;
     appearance: none;
     -webkit-appearance: none;
