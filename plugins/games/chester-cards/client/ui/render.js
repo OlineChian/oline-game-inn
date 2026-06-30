@@ -3,11 +3,17 @@
  * 阶段 2：含糖果槽渲染与得分动效触发列表
  * 阶段 6：实时分数预览（选牌时显示牌型与分数）→ 拆分到 preview-render.js
  * 纯 DOM 操作，状态由 main.js 推送
+ *
+ * Wave/UI 重构：
+ *   - HUD 顶部仅保留关卡胶囊（点击触发糖果面板）+ 目标/得分胶囊（三态显示）+ 设置按钮
+ *   - 出牌/弃牌按钮双行结构（动作名 + 剩余次数）
+ *   - 糖果查看由 panel-render.js 的 renderCandyPanel 承担（移动端侧滑 / 电脑端常驻）
  */
 
-import { scoreHand } from '../core/scoring.js';
 import { getTarget } from '../core/targets.js';
 import { renderVictorySubmitSection } from './submit-section.js';
+import { renderCandyPanel } from './panel-render.js';
+import { hasSave } from '../systems/save-system.js';
 
 // 实时预览渲染已拆分到 preview-render.js
 export { renderLivePreview } from './preview-render.js';
@@ -17,35 +23,24 @@ export function renderGame(config) {
   const stage = document.getElementById('chesterStage');
   stage.innerHTML = `
     <header class="cc-hud">
-      <div class="cc-hud-row cc-hud-row-single">
-        <div class="cc-hud-pill cc-pill-round">
-          <span class="cc-hud-label">关卡</span>
-          <span class="cc-round-num">
-            <span class="cc-round-current" id="ccRoundCurrent">1</span><span class="cc-round-total"> ∞</span>
-          </span>
+      <div class="cc-hud-row cc-hud-row-main">
+        <div class="cc-hud-pill cc-pill-round" data-action="toggle-candy-panel">
+          <span class="cc-hud-label">点击查看糖果</span>
+          <span class="cc-round-num">第 <span id="ccRoundCurrent">1</span> 关</span>
         </div>
-        <div class="cc-hud-pill cc-pill-target">
-          <span class="cc-hud-label">目标分</span>
-          <span class="cc-target-num"><span id="ccRoundScore">0</span><span class="cc-target-sep">/</span><span id="ccTarget">300</span></span>
+        <div class="cc-hud-pill cc-pill-score">
+          <span class="cc-score-label" id="ccScoreLabel">目标分</span>
+          <span class="cc-score-value" id="ccScoreValue">0</span>
         </div>
-        <div class="cc-hud-pill cc-pill-play">
-          <span class="cc-hud-label">出牌</span>
-          <span class="cc-hud-value"><span id="ccPlays">4</span><span class="cc-hud-div">/</span><span id="ccPlaysMax">4</span></span>
-        </div>
-        <div class="cc-hud-pill cc-pill-discard">
-          <span class="cc-hud-label">弃牌</span>
-          <span class="cc-hud-value"><span id="ccDiscards">2</span><span class="cc-hud-div">/</span><span id="ccDiscardsMax">2</span></span>
-        </div>
+        <button class="cc-hud-settings" data-action="open-settings" aria-label="设置">
+          <svg viewBox="0 0 24 24" class="cc-icon-gear" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+          </svg>
+        </button>
       </div>
     </header>
-
-    <section class="cc-candy-row">
-      <div class="cc-coin-box">
-        <span class="cc-coin-label">💰 金币</span>
-        <span class="cc-coin-value" id="ccCoins">0</span>
-      </div>
-      <div class="cc-candies" id="ccCandies"></div>
-    </section>
 
     <div class="cc-preview hidden" id="ccPreview"></div>
 
@@ -53,19 +48,22 @@ export function renderGame(config) {
       <div class="cc-hand" id="ccHand"></div>
       <div class="cc-actions">
         <button class="cc-btn cc-btn-play" data-action="play">
-          <span class="cc-btn-count" id="ccSelCount">0/${config.maxPlay}</span>
           <span class="cc-btn-label">出牌</span>
+          <span class="cc-btn-sub">剩余次数：<span id="ccPlaysLeft">4</span></span>
         </button>
         <button class="cc-btn cc-btn-discard" data-action="discard">
-          <span class="cc-btn-count" id="ccDiscLeft">2/${config.discardsPerRound}</span>
           <span class="cc-btn-label">弃牌</span>
+          <span class="cc-btn-sub">剩余次数：<span id="ccDiscardsLeft">2</span></span>
         </button>
-        <button class="cc-btn cc-btn-quit" data-action="quit">退出</button>
       </div>
     </section>
 
-    <div class="cc-score-popup hidden" id="ccPopup"></div>
+    <aside class="cc-candy-panel hidden" id="ccCandyPanel"></aside>
+    <aside class="cc-candy-sidebar hidden" id="ccCandySidebar"></aside>
+
+    <div class="cc-overlay cc-settings-overlay hidden" id="ccSettingsOverlay"></div>
     <div class="cc-overlay hidden" id="ccOverlay"></div>
+    <div class="cc-score-popup hidden" id="ccPopup"></div>
   `;
 }
 
@@ -83,59 +81,40 @@ export function renderHand(state) {
   }).join('');
 }
 
-/** 渲染糖果槽（已填充：点击翻面看效果；空槽：占位） */
-export function renderCandies(state, config) {
-  const candiesEl = document.getElementById('ccCandies');
-  if (!candiesEl) return;
-  const slots = [];
-  for (let i = 0; i < config.maxCandies; i++) {
-    const candy = state.candies[i];
-    if (candy) {
-      slots.push(`
-        <div class="cc-candy-slot has-candy cc-rarity-${candy.rarity}" data-slot="${i}">
-          <div class="cc-candy-inner">
-            <div class="cc-candy-face cc-candy-front">
-              <div class="cc-candy-emoji">${candy.emoji}</div>
-              <div class="cc-candy-name">${candy.name}</div>
-            </div>
-            <div class="cc-candy-face cc-candy-back">${candy.desc}</div>
-          </div>
-        </div>
-      `);
-    } else {
-      slots.push(`
-        <div class="cc-candy-slot" data-slot="${i}">
-          <div class="cc-candy-emoji">＋</div>
-          <div class="cc-candy-name">空槽</div>
-        </div>
-      `);
-    }
-  }
-  candiesEl.innerHTML = slots.join('');
-}
-
-/** 渲染 HUD（单行四胶囊，无进度条） */
+/** 渲染 HUD（关卡 + 目标/得分三态显示 + 按钮剩余次数 + 糖果面板同步） */
 export function renderHUD(state, config) {
   const target = getTarget(state.round);
   const setText = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
   };
+
   setText('ccRoundCurrent', state.round);
-  setText('ccRoundScore', state.roundScore);
-  setText('ccTarget', target);
-  setText('ccCoins', state.coins);
-  setText('ccPlays', state.playsLeft);
-  setText('ccPlaysMax', state.playsPerRound);
-  setText('ccDiscards', state.discardsLeft);
-  setText('ccDiscardsMax', state.discardsPerRound);
-  setText('ccSelCount', `${state.selected.size}/${config.maxPlay}`);
-  setText('ccDiscLeft', `${state.discardsLeft}/${state.discardsPerRound}`);
+
+  const scoreLabel = document.getElementById('ccScoreLabel');
+  const scoreValue = document.getElementById('ccScoreValue');
+  if (scoreLabel && scoreValue) {
+    if (state.roundScore === 0) {
+      scoreLabel.textContent = '目标分';
+      scoreValue.textContent = target;
+    } else if (state.roundScore < target) {
+      scoreLabel.textContent = `已得分 （还差：${target - state.roundScore}）`;
+      scoreValue.textContent = state.roundScore;
+    } else {
+      scoreLabel.textContent = '已得分';
+      scoreValue.textContent = state.roundScore;
+    }
+  }
+
+  setText('ccPlaysLeft', state.playsLeft);
+  setText('ccDiscardsLeft', state.discardsLeft);
 
   const playBtn = document.querySelector('.cc-btn-play');
   const discardBtn = document.querySelector('.cc-btn-discard');
   if (playBtn) playBtn.disabled = state.selected.size === 0 || state.playsLeft <= 0;
   if (discardBtn) discardBtn.disabled = state.selected.size === 0 || state.discardsLeft <= 0;
+
+  renderCandyPanel(state, config);
 }
 
 /** 得分动效（含糖果触发列表） */
@@ -210,9 +189,12 @@ export function hideEndScreen() {
   }
 }
 
-/** 开始界面 */
+/** 开始界面（如有 24h 内有效存档，显示"继续上次游戏"入口） */
 export function renderStartScreen() {
   const stage = document.getElementById('chesterStage');
+  const continueBtn = hasSave()
+    ? `<button class="cc-btn cc-btn-secondary cc-btn-continue" data-action="continue-game">继续上次游戏</button>`
+    : '';
   stage.innerHTML = `
     <section class="cc-start">
       <div class="cc-start-icon">🎪</div>
@@ -226,6 +208,7 @@ export function renderStartScreen() {
         <li>最多装备 5 颗糖果 · 可随时退出并记录分数</li>
       </ul>
       <button class="cc-btn cc-btn-primary cc-btn-start" data-action="start">开始游戏</button>
+      ${continueBtn}
     </section>
   `;
 }

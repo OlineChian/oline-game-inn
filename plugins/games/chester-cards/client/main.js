@@ -7,12 +7,16 @@
 import { createDeck, shuffle, drawCards, sortHand } from './core/deck.js';
 import { scoreHand, upgradeHandType } from './core/scoring.js';
 import { getTarget } from './core/targets.js';
-import { getPlaysForRound, getDiscardsForRound } from './data/wave-config.js';
 import {
-  renderGame, renderHand, renderHUD, renderCandies,
+  getPlaysForRound, getDiscardsForRound,
+  getDeckCount, isDeckUpgradeRound, getDeckTotalCards
+} from './data/deck-tiers.js';
+import {
+  renderGame, renderHand, renderHUD,
   renderLivePreview, showScorePopup, renderEndScreen, hideEndScreen, renderStartScreen
 } from './ui/render.js';
 import { setupInteraction } from './ui/interaction.js';
+import { renderWaveChoice } from './ui/panel-render.js';
 import {
   applyCandiesToScore, applyCandiesPerRound, hasHandModifier
 } from './systems/candy-system.js';
@@ -24,6 +28,7 @@ import { getChoiceCandies } from './systems/shop-system.js';
 import { getCandyById } from './data/candies.js';
 import { renderCandyChoice, hideShop } from './ui/shop-ui.js';
 import { createShopActions } from './systems/shop-actions.js';
+import { createSessionActions } from './systems/session-actions.js';
 import { submitAndRefresh, submitWithNickname } from './leaderboard-submit.js';
 
 const CONFIG = {
@@ -78,7 +83,7 @@ function playSelected() {
   });
   const context = {
     playedCards: played,
-    deckUsed: 52 - State.deck.length,
+    deckUsed: getDeckTotalCards(State.round) - State.deck.length,
     isLastPlayOfRound: State.playsLeft <= 1,
     prevPlayHandType: State.prevPlayHandType,
     maxCandies: CONFIG.maxCandies,
@@ -170,20 +175,32 @@ async function quitGame() {
 
 /** 关闭商店并进入下一关
  * 阶段 6：清除幸运加成状态（lucky-cookie 已在 openShop 时激活并使用）
+ * Wave 重构：若下一关为换副节点（50/100/200/300...），弹窗让玩家选择"现在结束"或"继续挑战"
  */
 function closeShop() {
   hideShop();
   State._luckyBonus = 1;
   State._activeLuckyBonus = 1;
+  const nextRound = State.round + 1;
+  if (isDeckUpgradeRound(nextRound)) {
+    State.phase = 'waveChoice';
+    renderWaveChoice(nextRound, getDeckCount(nextRound));
+    return;
+  }
+  proceedNextRound();
+}
+
+/** 进入下一关（不经过 wave 弹窗的常规路径） */
+function proceedNextRound() {
   State.round++;
   startRound();
 }
 
 /** 开始一关（应用回合开始钩子 + 每回合糖果效果）
- * 出牌/弃牌次数随关卡增长：关 11+ 每 7 关 +1 出牌，每 13 关 +1 弃牌，关 50 锁定
+ * Wave 重构：副数由 getDeckCount(State.round) 决定（50/100/200/300 换副节点）
  */
 function startRound() {
-  State.deck = shuffle(createDeck());
+  State.deck = shuffle(createDeck(getDeckCount(State.round)));
   State.hand = sortHand(drawCards(State.deck, CONFIG.handSize));  // 自动理牌
   State.selected = new Set();
   State.roundScore = 0;
@@ -242,12 +259,18 @@ function restart() {
 function renderAll() {
   renderHUD(State, CONFIG);
   renderHand(State);
-  renderCandies(State, CONFIG);
   renderLivePreview(State, CONFIG);
 }
 
 /** 商店操作集合（工厂模式，注入 State/CONFIG/renderAll） */
 const shopActions = createShopActions(State, CONFIG, renderAll);
+
+/** 会话操作集合（wave 选择 / 设置 / 临时存档 / 功成身退 / 糖果面板 / 继续游戏） */
+const sessionActions = createSessionActions(State, CONFIG, renderAll, {
+  startRound,
+  renderGame,
+  quitGame
+});
 
 /** 初始化 */
 function init() {
@@ -268,7 +291,8 @@ function init() {
     onRefreshShop: shopActions.refreshShop,
     onBuySpecialItem: shopActions.buySpecialItem,
     onUpgradeShop: shopActions.upgradeShop,
-    onSubmitScore: () => submitWithNickname(State, CONFIG)
+    onSubmitScore: () => submitWithNickname(State, CONFIG),
+    ...sessionActions  // onToggleCandyPanel/onOpenSettings/onCloseSettings/onTempSave/onRetire/onConfirmRetire/onCancelRetire/onContinueWave/onEndWave/onContinueGame
   });
 }
 

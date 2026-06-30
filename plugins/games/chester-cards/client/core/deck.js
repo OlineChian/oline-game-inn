@@ -15,18 +15,23 @@ export const RANK_VALUES = {
 /** 红色花色 */
 export const RED_SUITS = new Set(['♥', '♦']);
 
-/** 创建一副新牌（52 张） */
-export function createDeck() {
+/** 创建牌库（默认 1 副 52 张，可指定多副以支持 wave 换副）
+ * @param {number} [count=1] 副数
+ * @returns {Array} 牌数组
+ */
+export function createDeck(count = 1) {
   const deck = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
-      deck.push({
-        suit,
-        rank,
-        value: RANK_VALUES[rank],
-        id: `${rank}${suit}`,
-        isRed: RED_SUITS.has(suit)
-      });
+  for (let d = 0; d < count; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        deck.push({
+          suit,
+          rank,
+          value: RANK_VALUES[rank],
+          id: `${d}-${rank}${suit}`,  // 副数前缀避免多副间 id 冲突
+          isRed: RED_SUITS.has(suit)
+        });
+      }
     }
   }
   return deck;

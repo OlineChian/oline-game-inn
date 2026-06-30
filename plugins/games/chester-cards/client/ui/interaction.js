@@ -88,6 +88,26 @@ export function setupInteraction(handlers) {
       handlers.onOpenShop && handlers.onOpenShop();
     } else if (act === 'submit-score') {
       handlers.onSubmitScore && handlers.onSubmitScore();
+    } else if (act === 'toggle-candy-panel') {
+      handlers.onToggleCandyPanel && handlers.onToggleCandyPanel();
+    } else if (act === 'open-settings') {
+      handlers.onOpenSettings && handlers.onOpenSettings();
+    } else if (act === 'close-settings') {
+      handlers.onCloseSettings && handlers.onCloseSettings();
+    } else if (act === 'temp-save') {
+      handlers.onTempSave && handlers.onTempSave();
+    } else if (act === 'retire') {
+      handlers.onRetire && handlers.onRetire();
+    } else if (act === 'confirm-retire') {
+      handlers.onConfirmRetire && handlers.onConfirmRetire();
+    } else if (act === 'cancel-retire') {
+      handlers.onCancelRetire && handlers.onCancelRetire();
+    } else if (act === 'continue-wave') {
+      handlers.onContinueWave && handlers.onContinueWave();
+    } else if (act === 'end-wave') {
+      handlers.onEndWave && handlers.onEndWave();
+    } else if (act === 'continue-game') {
+      handlers.onContinueGame && handlers.onContinueGame();
     }
   });
 

@@ -41,7 +41,7 @@ export function renderLivePreview(state, config) {
   }
   const context = {
     playedCards: played,
-    deckUsed: state.deck ? 52 - state.deck.length : 0,
+    deckUsed: state.deck ? getDeckTotalCards(state.round) - state.deck.length : 0,
     isLastPlayOfRound: state.playsLeft <= 1,
     prevPlayHandType: state.prevPlayHandType,
     maxCandies: config.maxCandies,
