@@ -12,6 +12,9 @@
  *   - POST /api/inn-welcome/weights            设置权重并重算权重分
  *   - POST /api/inn-welcome/lottery            按权重分加权抽奖
  *   - GET  /api/inn-welcome/lottery/result     读取抽奖结果
+ *   - GET  /api/inn-welcome/config             读取积分与奖励配置
+ *   - POST /api/inn-welcome/config             保存积分与奖励配置（admin）
+ *   - POST /api/inn-welcome/direct-reward      直通奖励卡兑换
  *
  * 注意：管理员页面无鉴权（与现有活动管理端点一致），靠 URL 隐藏。
  */
@@ -85,6 +88,27 @@ module.exports = function(app, context) {
     res.json({ success: true, result: service.getLotteryResult() });
   });
 
+  // ===== 管理员：读取积分与奖励配置 =====
+  app.get('/api/inn-welcome/config', (req, res) => {
+    res.json({ success: true, pointsConfig: service.getPointsConfig() });
+  });
+
+  // ===== 管理员：保存积分与奖励配置 =====
+  app.post('/api/inn-welcome/config', (req, res) => {
+    const auth = checkAdminAuth(req);
+    if (!auth.ok) return res.status(401).json({ success: false, error: auth.error });
+    const r = service.setPointsConfig(req.body || {});
+    if (r.error) return res.status(r.code || 400).json({ success: false, error: r.error });
+    res.json(r);
+  });
+
+  // ===== 玩家：直通奖励卡兑换 =====
+  app.post('/api/inn-welcome/direct-reward', (req, res) => {
+    const r = service.directReward(req.body && req.body.nickname);
+    if (r.error) return res.status(r.code || 400).json({ success: false, error: r.error });
+    res.json(r);
+  });
+
   context.logger.info('[inn-welcome] plugin initialized with API routes');
 
   return {
@@ -93,6 +117,9 @@ module.exports = function(app, context) {
     listSubmissions: () => service.listSubmissions(),
     deleteSubmission: (n) => service.deleteSubmission(n),
     computeWeights: (w) => service.computeWeights(w),
-    runLottery: (c) => service.runLottery(c)
+    runLottery: (c) => service.runLottery(c),
+    getPointsConfig: () => service.getPointsConfig(),
+    setPointsConfig: (p) => service.setPointsConfig(p),
+    directReward: (n) => service.directReward(n)
   };
 };

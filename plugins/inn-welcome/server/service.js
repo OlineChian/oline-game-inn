@@ -2,19 +2,8 @@
 
 /**
  * 客栈迎新活动 - 业务逻辑服务
- * ============================
- * 职责：
- *   - 成绩提交（同一昵称更新覆盖，一人一票）
- *   - 权重分计算（每游戏分数归一化 × 管理员设定的游戏权重，求和）
- *   - 加权抽奖（按权重分无放回抽样 N 人，crypto 随机）
- *
- * 数据分区键（inn-welcome:）：
- *   - submission:{nickname}  → 单条提交快照
- *   - weights                → { gameId: weight }
- *   - lottery:result         → 上次抽奖结果
- *
- * 成绩快照来自前端调用排行榜 API（GET /api/leaderboard/:game/user/:nickname），
- * 后端只存储快照，不跨插件访问排行榜，符合插件隔离铁律。
+ * 职责：成绩提交、权重分计算、加权抽奖、积分配置、直通奖励卡
+ * 数据键：submission:{nickname}、weights、lottery:result、direct-reward:{nickname}
  */
 
 const fs = require('fs');
@@ -23,11 +12,14 @@ const crypto = require('crypto');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const CONFIG_PATH = path.join(ROOT_DIR, 'activities', 'inn-welcome', 'config.json');
+const GLOBAL_CONFIG_PATH = path.join(ROOT_DIR, 'activities', 'config.json');
 const DEFAULT_TAG_PATTERN = '^#[A-Z0-9]{3,10}$';
+const DEFAULT_POINTS_CONFIG = { participationReward: 10, directRewardCost: 50, directRewardPool: [] };
 
 class InnWelcomeService {
   constructor(context) {
     this.storage = context.storage;
+    this.eventBus = context.eventBus;
     this.logger = context.logger;
     this.config = this._loadConfig();
   }
@@ -80,10 +72,18 @@ class InnWelcomeService {
     };
     this.storage.set('submission:' + cleanNick, submission);
     this.logger.info('[inn-welcome] 提交: ' + cleanNick + ' / ' + tag);
+
+    const pointsConfig = this.getPointsConfig();
+    if (pointsConfig.participationReward > 0 && this.eventBus) {
+      this.eventBus.emit('user:award-points', {
+        nickname: cleanNick, amount: pointsConfig.participationReward,
+        reason: '参与活动：客栈迎新', activityId: 'inn-welcome'
+      });
+    }
+
     return { success: true, submission };
   }
 
-  /** 按活动配置的 5 款游戏规整成绩，缺失游戏置 null */
   _sanitizeScores(scores) {
     const out = {};
     for (const g of this.getGames()) {
@@ -110,10 +110,7 @@ class InnWelcomeService {
     return items;
   }
 
-  /**
-   * 删除一条提交记录（管理员清理篡改数据用）
-   * @param {string} nickname 玩家昵称（与提交时一致）
-   */
+  /** 删除一条提交记录（管理员清理用） */
   deleteSubmission(nickname) {
     if (!nickname || typeof nickname !== 'string' || !nickname.trim()) {
       return { error: '昵称不能为空', code: 400 };
@@ -188,10 +185,7 @@ class InnWelcomeService {
     return { success: true, weights: norm, submissions: this.listSubmissions() };
   }
 
-  /**
-   * 按权重分加权无放回抽样
-   * @param {number} count 中奖人数
-   */
+  /** 按权重分加权无放回抽样 */
   runLottery(count) {
     const n = parseInt(count, 10);
     if (!n || n < 1) return { error: '抽奖人数必须为正整数', code: 400 };
@@ -227,6 +221,77 @@ class InnWelcomeService {
 
   getLotteryResult() {
     return this.storage.get('lottery:result') || null;
+  }
+
+  // ===== 积分系统配置 =====
+
+  /** 读取全局积分配置（activities/config.json 的 pointsConfig） */
+  getPointsConfig() {
+    try {
+      const global = JSON.parse(fs.readFileSync(GLOBAL_CONFIG_PATH, 'utf8'));
+      return { ...DEFAULT_POINTS_CONFIG, ...(global.pointsConfig || {}) };
+    } catch (e) {
+      this.logger.warn('[inn-welcome] 读取全局积分配置失败: ' + e.message);
+      return { ...DEFAULT_POINTS_CONFIG };
+    }
+  }
+
+  /** 保存全局积分配置（合并写入 activities/config.json） */
+  setPointsConfig(payload) {
+    try {
+      const global = JSON.parse(fs.readFileSync(GLOBAL_CONFIG_PATH, 'utf8'));
+      const current = { ...DEFAULT_POINTS_CONFIG, ...(global.pointsConfig || {}) };
+      if (payload.participationReward != null)
+        current.participationReward = Math.max(0, Number(payload.participationReward) || 0);
+      if (payload.directRewardCost != null)
+        current.directRewardCost = Math.max(1, Number(payload.directRewardCost) || 50);
+      if (Array.isArray(payload.directRewardPool))
+        current.directRewardPool = payload.directRewardPool.map(s => String(s).trim()).filter(Boolean);
+      global.pointsConfig = current;
+      fs.writeFileSync(GLOBAL_CONFIG_PATH, JSON.stringify(global, null, 2), 'utf8');
+      this.logger.info('[inn-welcome] 积分配置已更新');
+      return { success: true, pointsConfig: current };
+    } catch (e) {
+      this.logger.error('[inn-welcome] 保存积分配置失败: ' + e.message);
+      return { error: '保存失败: ' + e.message, code: 500 };
+    }
+  }
+
+  /** 直通奖励卡：扣减积分（事件总线 callback）→ 从奖品池随机抽奖 */
+  directReward(nickname) {
+    if (!nickname || typeof nickname !== 'string' || !nickname.trim())
+      return { error: '昵称不能为空', code: 400 };
+    const cleanNick = nickname.trim().slice(0, 20);
+    const config = this.getPointsConfig();
+    if (!config.directRewardPool || config.directRewardPool.length === 0)
+      return { error: '奖品池未配置', code: 400 };
+
+    let deductResult = null;
+    this.eventBus.emit('user:deduct-points', {
+      nickname: cleanNick,
+      amount: config.directRewardCost,
+      reason: '直通奖励卡兑换',
+      activityId: 'inn-welcome',
+      callback: (r) => { deductResult = r; }
+    });
+
+    if (!deductResult || deductResult.error) {
+      return { error: (deductResult && deductResult.error) || '扣减失败', code: 400 };
+    }
+
+    // 随机抽取奖品
+    const prize = config.directRewardPool[
+      crypto.randomInt(0, config.directRewardPool.length)
+    ];
+
+    // 记录领取历史
+    const historyKey = 'direct-reward:' + cleanNick;
+    const history = this.storage.get(historyKey) || [];
+    history.push({ prize, cost: config.directRewardCost, timestamp: Date.now() });
+    this.storage.set(historyKey, history);
+
+    this.logger.info('[inn-welcome] 直通奖励: ' + cleanNick + ' → ' + prize);
+    return { success: true, reward: prize, remainingPoints: deductResult.points.total };
   }
 }
 

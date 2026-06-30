@@ -1,6 +1,17 @@
 /**
  * 用户系统插件入口
- * 提供：积分管理、挑战记录
+ * 提供：积分管理（单积分体系，含流水）
+ *
+ * 路由：
+ *   GET  /api/user/:nickname/points          获取积分
+ *   GET  /api/user/:nickname/points/history  获取流水
+ *   POST /api/user/:nickname/points/award    奖励积分（内部/admin）
+ *   POST /api/user/:nickname/points/deduct   扣减积分（直通奖励卡）
+ *
+ * 事件总线：
+ *   user:get-points    获取积分（callback）
+ *   user:award-points  奖励积分（fire-and-forget，含防刷）
+ *   user:deduct-points 扣减积分（callback 返回成功/失败）
  */
 
 const UserService = require('./service');
@@ -12,120 +23,78 @@ module.exports = function(app, context) {
     app.get('/api/user/:nickname/points', (req, res) => {
       const nickname = req.params.nickname;
       const points = service.getPoints(nickname);
-      res.json({
-        success: true,
-        nickname: nickname,
-        points: points
-      });
+      res.json({ success: true, nickname, points });
     });
 
-    app.post('/api/user/:nickname/points', (req, res) => {
+    app.get('/api/user/:nickname/points/history', (req, res) => {
       const nickname = req.params.nickname;
-      const { type, amount, reason } = req.body;
-      
-      if (!type || !amount) {
+      const limit = parseInt(req.query.limit, 10) || 50;
+      const history = service.getHistory(nickname, limit);
+      res.json({ success: true, nickname, history });
+    });
+
+    app.post('/api/user/:nickname/points/award', (req, res) => {
+      const nickname = req.params.nickname;
+      const { amount, reason, activityId } = req.body;
+      if (!amount || !Number.isFinite(Number(amount))) {
         return res.status(400).json({ success: false, error: '参数不完整' });
       }
-      
-      const points = service.updatePoints(nickname, type, amount, reason);
-      res.json({
-        success: true,
-        points: points
-      });
-    });
-
-    app.post('/api/user/points', (req, res) => {
-      const { nickname, challengePoints, predictionPoints, totalPoints } = req.body;
-      
-      if (!nickname) {
-        return res.status(400).json({ success: false, error: '昵称不能为空' });
-      }
-      
-      const points = service.syncPoints(nickname, challengePoints, predictionPoints);
-      res.json({
-        success: true,
-        points: points
-      });
-    });
-
-    // 接收 activity plugin 同步积分（设置绝对值）
-    app.post('/api/user/:nickname/sync', (req, res) => {
-      const { nickname } = req.params;
-      const { challenge, prediction, total } = req.body;
-      
-      if (!nickname) {
-        return res.status(400).json({ success: false, error: '昵称不能为空' });
-      }
-      
-      const points = service.syncPoints(nickname, challenge, prediction);
+      const points = service.addPoints(nickname, Number(amount), reason, activityId);
       res.json({ success: true, points });
     });
 
-    context.eventBus.on('challenge:completed', (data) => {
-      const { nickname, challenge, gameId } = data;
-      if (challenge && challenge.reward) {
-        // 防重复结算：同一用户同一游戏只发放一次挑战奖励
-        if (service.hasCompletedChallenge(nickname, gameId)) {
-          context.logger.debug(`${nickname} 已完成 ${gameId} 挑战，跳过重复结算`);
-          return;
-        }
-        service.updatePoints(nickname, 'challenge', challenge.reward, `完成挑战：${challenge.name}`);
-        service.markChallengeCompleted(nickname, gameId);
-        context.logger.info(`${nickname} 完成挑战，获得 ${challenge.reward} 积分`);
+    app.post('/api/user/:nickname/points/deduct', (req, res) => {
+      const nickname = req.params.nickname;
+      const { amount, reason, activityId } = req.body;
+      if (!amount || !Number.isFinite(Number(amount))) {
+        return res.status(400).json({ success: false, error: '参数不完整' });
       }
+      const result = service.deductPoints(nickname, Number(amount), reason, activityId);
+      if (result.error) return res.status(result.code || 400).json({ success: false, error: result.error });
+      res.json({ success: true, points: result.points });
     });
   }
-  
-  const api = {
-    service,
-    
-    getPoints(nickname) {
-      return service.getPoints(nickname);
-    },
-    
-    updatePoints(nickname, type, amount, reason) {
-      return service.updatePoints(nickname, type, amount, reason);
-    },
-    
-    syncPoints(nickname, challengePoints, predictionPoints) {
-      return service.syncPoints(nickname, challengePoints, predictionPoints);
-    },
-    
-    deductPoints(nickname, amount, reason) {
-      return service.deductPoints(nickname, amount, reason);
-    },
-    
-    refundPoints(nickname, amount, reason) {
-      return service.refundPoints(nickname, amount, reason);
-    },
-    
-    hasCompletedChallenge(nickname, gameId) {
-      return service.hasCompletedChallenge(nickname, gameId);
-    },
-    
-    markChallengeCompleted(nickname, gameId) {
-      return service.markChallengeCompleted(nickname, gameId);
-    }
-  };
-  
+
+  // 事件总线：获取积分（callback 模式）
   context.eventBus.on('user:get-points', (data) => {
     const { nickname, callback } = data;
     const points = service.getPoints(nickname);
     if (callback) callback(points);
   });
-  
-  context.eventBus.on('user:update-points', (data) => {
-    const { nickname, type, amount, reason } = data;
-    service.updatePoints(nickname, type, amount, reason);
+
+  // 事件总线：奖励积分（fire-and-forget，含每人每活动一次防刷）
+  context.eventBus.on('user:award-points', (data) => {
+    const { nickname, amount, reason, activityId } = data;
+    if (!nickname || !amount) return;
+    if (activityId && service.hasBeenRewarded(nickname, activityId)) {
+      context.logger.debug(`[user] ${nickname} 已对 ${activityId} 领取过奖励，跳过`);
+      return;
+    }
+    service.addPoints(nickname, amount, reason, activityId);
+    if (activityId) service.markRewarded(nickname, activityId);
+    context.logger.info(`[user] ${nickname} 获得 ${amount} 积分（${reason || ''}）`);
   });
-  
-  context.eventBus.on('user:check-challenge', (data) => {
-    const { nickname, gameId, callback } = data;
-    const completed = service.hasCompletedChallenge(nickname, gameId);
-    if (callback) callback(completed);
+
+  // 事件总线：扣减积分（callback 返回成功/失败，供直通奖励卡判断）
+  context.eventBus.on('user:deduct-points', (data) => {
+    const { nickname, amount, reason, activityId, callback } = data;
+    if (!nickname || !amount) {
+      if (callback) callback({ error: '参数不完整' });
+      return;
+    }
+    const result = service.deductPoints(nickname, amount, reason, activityId);
+    if (callback) callback(result);
   });
-  
+
+  const api = {
+    service,
+    getPoints(nickname) { return service.getPoints(nickname); },
+    addPoints(nickname, amount, reason, activityId) { return service.addPoints(nickname, amount, reason, activityId); },
+    deductPoints(nickname, amount, reason, activityId) { return service.deductPoints(nickname, amount, reason, activityId); },
+    getHistory(nickname, limit) { return service.getHistory(nickname, limit); }
+  };
+
   context.logger.info('User plugin initialized with API routes');
-  
+
   return api;
 };

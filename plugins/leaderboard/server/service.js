@@ -228,10 +228,8 @@ class LeaderboardService {
 
   /**
    * 提交成绩
-   * 注意：排行榜只负责成绩存储与排名，不再自动结算挑战积分。
-   * 挑战积分由活动中心的挑战 Session 流程独立结算
-   * （createChallengeSession → submitChallengeScore → _settleChallengeScore），
-   * 该流程要求用户从活动中心进入并持有 challengeSessionId，避免"未参与挑战即加分"。
+   * 注意：排行榜只负责成绩存储与排名，不结算积分。
+   * 活动参与奖励由活动插件通过事件总线 user:award-points 发放。
    */
   submitScore(gameId, data, siteConfig) {
     const { nickname, score, extra } = data;
