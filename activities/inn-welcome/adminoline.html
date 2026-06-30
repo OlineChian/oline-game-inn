@@ -34,6 +34,28 @@
             <p class="activity-subtitle">查看提交 · 计算权重 · 加权抽奖</p>
         </div>
 
+        <!-- 积分与奖励配置 -->
+        <div class="form-section">
+            <h2 class="section-title">积分与奖励配置</h2>
+            <p class="form-hint" style="margin-bottom:12px;">参与奖励=每次参与活动获得的积分；直通奖励卡=消耗指定积分直接领取奖励；奖品池=每行一个奖品名称。</p>
+            <div class="form-row">
+                <label class="form-label" for="participationReward">参与奖励积分</label>
+                <input type="number" id="participationReward" class="form-input" min="0" value="10">
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="directRewardCost">直通奖励卡消耗</label>
+                <input type="number" id="directRewardCost" class="form-input" min="1" value="50">
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="directRewardPool">奖品池（每行一个）</label>
+                <textarea id="directRewardPool" class="form-input" rows="4" placeholder="例如：&#10;100宝石&#10;稀有皮肤&#10;限定头像框" style="resize:vertical;font-family:inherit;"></textarea>
+            </div>
+            <div class="admin-actions">
+                <button class="primary-btn" style="flex:1;" onclick="savePointsConfig()">保存配置</button>
+                <button class="secondary-btn" onclick="loadPointsConfig()">重置</button>
+            </div>
+        </div>
+
         <!-- 权重设置 -->
         <div class="form-section">
             <h2 class="section-title">⚖️ 游戏权重设置</h2>

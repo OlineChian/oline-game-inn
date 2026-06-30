@@ -6,13 +6,13 @@
     <title>活动中心 - Oline荒野游戏客栈</title>
     <link rel="stylesheet" href="/common.css">
     <link rel="stylesheet" href="/navbar.css">
+    <link rel="stylesheet" href="/points-history.css">
     <style>
         body {
             min-height: 100vh;
             padding: 60px 3vw 2vh 3vw;
         }
 
-        /* 导航栏 */
         .game-actions {
             position: fixed;
             top: 0;
@@ -49,7 +49,6 @@
         }
         .game-action-btn:active { transform: scale(0.95); }
 
-        /* 头部 */
         .header {
             text-align: center;
             margin-bottom: 3vh;
@@ -63,7 +62,6 @@
             opacity: 0.8;
         }
 
-        /* 用户信息栏 */
         .user-info {
             background: var(--bg-card);
             border: 1px solid #222;
@@ -88,8 +86,12 @@
             font-weight: bold;
             font-size: clamp(16px, 3.5vw, 22px);
         }
+        .points-display {
+            cursor: pointer;
+            transition: opacity var(--transition-normal);
+        }
+        .points-display:hover { opacity: 0.75; }
 
-        /* 活动列表 */
         .activity-list {
             display: flex;
             flex-direction: column;
@@ -119,9 +121,14 @@
             box-shadow: 0 8px 30px rgba(237, 117, 38, 0.1);
         }
         .activity-card:active { transform: translateX(2px); }
-        .activity-card.expired {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .activity-card.ended {
+            opacity: 0.7;
+            cursor: default;
+        }
+        .activity-card.ended:hover {
+            transform: none;
+            border-color: #222;
+            box-shadow: none;
         }
         .activity-info {
             flex: 1;
@@ -160,7 +167,6 @@
             color: var(--text-muted);
         }
 
-        /* 活动状态 */
         .activity-status-wrapper {
             flex-shrink: 0;
             display: flex;
@@ -182,10 +188,10 @@
             border: 1px solid rgba(0, 184, 148, 0.3);
             color: #00b894;
         }
-        .status-expired {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #333;
-            color: var(--text-muted);
+        .status-ended {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-secondary);
         }
         .status-upcoming {
             background: rgba(237, 117, 38, 0.15);
@@ -199,7 +205,17 @@
             text-align: right;
         }
 
-        /* 空状态 */
+        .activity-section-title {
+            font-size: clamp(13px, 2.5vw, 15px);
+            color: var(--text-secondary);
+            margin: 20px 0 5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #222;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         .back-link {
             text-align: center;
             margin-top: 3vh;
@@ -243,17 +259,17 @@
     <script src="/navbar.js"></script>
     <div class="game-actions">
         <a href="/#games" class="game-action-btn">← 返回大厅</a>
-        <button class="game-action-btn" onclick="showLeaderboard()">🏆 排行榜</button>
+        <button class="game-action-btn" onclick="showLeaderboard()">排行榜</button>
     </div>
 
     <div class="header">
-        <h1>🎉 活动中心</h1>
+        <h1>活动中心</h1>
         <p>参与活动，赢取丰厚奖励！</p>
     </div>
 
     <div class="user-info">
-        <div class="nickname">👤 <span id="userNickname">游客</span></div>
-        <div class="points">💎 积分: <span id="userPoints">0</span></div>
+        <div class="nickname" id="userNicknameDisplay">游客</div>
+        <div class="points points-display" onclick="showPointsHistory()" title="点击查看积分流水">积分: <span id="userPoints">0</span></div>
     </div>
 
     <div class="activity-list" id="activityList"></div>
@@ -262,7 +278,6 @@
     <div class="modal-overlay hidden" id="leaderboardModal">
         <div class="modal" style="max-width:500px;">
             <button class="close-modal" onclick="closeLeaderboard()">×</button>
-            <div class="modal-icon">🏆</div>
             <h2>游戏排行榜</h2>
             <p>看看谁是最强玩家！</p>
             <div class="leaderboard-tabs" id="leaderboardTabs"></div>
@@ -272,53 +287,98 @@
         </div>
     </div>
 
+    <!-- 积分流水弹窗 -->
+    <div class="modal-overlay hidden" id="pointsHistoryModal">
+        <div class="modal" style="max-width:500px;">
+            <button class="close-modal" onclick="closePointsHistory()">×</button>
+            <h2>积分流水</h2>
+            <div class="points-summary">当前积分: <span id="historyTotal">0</span></div>
+            <div class="points-history-list" id="pointsHistoryList">
+                <div class="points-history-empty">加载中...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const nickname = localStorage.getItem('gameNickname') || '游客';
-        document.getElementById('userNickname').textContent = nickname;
+        document.getElementById('userNicknameDisplay').textContent = nickname;
+
+        let pointsConfig = { participationReward: 10, directRewardCost: 50 };
 
         async function loadActivities() {
             const listContainer = document.getElementById('activityList');
             try {
                 const response = await fetch('/api/activities');
                 const data = await response.json();
-                if (data.success && data.activities.length > 0) {
-                    listContainer.innerHTML = data.activities.map(activity => {
-                        const now = new Date();
-                        const startTime = new Date(activity.startTime);
-                        const endTime = new Date(activity.endTime);
-                        let statusClass, statusText;
-                        if (now < startTime) { statusClass = 'status-upcoming'; statusText = '即将开始'; }
-                        else if (now > endTime) { statusClass = 'status-expired'; statusText = '已结束'; }
-                        else { statusClass = 'status-active'; statusText = '进行中'; }
-                        const isExpired = now > endTime;
-                        return `<div class="activity-card ${isExpired ? 'expired' : ''}"
-                                onclick="${isExpired ? '' : `window.location.href='activities/${activity.path}'`}">
-                            <div class="activity-info">
-                                <div class="activity-icon">${activity.icon}</div>
-                                <div class="activity-text">
-                                    <div class="activity-name">${activity.name}</div>
-                                    <div class="activity-desc">${activity.description}</div>
-                                    <div class="activity-time">📅 ${formatDate(startTime)} - ${formatDate(endTime)}</div>
-                                </div>
-                            </div>
-                            <div class="activity-status-wrapper">
-                                <span class="activity-status ${statusClass}">${statusText}</span>
-                                ${!isExpired ? `<div class="countdown" id="countdown-${activity.id}"></div>` : ''}
-                            </div>
-                        </div>`;
-                    }).join('');
-                    data.activities.forEach(activity => {
-                        const endTime = new Date(activity.endTime);
-                        if (new Date() < endTime) startCountdown(activity.id, endTime);
-                    });
-                } else {
+                if (data.pointsConfig) pointsConfig = data.pointsConfig;
+
+                const active = data.activities || [];
+                const ended = data.endedActivities || [];
+
+                if (active.length === 0 && ended.length === 0) {
                     listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">暂无活动，敬请期待！</div></div>`;
+                    return;
                 }
+
+                let html = '';
+                if (active.length > 0) {
+                    html += active.map(a => renderActivityCard(a, false)).join('');
+                }
+                if (ended.length > 0) {
+                    html += `<div class="activity-section-title">已结束活动</div>`;
+                    html += ended.map(a => renderActivityCard(a, true)).join('');
+                }
+                listContainer.innerHTML = html;
+
+                active.forEach(activity => {
+                    const endTime = new Date(activity.endTime);
+                    if (new Date() < endTime) startCountdown(activity.id, endTime);
+                });
             } catch (error) {
                 listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败，请刷新重试</div></div>`;
             }
         }
+
+        function renderActivityCard(activity, isEnded) {
+            const now = new Date();
+            const startTime = new Date(activity.startTime);
+            const endTime = new Date(activity.endTime);
+            let statusClass, statusText;
+            if (isEnded) {
+                statusClass = 'status-ended';
+                statusText = '已结束';
+            } else if (now < startTime) {
+                statusClass = 'status-upcoming';
+                statusText = '即将开始';
+            } else {
+                statusClass = 'status-active';
+                statusText = '进行中';
+            }
+            const cardClass = isEnded ? 'ended' : '';
+            const onclick = isEnded ? '' : `window.location.href='activities/${activity.path}'`;
+            const countdownHtml = (!isEnded && now < endTime) ? `<div class="countdown" id="countdown-${activity.id}"></div>` : '';
+            const directRewardHtml = (!isEnded && activity.directReward && now >= startTime && now <= endTime)
+                ? `<button class="direct-reward-btn" onclick="event.stopPropagation();claimDirectReward('${activity.id}')">直通奖励卡 (${pointsConfig.directRewardCost || 50}积分)</button>`
+                : '';
+            return `<div class="activity-card ${cardClass}" onclick="${onclick}">
+                <div class="activity-info">
+                    <div class="activity-icon">${activity.icon}</div>
+                    <div class="activity-text">
+                        <div class="activity-name">${activity.name}</div>
+                        <div class="activity-desc">${activity.description}</div>
+                        <div class="activity-time">${formatDate(startTime)} - ${formatDate(endTime)}</div>
+                    </div>
+                </div>
+                <div class="activity-status-wrapper">
+                    <span class="activity-status ${statusClass}">${statusText}</span>
+                    ${countdownHtml}
+                    ${directRewardHtml}
+                </div>
+            </div>`;
+        }
+
         function formatDate(date) { return `${date.getMonth() + 1}月${date.getDate()}日`; }
+
         function startCountdown(activityId, endTime) {
             function update() {
                 const now = new Date();
@@ -327,7 +387,7 @@
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                let text = '⏰ 距离结束还有 ';
+                let text = '距结束 ';
                 if (days > 0) text += `${days}天`;
                 text += `${hours}时${minutes}分`;
                 const el = document.getElementById(`countdown-${activityId}`);
@@ -336,6 +396,7 @@
             }
             update();
         }
+
         async function loadUserPoints() {
             if (nickname === '游客') return;
             try {
@@ -344,10 +405,94 @@
                 if (data.success) document.getElementById('userPoints').textContent = data.points.total || 0;
             } catch (error) { console.log('加载积分失败:', error); }
         }
+
+        // ===== 积分流水 =====
+        async function showPointsHistory() {
+            document.getElementById('pointsHistoryModal').classList.remove('hidden');
+            await loadPointsHistory();
+        }
+        function closePointsHistory() {
+            document.getElementById('pointsHistoryModal').classList.add('hidden');
+        }
+        async function loadPointsHistory() {
+            const listEl = document.getElementById('pointsHistoryList');
+            const totalEl = document.getElementById('historyTotal');
+            if (nickname === '游客') {
+                listEl.innerHTML = '<div class="points-history-empty">请先设置昵称</div>';
+                totalEl.textContent = '0';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/user/${encodeURIComponent(nickname)}/points/history?limit=50`);
+                const data = await response.json();
+                if (data.success) {
+                    totalEl.textContent = (await fetch(`/api/user/${encodeURIComponent(nickname)}/points`).then(r=>r.json())).points.total || 0;
+                    const history = data.history || [];
+                    if (history.length === 0) {
+                        listEl.innerHTML = '<div class="points-history-empty">暂无积分记录</div>';
+                        return;
+                    }
+                    listEl.innerHTML = history.slice().reverse().map(item => {
+                        const isAward = item.type === 'award';
+                        const amountClass = isAward ? 'positive' : 'negative';
+                        const sign = isAward ? '+' : '';
+                        const typeLabel = isAward ? '获得' : '消耗';
+                        const date = new Date(item.timestamp);
+                        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+                        return `<div class="points-history-item ${item.type}">
+                            <div class="ph-info">
+                                <div class="ph-reason">${escapeHtml(item.reason || typeLabel)}</div>
+                                <div class="ph-meta">${timeStr}${item.activityId ? ' · ' + escapeHtml(item.activityId) : ''}</div>
+                            </div>
+                            <div class="ph-amount ${amountClass}">${sign}${item.amount}</div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch (error) {
+                listEl.innerHTML = '<div class="points-history-empty">加载失败</div>';
+            }
+        }
+
+        // ===== 直通奖励卡 =====
+        async function claimDirectReward(activityId) {
+            if (nickname === '游客') { alert('请先设置昵称'); return; }
+            const cost = pointsConfig.directRewardCost || 50;
+            if (!confirm(`消耗 ${cost} 积分直接领取活动奖励？`)) return;
+            try {
+                const response = await fetch(`/api/${activityId}/direct-reward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showRewardResult(data.reward || '神秘奖励');
+                    loadUserPoints();
+                } else {
+                    alert(data.error || '兑换失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        function showRewardResult(prize) {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.display = 'flex';
+            overlay.innerHTML = `<div class="direct-reward-result">
+                <div class="reward-title">恭喜获得</div>
+                <div class="reward-prize">${escapeHtml(prize)}</div>
+                <button class="reward-close-btn" onclick="this.closest('.modal-overlay').remove()">领取</button>
+            </div>`;
+            document.body.appendChild(overlay);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        }
+
         loadActivities();
         loadUserPoints();
 
-        // 排行榜弹窗
+        // ===== 排行榜弹窗 =====
         let gameList = [];
         let currentGameTab = '';
         async function showLeaderboard() {
@@ -406,6 +551,10 @@
             const modal = document.getElementById('leaderboardModal');
             if (modal) {
                 modal.addEventListener('click', function(e) { if (e.target === this) closeLeaderboard(); });
+            }
+            const pointsModal = document.getElementById('pointsHistoryModal');
+            if (pointsModal) {
+                pointsModal.addEventListener('click', function(e) { if (e.target === this) closePointsHistory(); });
             }
         });
     </script>

@@ -1,8 +1,6 @@
 {
   "_文件说明": "Oline荒野游戏客栈 - 活动全局配置",
-  "_配置说明": "此文件定义活动系统的全局配置，包括积分权重和活动列表。后端通过扫描 activities/ 目录自动发现子活动，此处的 activities 数组为可选的手动注册（用于覆盖或预留）。",
-  "_注意事项": "1. summer-challenge 为预留活动，对应文件夹尚未创建。2. 积分权重配置影响初夏挑战季的抽奖加权计算。",
-  
+  "_配置说明": "此文件定义活动系统的全局配置。后端通过扫描 activities/ 目录自动发现子活动，此处的 activities 数组为可选的手动注册（用于覆盖或预留）。",
   "activities": [
     {
       "_说明": "夏日挑战季 - 预留活动（文件夹待创建）",
@@ -14,13 +12,15 @@
       "endTime": "2026-08-31T23:59:59",
       "enabled": true,
       "path": "summer-challenge/index.html",
-      "modules": ["challenge", "prediction", "lottery"]
+      "modules": [
+        "lottery"
+      ]
     }
   ],
-  
   "pointsConfig": {
-    "_说明": "积分权重配置",
-    "challengeWeight": 0.6,
-    "predictionWeight": 0.4
+    "participationReward": 10,
+    "directRewardCost": 50,
+    "directRewardPool": [],
+    "_说明": "积分系统配置：participationReward=每次参与活动奖励积分；directRewardCost=直通奖励卡消耗积分；directRewardPool=直通奖励卡奖品池（每行一个奖品名称）"
   }
 }

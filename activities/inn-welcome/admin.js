@@ -35,6 +35,7 @@ function authHeaders() {
 
 async function init() {
     await loadConfig();
+    await loadPointsConfig();
     await loadWeights();
     await loadSubmissions();
     await loadLotteryResult();
@@ -61,6 +62,45 @@ async function loadConfig() {
         }
     } catch (e) {
         showToast('加载活动配置失败');
+    }
+}
+
+async function loadPointsConfig() {
+    try {
+        const res = await fetch('/api/inn-welcome/config');
+        const data = await res.json();
+        if (data.success && data.pointsConfig) {
+            const c = data.pointsConfig;
+            document.getElementById('participationReward').value = c.participationReward ?? 10;
+            document.getElementById('directRewardCost').value = c.directRewardCost ?? 50;
+            document.getElementById('directRewardPool').value = (c.directRewardPool || []).join('\n');
+        }
+    } catch (e) {
+        showToast('加载积分配置失败');
+    }
+}
+
+async function savePointsConfig() {
+    const payload = {
+        participationReward: Number(document.getElementById('participationReward').value),
+        directRewardCost: Number(document.getElementById('directRewardCost').value),
+        directRewardPool: document.getElementById('directRewardPool').value.split('\n').map(s => s.trim()).filter(Boolean)
+    };
+    try {
+        const res = await fetch('/api/inn-welcome/config', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('积分配置已保存');
+            await loadPointsConfig();
+        } else {
+            showToast(data.error || '保存失败');
+        }
+    } catch (e) {
+        showToast('网络错误');
     }
 }
 

@@ -12,6 +12,7 @@
   "featured": true,
   "path": "inn-welcome/index.html",
   "modules": ["submission", "lottery"],
+  "directReward": true,
 
   "tag": {
     "_说明": "游戏标签格式：以 # 开头，仅含大写字母和数字，3-10 位",
