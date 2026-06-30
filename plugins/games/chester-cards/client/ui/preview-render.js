@@ -8,6 +8,7 @@
 
 import { scoreHand } from '../core/scoring.js';
 import { previewCandiesToScore, hasHandModifier } from '../systems/candy-system.js';
+import { getDeckTotalCards } from '../data/deck-tiers.js';
 
 /**
  * 实时分数预览（选牌时显示当前牌型与分数）

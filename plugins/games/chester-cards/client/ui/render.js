@@ -25,7 +25,8 @@ export function renderGame(config) {
     <header class="cc-hud">
       <div class="cc-hud-row cc-hud-row-main">
         <div class="cc-hud-pill cc-pill-round" data-action="toggle-candy-panel">
-          <span class="cc-hud-label">点击查看糖果</span>
+          <span class="cc-hud-label cc-label-mobile">点击查看糖果</span>
+          <span class="cc-hud-label cc-label-desktop">当前关卡</span>
           <span class="cc-round-num">第 <span class="cc-round-current" id="ccRoundCurrent">1</span> 关</span>
         </div>
         <div class="cc-hud-pill cc-pill-score">

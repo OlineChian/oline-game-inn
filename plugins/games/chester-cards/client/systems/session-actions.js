@@ -65,6 +65,7 @@ export function createSessionActions(state, config, renderAll, helpers) {
    *    关闭时：移除 is-open 触发滑出，动画结束后加 mask/panel 的 hidden
    */
   function toggleCandyPanel() {
+    if (window.matchMedia('(min-width: 768px)').matches) return;  // 电脑端 sidebar 常驻，不触发侧滑
     const panel = document.getElementById('ccCandyPanel');
     const mask = document.getElementById('ccCandyMask');
     if (!panel) return;

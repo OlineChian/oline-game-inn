@@ -75,6 +75,13 @@
 }
 .cc-hud-label { font-family: var(--font-body); font-size: var(--fs-tiny); color: var(--text-secondary); letter-spacing: 0.5px; line-height: 1.2; }
 .cc-hud-div { margin: 0 2px; color: var(--text-muted); }
+.cc-label-desktop { display: none; }
+@media (min-width: 768px) {
+    .cc-label-mobile { display: none; }
+    .cc-label-desktop { display: inline; }
+    .cc-pill-round { cursor: default; }
+    .cc-pill-round:hover { filter: none; }
+}
 
 /* 关卡胶囊（可点击查看糖果） */
 .cc-pill-round {
@@ -84,7 +91,7 @@
 }
 .cc-pill-round:hover { filter: brightness(1.15); }
 .cc-round-num { display: inline-flex; align-items: baseline; gap: 2px; }
-.cc-round-current { font-family: var(--font-number); font-size: var(--fs-number-xl); font-weight: 700; color: var(--color-red); line-height: 1; text-shadow: var(--text-shadow-sm); }
+.cc-round-current { font-family: var(--font-number); font-size: var(--fs-number-xl); font-weight: 700; color: var(--color-red); line-height: 1; text-shadow: var(--text-shadow-sm); padding: 0 8px; }
 
 /* 分数胶囊（三态显示，左对齐 + 大字号） */
 .cc-pill-score {
@@ -104,9 +111,9 @@
     word-break: break-all;
 }
 
-/* 设置齿轮按钮 */
+/* 设置齿轮按钮（高度自动拉伸对齐 HUD） */
 .cc-hud-settings {
-    flex: 0 0 auto; width: 44px; height: 44px;
+    flex: 0 0 auto; width: 44px; align-self: stretch;
     background: var(--bg-card-alt);
     border: 2px solid #0a1818; border-radius: var(--radius-sm);
     color: var(--text-primary); cursor: pointer;
