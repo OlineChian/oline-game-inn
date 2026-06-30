@@ -22,46 +22,47 @@ export { renderLivePreview } from './preview-render.js';
 export function renderGame(config) {
   const stage = document.getElementById('chesterStage');
   stage.innerHTML = `
-    <header class="cc-hud">
-      <div class="cc-hud-row cc-hud-row-main">
-        <div class="cc-hud-pill cc-pill-round" data-action="toggle-candy-panel">
-          <span class="cc-hud-label cc-label-mobile">点击查看糖果</span>
-          <span class="cc-hud-label cc-label-desktop">当前关卡</span>
-          <span class="cc-round-num">第 <span class="cc-round-current" id="ccRoundCurrent">1</span> 关</span>
+    <aside class="cc-candy-sidebar hidden" id="ccCandySidebar"></aside>
+    <div class="cc-main">
+      <header class="cc-hud">
+        <div class="cc-hud-row cc-hud-row-main">
+          <div class="cc-hud-pill cc-pill-round" data-action="toggle-candy-panel">
+            <span class="cc-hud-label cc-label-mobile">点击查看糖果</span>
+            <span class="cc-hud-label cc-label-desktop">当前关卡</span>
+            <span class="cc-round-num">第 <span class="cc-round-current" id="ccRoundCurrent">1</span> 关</span>
+          </div>
+          <div class="cc-hud-pill cc-pill-score">
+            <span class="cc-score-label" id="ccScoreLabel">目标分</span>
+            <span class="cc-score-value" id="ccScoreValue">0</span>
+          </div>
+          <button class="cc-hud-settings" data-action="open-settings" aria-label="设置">
+            <svg viewBox="0 0 24 24" class="cc-icon-gear" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
         </div>
-        <div class="cc-hud-pill cc-pill-score">
-          <span class="cc-score-label" id="ccScoreLabel">目标分</span>
-          <span class="cc-score-value" id="ccScoreValue">0</span>
+      </header>
+
+      <div class="cc-preview hidden" id="ccPreview"></div>
+
+      <section class="cc-table" id="ccTable">
+        <div class="cc-hand" id="ccHand"></div>
+        <div class="cc-actions">
+          <button class="cc-btn cc-btn-play" data-action="play">
+            <span class="cc-btn-label">出牌</span>
+            <span class="cc-btn-sub">剩余次数：<span id="ccPlaysLeft">4</span></span>
+          </button>
+          <button class="cc-btn cc-btn-discard" data-action="discard">
+            <span class="cc-btn-label">弃牌</span>
+            <span class="cc-btn-sub">剩余次数：<span id="ccDiscardsLeft">2</span></span>
+          </button>
         </div>
-        <button class="cc-hud-settings" data-action="open-settings" aria-label="设置">
-          <svg viewBox="0 0 24 24" class="cc-icon-gear" aria-hidden="true">
-            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <div class="cc-preview hidden" id="ccPreview"></div>
-
-    <section class="cc-table" id="ccTable">
-      <div class="cc-hand" id="ccHand"></div>
-      <div class="cc-actions">
-        <button class="cc-btn cc-btn-play" data-action="play">
-          <span class="cc-btn-label">出牌</span>
-          <span class="cc-btn-sub">剩余次数：<span id="ccPlaysLeft">4</span></span>
-        </button>
-        <button class="cc-btn cc-btn-discard" data-action="discard">
-          <span class="cc-btn-label">弃牌</span>
-          <span class="cc-btn-sub">剩余次数：<span id="ccDiscardsLeft">2</span></span>
-        </button>
-      </div>
-    </section>
+      </section>
+    </div>
 
     <div class="cc-candy-mask hidden" id="ccCandyMask" data-action="toggle-candy-panel"></div>
     <aside class="cc-candy-panel hidden" id="ccCandyPanel"></aside>
-    <aside class="cc-candy-sidebar hidden" id="ccCandySidebar"></aside>
 
     <div class="cc-overlay cc-settings-overlay hidden" id="ccSettingsOverlay"></div>
     <div class="cc-overlay hidden" id="ccOverlay"></div>

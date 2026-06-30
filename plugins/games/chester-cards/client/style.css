@@ -17,6 +17,15 @@
     margin: 0 auto;
 }
 
+/* 主内容容器（HUD/预览/牌桌）：移动端纵向排列，电脑端在 panels.css 中改为居中 */
+.cc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 /* ---------- 开始界面 ---------- */
 .cc-start {
     flex: 1;
@@ -113,7 +122,12 @@
 
 /* 设置齿轮按钮（高度自动拉伸对齐 HUD） */
 .cc-hud-settings {
-    flex: 0 0 auto; width: 44px; align-self: stretch;
+    flex: 0 0 auto; width: 44px;
+    align-self: stretch;
+    height: 100%;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
     background: var(--bg-card-alt);
     border: 2px solid #0a1818; border-radius: var(--radius-sm);
     color: var(--text-primary); cursor: pointer;

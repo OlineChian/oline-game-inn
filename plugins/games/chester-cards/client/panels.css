@@ -44,19 +44,18 @@
 /* ---------- 3. 糖果侧栏（电脑端常驻，≥768px） ---------- */
 .cc-candy-sidebar { display: none; }
 @media (min-width: 768px) {
-    /* 电脑端 Grid 布局：sidebar 左侧常驻，主内容右侧 */
+    /* 电脑端 flex row 布局：sidebar 左侧常驻，主内容右侧居中 */
     .chester-stage {
-        display: grid;
-        grid-template-columns: 220px 1fr;
-        align-items: start;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
         gap: 8px;
-        max-width: 980px;
+        max-width: 1200px;
     }
-    .cc-start { grid-column: 1 / -1; }
+    .cc-start { flex: 1 1 auto; }
     .cc-candy-sidebar {
         display: block !important;  /* !important 覆盖初始 hidden class */
-        grid-column: 1;
-        grid-row: 1 / -1;  /* 跨越所有行，常驻左侧 */
+        flex: 0 0 220px;
         position: sticky;
         top: 56px;  /* 避开顶部 48px game-header */
         max-height: calc(100vh - 64px);
@@ -67,7 +66,15 @@
         padding: 10px;
         box-shadow: var(--shadow-card);
     }
-    .cc-hud, .cc-preview, .cc-table { grid-column: 2; }
+    /* .cc-main 占据剩余空间，主内容在其中居中，右侧自动留白 */
+    .cc-main {
+        flex: 1 1 auto;
+        align-items: center;  /* HUD/预览/牌桌在 .cc-main 内水平居中 */
+    }
+    .cc-hud, .cc-preview, .cc-table {
+        width: 100%;
+        max-width: 760px;
+    }
     .cc-candy-panel { display: none !important; }
 }
 
