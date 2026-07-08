@@ -473,6 +473,22 @@ module.exports = function(app, context) {
   context.eventBus.on('user:points-request', (data) => {
     context.logger.debug('Received user:points-request event');
   });
+
+  // 查询玩家最佳成绩（callback 模式，同步返回，供活动插件使用）
+  context.eventBus.on('leaderboard:get-user-best', (data) => {
+    const { gameId, nickname, callback } = data;
+    const result = service.getUserBest(gameId, nickname, siteConfig);
+    if (callback) callback(result);
+  });
+
+  // 查询游戏全服最高分（用于权重归一化）
+  context.eventBus.on('leaderboard:get-top-score', (data) => {
+    const { gameId, callback } = data;
+    const overview = service.getLeaderboardOverview(gameId, siteConfig);
+    if (!overview) { if (callback) callback({ topScore: 0, total: 0 }); return; }
+    const topScore = overview.top3[0]?.score || 0;
+    if (callback) callback({ topScore, total: overview.total });
+  });
   
   context.logger.info('Leaderboard plugin initialized with API routes');
   
