@@ -1267,14 +1267,14 @@
         <!-- 左右循环切换板块（大幅入口） -->
         <div class="art-carousel" id="artCarousel">
             <div class="art-carousel-track" id="artCarouselTrack">
-                <!-- Slide 1: 巅峰双重挑战活动入口 -->
-                <a href="activities/peak-dual/index.html" class="art-slide art-link" id="activityLink">
+                <!-- Slide 1: 活动入口（先进入活动中心，由活动中心按时间控制进入具体活动） -->
+                <a href="activity.html" class="art-slide art-link" id="activityLink">
                     <div class="art-glow-ring" id="activityBadge"></div>
                     <div class="art-text">
                         <span class="art-label">OLINE GAME INN</span>
                         <h2 class="art-title" id="activityTitle">巅峰双重挑战·宝石抽奖</h2>
                         <p class="art-desc" id="activityDesc">双游戏挑战 · 实时排名 · 动态概率抽奖</p>
-                        <span class="art-hint" id="activityHint">💎 点击进入活动页面</span>
+                        <span class="art-hint" id="activityHint">点击进入活动中心</span>
                     </div>
                 </a>
                 <!-- Slide 2: 乱斗前线大幅入口（纯代码 SVG 几何插画，无位图） -->
@@ -1692,12 +1692,15 @@
                     const titleEl = document.getElementById('activityTitle');
                     const descEl = document.getElementById('activityDesc');
                     const hintEl = document.getElementById('activityHint');
-                    const linkEl = document.getElementById('activityLink');
                     const badgeEl = document.getElementById('activityBadge');
                     if (titleEl && activity.name) titleEl.textContent = activity.name;
                     if (descEl && activity.description) descEl.textContent = activity.description;
-                    if (hintEl) hintEl.textContent = '🎁 点击参与活动';
-                    if (linkEl && activity.path) linkEl.href = 'activities/' + activity.path;
+                    // 链接始终指向活动中心，由活动中心按时间控制是否可进入具体活动
+                    const now = new Date();
+                    const startTime = new Date(activity.startTime);
+                    if (hintEl) {
+                        hintEl.textContent = now < startTime ? '活动即将开始，点击查看详情' : '点击参与活动';
+                    }
                     if (badgeEl) badgeEl.style.animation = 'glowRing 1.5s ease-in-out infinite';
                 }
             } catch (error) {

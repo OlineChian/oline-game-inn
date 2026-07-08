@@ -130,6 +130,14 @@
             border-color: #222;
             box-shadow: none;
         }
+        .activity-card.upcoming {
+            cursor: default;
+        }
+        .activity-card.upcoming:hover {
+            transform: none;
+            border-color: #222;
+            box-shadow: none;
+        }
         .activity-info {
             flex: 1;
             min-width: 0;
@@ -331,8 +339,14 @@
                 listContainer.innerHTML = html;
 
                 active.forEach(activity => {
+                    const now = new Date();
+                    const startTime = new Date(activity.startTime);
                     const endTime = new Date(activity.endTime);
-                    if (new Date() < endTime) startCountdown(activity.id, endTime);
+                    if (now < startTime) {
+                        startCountdown(activity.id, startTime, '距开始 ');
+                    } else if (now < endTime) {
+                        startCountdown(activity.id, endTime, '距结束 ');
+                    }
                 });
             } catch (error) {
                 listContainer.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败，请刷新重试</div></div>`;
@@ -343,20 +357,27 @@
             const now = new Date();
             const startTime = new Date(activity.startTime);
             const endTime = new Date(activity.endTime);
-            let statusClass, statusText;
+            let statusClass, statusText, cardClass = '', onclick = '', countdownHtml = '';
+
             if (isEnded) {
                 statusClass = 'status-ended';
                 statusText = '已结束';
+                cardClass = 'ended';
             } else if (now < startTime) {
+                // 即将开始：不可点击，等待开始时间
                 statusClass = 'status-upcoming';
                 statusText = '即将开始';
+                cardClass = 'upcoming';
+                onclick = '';
+                countdownHtml = `<div class="countdown" id="countdown-${activity.id}"></div>`;
             } else {
+                // 进行中：可点击进入
                 statusClass = 'status-active';
                 statusText = '进行中';
+                onclick = `window.location.href='activities/${activity.path}'`;
+                countdownHtml = `<div class="countdown" id="countdown-${activity.id}"></div>`;
             }
-            const cardClass = isEnded ? 'ended' : '';
-            const onclick = isEnded ? '' : `window.location.href='activities/${activity.path}'`;
-            const countdownHtml = (!isEnded && now < endTime) ? `<div class="countdown" id="countdown-${activity.id}"></div>` : '';
+
             const directRewardHtml = (!isEnded && activity.directReward && now >= startTime && now <= endTime)
                 ? `<button class="direct-reward-btn" onclick="event.stopPropagation();claimDirectReward('${activity.id}')">直通奖励卡 (${pointsConfig.directRewardCost || 50}积分)</button>`
                 : '';
@@ -379,15 +400,20 @@
 
         function formatDate(date) { return `${date.getMonth() + 1}月${date.getDate()}日`; }
 
-        function startCountdown(activityId, endTime) {
+        function startCountdown(activityId, targetTime, prefix) {
+            prefix = prefix || '距结束 ';
             function update() {
                 const now = new Date();
-                const diff = endTime - now;
-                if (diff <= 0) { const el = document.getElementById(`countdown-${activityId}`); if (el) el.textContent = '活动已结束'; return; }
+                const diff = targetTime - now;
+                if (diff <= 0) {
+                    const el = document.getElementById(`countdown-${activityId}`);
+                    if (el) el.textContent = prefix === '距开始 ' ? '已开始' : '活动已结束';
+                    return;
+                }
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                let text = '距结束 ';
+                let text = prefix;
                 if (days > 0) text += `${days}天`;
                 text += `${hours}时${minutes}分`;
                 const el = document.getElementById(`countdown-${activityId}`);
