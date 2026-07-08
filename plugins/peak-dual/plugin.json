@@ -1,0 +1,16 @@
+{
+  "id": "peak-dual",
+  "name": "巅峰双重挑战·宝石抽奖",
+  "version": "1.0.0",
+  "description": "双游戏挑战、实时排名、动态概率抽奖",
+  "type": "feature",
+  "author": "Oline Team",
+  "entry": {
+    "server": "server/index.js"
+  },
+  "dependencies": [],
+  "provides": ["peak-dual-api"],
+  "config": {
+    "activitiesDir": "activities"
+  }
+}
