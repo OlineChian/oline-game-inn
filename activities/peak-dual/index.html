@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巅峰双重挑战·宝石抽奖</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="pd-container">
+        <a href="/activity.html" class="pd-back-link">← 返回活动中心</a>
+
+        <div class="pd-header">
+            <div class="pd-header-icon">💎</div>
+            <h1>巅峰双重挑战·宝石抽奖</h1>
+            <p>挑战双游戏 · 提升成绩 · 动态概率抽奖</p>
+        </div>
+
+        <!-- 游戏入口 -->
+        <div class="pd-game-links">
+            <a href="/game/brawl-frontline" class="pd-game-link">⚔️ 乱斗前线</a>
+            <a href="/game/chester-cards" class="pd-game-link">🃏 切斯特牌</a>
+        </div>
+
+        <!-- 绑定区 -->
+        <div class="pd-card" id="bindCard">
+            <div class="pd-section-title">绑定玩家信息</div>
+            <div class="pd-form-group">
+                <label class="pd-label">Player Tag（玩家标签）</label>
+                <input type="text" id="playerTag" class="pd-input" placeholder="#2P8Y9R" maxlength="15">
+                <div class="pd-hint" id="tagHint">以 # 开头，仅含 0289PYLQGRJCUV，总长 3-15 位</div>
+            </div>
+            <div class="pd-form-group">
+                <label class="pd-label">游戏昵称（在游戏中使用的昵称）</label>
+                <input type="text" id="gameNickname" class="pd-input" placeholder="游戏内昵称" maxlength="20">
+                <div class="pd-hint">请输入你在乱斗前线和切斯特牌中提交成绩时使用的昵称</div>
+            </div>
+            <button class="pd-btn pd-btn-primary" id="bindBtn" onclick="doBind()">绑定并查询成绩</button>
+        </div>
+
+        <!-- 成绩与抽奖区（绑定后显示） -->
+        <div class="pd-hidden" id="mainCard">
+            <div class="pd-card">
+                <div class="pd-section-title">成绩查询</div>
+                <div class="pd-scores">
+                    <div class="pd-score-card">
+                        <div class="game-name">⚔️ 乱斗前线</div>
+                        <div class="score" id="scoreA">—</div>
+                        <div class="rank" id="rankA">未排名</div>
+                        <div class="bonus" id="bonusA"></div>
+                    </div>
+                    <div class="pd-score-card">
+                        <div class="game-name">🃏 切斯特牌</div>
+                        <div class="score" id="scoreB">—</div>
+                        <div class="rank" id="rankB">未排名</div>
+                        <div class="bonus" id="bonusB"></div>
+                    </div>
+                </div>
+                <div class="pd-weight-display">
+                    <div class="label">综合权重</div>
+                    <div class="value" id="currentWeight">0</div>
+                </div>
+                <button class="pd-btn pd-btn-secondary" onclick="doQuery()">刷新成绩</button>
+            </div>
+
+            <div class="pd-card">
+                <div class="pd-section-title">抽奖信息</div>
+                <div class="pd-info-grid">
+                    <div class="pd-info-item">
+                        <div class="label">剩余抽奖次数</div>
+                        <div class="value" id="drawsLeft">5 / 5</div>
+                    </div>
+                    <div class="pd-info-item">
+                        <div class="label">奖池剩余</div>
+                        <div class="value" id="prizeLeft">20 / 20</div>
+                    </div>
+                    <div class="pd-info-item">
+                        <div class="label">上次抽奖成绩</div>
+                        <div class="value" id="lastWeight">—</div>
+                    </div>
+                    <div class="pd-info-item">
+                        <div class="label">当前成绩</div>
+                        <div class="value" id="nowWeight">0</div>
+                    </div>
+                </div>
+                <div class="pd-eligibility" id="eligibility">查询成绩后可抽奖</div>
+                <button class="pd-btn pd-btn-gold" id="drawBtn" onclick="doDraw()" disabled>立即抽奖</button>
+            </div>
+
+            <div class="pd-card">
+                <div class="pd-section-title">活动规则</div>
+                <div class="pd-rules">
+                    <ul>
+                        <li>完成乱斗前线和切斯特牌两个游戏，系统自动记录最高分和排名</li>
+                        <li>综合权重 = 归一化分数×40% + 归一化分数×40% + 排名加分×20%</li>
+                        <li>每次抽奖需成绩比上次提升，否则无法抽奖</li>
+                        <li>每人最多 5 次抽奖，中奖后立即结束</li>
+                        <li>第 5 次抽奖为保底（需成绩提升），100% 中奖</li>
+                        <li>奖池共 20 份，动态概率算法确保 150 次有效抽奖内发完</li>
+                    </ul>
+                    <h3>排名加分表</h3>
+                    <ul>
+                        <li>第1名:500 | 第2名:450 | 第3名:420</li>
+                        <li>第4-10名:380 | 第11-20名:340 | 第21-50名:300</li>
+                        <li>第51-100名:250 | 第101-300名:180 | 第301+名:100</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 抽奖结果弹窗 -->
+    <div class="pd-result-modal" id="resultModal">
+        <div class="pd-result-content">
+            <div class="icon" id="resultIcon">🎉</div>
+            <h2 id="resultTitle">恭喜中奖！</h2>
+            <p id="resultDesc">你获得了一份宝石奖励</p>
+            <button class="pd-btn pd-btn-primary" onclick="closeResult()">确定</button>
+        </div>
+    </div>
+
+    <div class="pd-toast" id="toast"></div>
+    <script src="script.js"></script>
+</body>
+</html>

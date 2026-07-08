@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理工具 - 巅峰双重挑战</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="pd-container">
+        <a href="index.html" class="pd-back-link">← 活动页</a>
+
+        <div class="pd-header">
+            <div class="pd-header-icon">🛠️</div>
+            <h1>巅峰双重挑战 - 管理工具</h1>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-form-group">
+                <label class="pd-label">管理员Token（可选）</label>
+                <input type="text" id="adminToken" class="pd-input" placeholder="未设ADMIN_TOKEN则留空">
+            </div>
+            <button class="pd-btn pd-btn-secondary" onclick="refreshAll()">刷新数据</button>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-section-title">概览</div>
+            <div class="pd-info-grid">
+                <div class="pd-info-item"><div class="label">剩余奖品</div><div class="value" id="remainPrize">—</div></div>
+                <div class="pd-info-item"><div class="label">已抽奖次数</div><div class="value" id="drawCount">—</div></div>
+                <div class="pd-info-item"><div class="label">总玩家数</div><div class="value" id="totalPlayers">—</div></div>
+                <div class="pd-info-item"><div class="label">中奖人数</div><div class="value" id="totalWinners">—</div></div>
+            </div>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-section-title">活动配置</div>
+            <div class="pd-form-group">
+                <label class="pd-label">总奖品数</label>
+                <input type="number" id="cfgTotalPrize" class="pd-input" min="1" value="20">
+            </div>
+            <div class="pd-form-group">
+                <label class="pd-label">保底抽奖次数</label>
+                <input type="number" id="cfgGuaranteedDraw" class="pd-input" min="1" value="150">
+            </div>
+            <div class="pd-form-group">
+                <label class="pd-label">每人最大抽奖次数</label>
+                <input type="number" id="cfgMaxDraws" class="pd-input" min="1" value="5">
+            </div>
+            <button class="pd-btn pd-btn-primary" onclick="saveConfig()">保存配置</button>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-section-title">中奖名单</div>
+            <div id="winnersList" style="font-size:13px;"></div>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-section-title">玩家记录</div>
+            <div id="playersList" style="font-size:13px; overflow-x:auto;"></div>
+        </div>
+
+        <div class="pd-card">
+            <div class="pd-section-title">操作日志（最近100条）</div>
+            <div id="logsList" style="font-size:12px; max-height:400px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <div class="pd-toast" id="toast"></div>
+    <script src="admin.js"></script>
+</body>
+</html>
