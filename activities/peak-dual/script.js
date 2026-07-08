@@ -9,6 +9,19 @@ let lastDrawWeight = 0;
 let drawCount = 0;
 let maxDraws = 5;
 
+// 时间守卫：未到开始时间则跳转回活动中心
+(async function checkActivityTime() {
+    try {
+        const res = await fetch('/api/activities');
+        const data = await res.json();
+        const activity = (data.activities || []).find(a => a.id === 'peak-dual');
+        if (activity && new Date() < new Date(activity.startTime)) {
+            alert('活动尚未开始，请于活动开始后再来');
+            window.location.href = '/activity.html';
+        }
+    } catch (e) { /* 查询失败不阻塞，由后端 API 兜底 */ }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     const savedNick = localStorage.getItem('gameNickname');
     if (savedNick) document.getElementById('gameNickname').value = savedNick;
