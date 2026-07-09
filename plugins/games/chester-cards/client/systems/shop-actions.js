@@ -15,7 +15,7 @@ import {
   getSpecialItemOffering, applySpecialItem, canBuySpecialItem
 } from './special-item-system.js';
 import {
-  getCandyCountForLevel, getLegendaryBonusForLevel, hasFreeRefresh, canUpgradeShop
+  getCandyCountForLevel, hasFreeRefresh, canUpgradeShop
 } from './shop-level-system.js';
 import { renderShop } from '../ui/shop-ui.js';
 import { hideEndScreen } from '../ui/render.js';
@@ -41,11 +41,6 @@ export function createShopActions(state, config, renderAll) {
     state._refreshCount = 0;
     // 阶段 6：每次打开商店随机生成 1 个特殊商品（20% 概率不出现）
     state._specialItemOffering = getSpecialItemOffering(state.round);
-    // 阶段 6：激活幸运加成（lucky-cookie 效果"下一次商店"生效，使用后清除）
-    state._activeLuckyBonus = state._luckyBonus || 1;
-    state._luckyBonus = 1;
-    // 阶段 8：快照商店等级传奇加成（Lv4+ 提供 +2%）
-    state._shopLegendaryBonus = getLegendaryBonusForLevel(state.shopLevel || 1);
     renderShop(state, config);
   }
 
@@ -152,7 +147,7 @@ export function createShopActions(state, config, renderAll) {
   /**
    * 阶段 8：升级商店等级
    * - 需满足关卡要求 + 金币要求
-   * - 升级后重新生成货架（商品数量可能变化）+ 更新传奇加成
+   * - 升级后重新生成货架（商品数量可能变化）
    */
   function upgradeShop() {
     if (state.phase !== 'roundWin') return;
@@ -160,10 +155,9 @@ export function createShopActions(state, config, renderAll) {
     if (!check.canUpgrade) return;
     state.coins -= check.cost;
     state.shopLevel = (state.shopLevel || 1) + 1;
-    // 升级后重新生成货架（商品数量可能变化）+ 更新传奇加成
+    // 升级后重新生成货架（商品数量可能变化）
     const candyCount = getCandyCountForLevel(state.shopLevel);
     state._candyOfferings = getCandyShopOfferings(state.round, candyCount);
-    state._shopLegendaryBonus = getLegendaryBonusForLevel(state.shopLevel);
     renderShop(state, config);
     renderAll();
   }

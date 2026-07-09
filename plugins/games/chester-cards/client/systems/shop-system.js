@@ -13,7 +13,6 @@
 
 import { getPoolForRound } from './candy-system.js';
 import { CANDIES } from '../data/candies.js';
-import { getWaveWeights } from '../data/wave-config.js';
 
 /**
  * 开局三选一池：仅 common + rare（开局最高选稀有）
@@ -59,60 +58,6 @@ export function getCandyShopOfferings(round, count = 3) {
 }
 
 /**
- * 按 Wave 系统的稀有度权重抽选 1 张糖果
- * 采用两步法：先按权重抽稀有度，再从该稀有度中随机选 1 颗
- * 这样每个稀有度的概率严格符合 Wave 权重，不受糖果数量影响
- * Wave 1（1-10关）：70/25/5
- * Wave 2（11-30关）：45/35/15/5
- * Wave 3（31+关）：30/35/20/10/5
- * @param {number} round 当前关卡
- * @param {number} [luckyBonus=1] 幸运加成（阶段 6 幸运饼干）：传奇权重 ×luckyBonus
- * @param {number} [shopBonus=0] 商店等级传奇加成（阶段 8 Lv4+）：传奇权重 +shopBonus
- * @returns 糖果对象
- */
-export function drawWeightedCandy(round, luckyBonus = 1, shopBonus = 0) {
-  const pool = getPoolForRound(round);
-  if (pool.length === 0) return null;
-  const weights = getWaveWeights(round);
-
-  // 阶段 6：幸运饼干效果 — 传奇权重 ×luckyBonus
-  if (luckyBonus > 1 && weights.legendary > 0) {
-    weights.legendary = Math.round(weights.legendary * luckyBonus);
-  }
-  // 阶段 8：商店等级 Lv4+ 传奇概率加成 — 传奇权重 +shopBonus
-  if (shopBonus > 0 && weights.legendary !== undefined) {
-    weights.legendary += shopBonus;
-  }
-
-  // 第一步：按稀有度权重抽选稀有度
-  const rarities = Object.keys(weights).filter(r => weights[r] > 0);
-  const totalWeight = rarities.reduce((s, r) => s + weights[r], 0);
-  let r = Math.random() * totalWeight;
-  let selectedRarity = null;
-  for (const rarity of rarities) {
-    r -= weights[rarity];
-    if (r <= 0) { selectedRarity = rarity; break; }
-  }
-  if (!selectedRarity) selectedRarity = rarities[rarities.length - 1];
-
-  // 第二步：从该稀有度的糖果中随机选 1 颗
-  const candidates = pool.filter(c => c.rarity === selectedRarity);
-  if (candidates.length === 0) return null;
-  return candidates[Math.floor(Math.random() * candidates.length)];
-}
-
-/**
- * 随机抽选 1 张糖果（向后兼容，内部调用 drawWeightedCandy）
- * @param {number} round 当前关卡
- * @param {number} [luckyBonus=1] 幸运加成（阶段 6）
- * @param {number} [shopBonus=0] 商店等级传奇加成（阶段 8）
- * @returns 糖果对象
- */
-export function drawRandomCandy(round, luckyBonus = 1, shopBonus = 0) {
-  return drawWeightedCandy(round, luckyBonus, shopBonus);
-}
-
-/**
  * Fisher-Yates 洗牌（不修改原数组）
  */
 function shuffle(arr) {
@@ -141,15 +86,6 @@ export function getChoiceCandies(round, count = 3) {
  */
 export function canAfford(coins, price) {
   return coins >= price;
-}
-
-/**
- * 计算随机抽选价格（基于商店货架均价 -2，最低 3）
- * 公式：max(3, floor(avgPrice - 2))
- */
-export function getRandomDrawPrice(round) {
-  const avg = getAveragePrice(getShopOfferings(round));
-  return Math.max(3, Math.floor(avg - 2));
 }
 
 /**

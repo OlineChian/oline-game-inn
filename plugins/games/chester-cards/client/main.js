@@ -174,13 +174,10 @@ async function quitGame() {
 }
 
 /** 关闭商店并进入下一关
- * 阶段 6：清除幸运加成状态（lucky-cookie 已在 openShop 时激活并使用）
  * Wave 重构：若下一关为换副节点（50/100/200/300...），弹窗让玩家选择"现在结束"或"继续挑战"
  */
 function closeShop() {
   hideShop();
-  State._luckyBonus = 1;
-  State._activeLuckyBonus = 1;
   const nextRound = State.round + 1;
   if (isDeckUpgradeRound(nextRound)) {
     State.phase = 'waveChoice';

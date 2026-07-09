@@ -4,21 +4,12 @@
  * 商店第三区域 "🎁 特殊商品 ×1"，每次打开商店随机生成 1 个
  *
  * 效果类型说明：
- *   lucky_bonus       下一次商店传奇概率×value
  *   random_candy      获得指定稀有度的随机糖果
  *   coin_gain         立即获得 value 金币
  *   recycle_candy     原价回收一个糖果（自动回收最早拥有的）
  */
 
 export const SPECIAL_ITEMS = [
-  {
-    id: 'lucky-cookie',
-    name: '幸运饼干',
-    emoji: '🍀',
-    price: 12,
-    desc: '下一次商店 传奇概率 ×2',
-    effect: { type: 'lucky_bonus', value: 2 }
-  },
   {
     id: 'candy-box',
     name: '糖果盒',

@@ -72,6 +72,8 @@ function applyCandiesInternal(baseResult, candies, context, isPreview) {
     }
   }
 
+  // 防止负倍率：永久状态（牛奶糖弃牌）累积为负时钳制为 1，避免负分
+  if (newMult < 1) newMult = 1;
   const finalScore = (newBase + newChips) * newMult + scoreBonus;
   const bonusPart = scoreBonus ? ` + ${scoreBonus}` : '';
   return {
@@ -114,12 +116,6 @@ export function applyCandiesPerRound(candies) {
 export function getPoolForRound(round) {
   const rarities = getAvailableRarities(round);
   return CANDIES.filter(c => rarities.includes(c.rarity));
-}
-
-/** 从池中随机抽取 1 张糖果 */
-export function getRandomCandy(round) {
-  const pool = getPoolForRound(round);
-  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /** 检查是否还能添加糖果 */

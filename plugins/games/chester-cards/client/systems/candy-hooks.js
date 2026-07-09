@@ -39,20 +39,23 @@ export function onPlayEnd(candies, playedCards, handType, ctx = {}) {
     switch (e.type) {
       case 'permanent_mult_play': {
         const inc = e.perPlay || 0;
-        candy._permMult = (candy._permMult || 0) + inc;
+        const next = (candy._permMult || 0) + inc;
+        candy._permMult = Math.max(0, Math.min(e.maxPermMult || Infinity, next));
         if (inc !== 0) triggered.push({ candy, msg: `永久 +${inc} 倍率` });
         break;
       }
       case 'permanent_chips_hand': {
         if (handType && handType.key === e.handType) {
-          candy._permChips = (candy._permChips || 0) + (e.value || 0);
+          const next = (candy._permChips || 0) + (e.value || 0);
+          candy._permChips = Math.min(e.maxPermChips || Infinity, next);
           triggered.push({ candy, msg: `永久 +${e.value} 筹码` });
         }
         break;
       }
       case 'permanent_mult_hand': {
         if (handType && handType.key === e.handType) {
-          candy._permMult = (candy._permMult || 0) + (e.value || 0);
+          const next = (candy._permMult || 0) + (e.value || 0);
+          candy._permMult = Math.min(e.maxPermMult || Infinity, next);
           triggered.push({ candy, msg: `永久 +${e.value} 倍率` });
         }
         break;
@@ -85,7 +88,7 @@ export function onDiscard(candies, discardedCards) {
     const e = candy.effect;
     if (e.type === 'permanent_mult_play') {
       const dec = Math.abs(e.perDiscard || 0);
-      candy._permMult = (candy._permMult || 0) - dec;
+      candy._permMult = Math.max(0, (candy._permMult || 0) - dec);
       if (dec > 0) triggered.push({ candy, msg: `永久 -${dec} 倍率` });
     } else if (e.type === 'candy_king') {
       const ranks = e.ranks || [];
@@ -119,9 +122,11 @@ export function onRoundStart(candies, ctx = {}) {
     const idx = candies.length - 1;
     const right = candies[idx];
     if (right.id === candy.id) continue;
+    // 不吞食传奇/神话糖果，防止误回收极品
+    if (right.rarity === 'legendary' || right.rarity === 'mythic') continue;
     removedCandyIdx = idx;
     permMultGain = (right.price || 0) * 2;
-    candy._permMult = (candy._permMult || 0) + permMultGain;
+    candy._permMult = Math.min(candy.effect.maxPermMult || Infinity, (candy._permMult || 0) + permMultGain);
     triggered.push({ candy, msg: `回收${right.name} +${permMultGain} 倍率` });
     break; // 一回合只处理一个糖果机器
   }

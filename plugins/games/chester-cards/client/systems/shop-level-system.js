@@ -8,18 +8,16 @@
  *   Lv1: 3 商品（初始）
  *   Lv2: 4 商品（关卡 ≥ 8，花费 25 金币）
  *   Lv3: 5 商品（关卡 ≥ 15，花费 50 金币）
- *   Lv4: 传奇概率 +2%（关卡 ≥ 25，花费 80 金币）
+ *   Lv4: 5 商品（关卡 ≥ 25，花费 80 金币）
  *   Lv5: 每次刷新免费一次（关卡 ≥ 35，花费 120 金币）
- *
- * 传奇概率加成叠加在 luckyBonus 之后（luckyBonus 乘法，shopBonus 加法）
  */
 
 export const SHOP_LEVELS = [
-  { level: 1, candyCount: 3, legendaryBonus: 0, freeRefresh: false, upgradeCost: 25, upgradeRound: 8 },
-  { level: 2, candyCount: 4, legendaryBonus: 0, freeRefresh: false, upgradeCost: 50, upgradeRound: 15 },
-  { level: 3, candyCount: 5, legendaryBonus: 0, freeRefresh: false, upgradeCost: 80, upgradeRound: 25 },
-  { level: 4, candyCount: 5, legendaryBonus: 2, freeRefresh: false, upgradeCost: 120, upgradeRound: 35 },
-  { level: 5, candyCount: 5, legendaryBonus: 2, freeRefresh: true,  upgradeCost: 0,   upgradeRound: Infinity }
+  { level: 1, candyCount: 3, freeRefresh: false, upgradeCost: 25, upgradeRound: 8 },
+  { level: 2, candyCount: 4, freeRefresh: false, upgradeCost: 50, upgradeRound: 15 },
+  { level: 3, candyCount: 5, freeRefresh: false, upgradeCost: 80, upgradeRound: 25 },
+  { level: 4, candyCount: 5, freeRefresh: false, upgradeCost: 120, upgradeRound: 35 },
+  { level: 5, candyCount: 5, freeRefresh: true,  upgradeCost: 0,   upgradeRound: Infinity }
 ];
 
 export const MAX_SHOP_LEVEL = 5;
@@ -33,11 +31,6 @@ export function getShopLevelConfig(level) {
 /** 获取指定等级的糖果货架数量 */
 export function getCandyCountForLevel(level) {
   return getShopLevelConfig(level).candyCount;
-}
-
-/** 获取指定等级的传奇概率加成（百分比点） */
-export function getLegendaryBonusForLevel(level) {
-  return getShopLevelConfig(level).legendaryBonus;
 }
 
 /** 指定等级是否拥有免费刷新（Lv5） */

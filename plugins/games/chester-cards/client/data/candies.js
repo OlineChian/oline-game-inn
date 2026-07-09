@@ -2,7 +2,7 @@
  * 切斯特牌 - 糖果数据汇总入口
  * 合并 5 个稀有度子模块，对外统一导出
  *
- * 糖果总数：35 颗（21 common + 4 rare + 4 epic + 4 mythic + 2 legendary）
+ * 糖果总数：35 颗（17 common + 5 rare + 6 epic + 5 mythic + 2 legendary）
  * 数据按稀有度拆分以遵守单文件 ≤300 行铁律
  *
  * Wave 解锁规则（替代旧的固定关卡解锁）：

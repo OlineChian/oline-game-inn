@@ -18,7 +18,12 @@ function serialize(state) {
     round: state.round,
     totalScore: state.totalScore,
     coins: state.coins,
-    candies: (state.candies || []).map(c => c.id),
+    candies: (state.candies || []).map(c => ({
+      id: c.id,
+      _permMult: c._permMult || 0,
+      _permChips: c._permChips || 0,
+      _kingMult: c._kingMult || 1
+    })),
     handLevels: { ...(state.handLevels || {}) },
     shopLevel: state.shopLevel || 1
   };

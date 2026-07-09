@@ -6,7 +6,6 @@
  *   - applySpecialItem(item, state, config)：应用特殊商品效果
  *
  * 效果应用：
- *   lucky_bonus     → state._luckyBonus = value（下次商店传奇概率×value）
  *   random_candy    → 随机获得指定稀有度糖果（需有空槽）
  *   coin_gain       → state.coins += value
  *   recycle_candy   → 原价回收最早拥有的糖果（state.candies[0]）
@@ -40,15 +39,6 @@ export function applySpecialItem(item, state, config) {
   if (!effect) return { success: false, message: '无效的特殊商品' };
 
   switch (effect.type) {
-    case 'lucky_bonus': {
-      // 下次商店传奇概率×value
-      state._luckyBonus = (state._luckyBonus || 1) * effect.value;
-      return {
-        success: true,
-        message: `下次商店传奇概率 ×${effect.value}（当前加成 ×${state._luckyBonus}）`
-      };
-    }
-
     case 'random_candy': {
       // 获得指定稀有度的随机糖果
       if (!canAddCandy(state.candies, config.maxCandies)) {

@@ -141,7 +141,8 @@ export function applyEffect(effect, baseResult, candy, context = {}) {
     case 'mult_deck_used': {
       const deckUsed = context.deckUsed || 0;
       if (deckUsed > 0) {
-        return { multAdd: deckUsed * effect.value, triggered: { candy, msg: `牌库-${deckUsed} +${deckUsed * effect.value} 倍率` } };
+        const gain = Math.min(deckUsed * effect.value, effect.maxMult || Infinity);
+        return { multAdd: gain, triggered: { candy, msg: `牌库-${deckUsed} +${gain} 倍率` } };
       }
       return {};
     }

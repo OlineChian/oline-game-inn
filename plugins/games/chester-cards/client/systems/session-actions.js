@@ -26,7 +26,8 @@ import { getCandyById } from '../data/candies.js';
 export function createSessionActions(state, config, renderAll, helpers) {
   const { startRound, renderGame, quitGame } = helpers;
 
-  /** 继续上次游戏（从 localStorage 临时存档恢复） */
+  /** 继续上次游戏（从 localStorage 临时存档恢复）
+   *  浅拷贝糖果数据避免污染全局 CANDIES；恢复 _permMult/_permChips/_kingMult 实例状态 */
   function continueGame() {
     const saved = loadGame();
     if (!saved) return;
@@ -34,7 +35,18 @@ export function createSessionActions(state, config, renderAll, helpers) {
     state.round = s.round;
     state.totalScore = s.totalScore;
     state.coins = s.coins;
-    state.candies = (s.candies || []).map(id => getCandyById(id)).filter(Boolean);
+    state.candies = (s.candies || []).map(item => {
+      const id = typeof item === 'string' ? item : item.id;
+      const base = getCandyById(id);
+      if (!base) return null;
+      const candy = { ...base };
+      if (typeof item === 'object' && item) {
+        candy._permMult = item._permMult || 0;
+        candy._permChips = item._permChips || 0;
+        candy._kingMult = item._kingMult || 1;
+      }
+      return candy;
+    }).filter(Boolean);
     state.handLevels = s.handLevels || {};
     state.shopLevel = s.shopLevel || 1;
     state.phase = 'idle';
