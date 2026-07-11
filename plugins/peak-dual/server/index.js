@@ -94,6 +94,12 @@ module.exports = function(app, context) {
     res.json(service.getWinners());
   });
 
+  app.post('/api/peak-dual/admin/initialize', (req, res) => {
+    const auth = checkAdminAuth(req);
+    if (!auth.ok) return res.status(401).json({ success: false, error: auth.error });
+    res.json(service.initialize());
+  });
+
   context.logger.info('[peak-dual] plugin initialized with API routes');
   return { service };
 };

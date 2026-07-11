@@ -131,6 +131,38 @@ class LeaderboardService {
   }
 
   /**
+   * 获取用户在指定游戏指定时间之后的最佳成绩（用于活动按参与时间统计）
+   * 返回 { bestScore, scoreTime, rank, total } 或 { error }
+   */
+  getUserBestAfter(gameId, nickname, afterTimestamp, siteConfig) {
+    const gameConfigs = this.getGameConfigs(siteConfig);
+    const config = gameConfigs[gameId];
+    if (!config) return { error: '游戏不存在' };
+
+    const board = this.getBoard(gameId);
+    const afterTs = Number(afterTimestamp) || 0;
+    const userRecords = board.filter(r => r.nickname === nickname && Number(r.timestamp) > afterTs);
+    if (userRecords.length === 0) {
+      return { error: '暂无新成绩', bestScore: null, scoreTime: null, rank: null, total: board.length };
+    }
+
+    const best = config.sort === 'asc'
+      ? userRecords.reduce((a, b) => a.score < b.score ? a : b)
+      : userRecords.reduce((a, b) => a.score > b.score ? a : b);
+    const sorted = this.sortBoard(board, config.sort);
+    const rank = sorted.findIndex(r => r.timestamp === best.timestamp) + 1;
+
+    return {
+      gameId, nickname,
+      bestScore: best.score,
+      scoreTime: best.timestamp,
+      rank: rank || null,
+      total: board.length,
+      config
+    };
+  }
+
+  /**
    * 获取排行榜详情
    * mode:
    *   - 'history'：返回全部历史记录（不按昵称聚合），用于“查看全部历史成绩”

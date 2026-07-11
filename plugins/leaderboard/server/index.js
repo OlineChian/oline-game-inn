@@ -481,6 +481,13 @@ module.exports = function(app, context) {
     if (callback) callback(result);
   });
 
+  // 查询玩家在指定时间之后的最佳成绩（用于活动按参与时间统计）
+  context.eventBus.on('leaderboard:get-user-best-after', (data) => {
+    const { gameId, nickname, afterTimestamp, callback } = data;
+    const result = service.getUserBestAfter(gameId, nickname, afterTimestamp, siteConfig);
+    if (callback) callback(result);
+  });
+
   // 查询游戏全服最高分（用于权重归一化）
   context.eventBus.on('leaderboard:get-top-score', (data) => {
     const { gameId, callback } = data;
