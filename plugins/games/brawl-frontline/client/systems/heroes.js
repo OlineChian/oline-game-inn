@@ -9,6 +9,7 @@ import { Enemies } from './enemies.js';
 import { Buffs } from './buffs.js';
 import { Supers } from './hero-supers.js';
 import { BoltAI } from './hero-bolt.js';
+import * as SaveSystem from './save-system.js';
 
 export const Heroes = {
   /** 招募英雄（必须已解锁） */
@@ -20,6 +21,7 @@ export const Heroes = {
     Game.state.tickets -= data.cost.tickets || 1;
     Game.entities.heroes.push(this._create(data));
     Game.state.totalRecruited[heroId] = (Game.state.totalRecruited[heroId] || 0) + 1;
+    SaveSystem.save();
     return true;
   },
 
@@ -38,6 +40,7 @@ export const Heroes = {
     Game.state.tickets -= cost;
     Game.state.unlockedHeroes.push(heroId);
     Game.state.unlockChoices = [];
+    SaveSystem.save();
     return { ok: true, hero: data };
   },
 
@@ -122,6 +125,7 @@ export const Heroes = {
     Game.entities.heroes.forEach(h => {
       if (h.id === heroId) { h.star = curStar + 1; this._applyStar(h); }
     });
+    SaveSystem.save();
     return true;
   },
 

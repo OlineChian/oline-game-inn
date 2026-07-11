@@ -24,18 +24,18 @@ export const Economy = {
 
   /** 击杀掉落奖励：金币 + 英雄券（受 kill-gold-flat / kill-ticket-flat / kill-ticket-rate buff 加成） */
   onKill(enemy) {
-    const goldGain = enemy.goldDrop + this._buffFlat('kill-gold-flat');
+    const goldGain = Math.floor(enemy.goldDrop + this._buffFlat('kill-gold-flat'));
     Game.state.gold += goldGain;
     Game.state.totalGoldEarned += goldGain;
     const base = enemy.ticketDrop || 0;
     const tFlat = this._buffFlat('kill-ticket-flat');
     const tRate = this._buffRate('kill-ticket-rate');
-    const ticketGain = Math.floor(base * (1 + tRate)) + tFlat;
+    const ticketGain = Math.floor(base * (1 + tRate) + tFlat);
     Game.state.tickets += ticketGain;
     Game.state.totalTicketsEarned += ticketGain;
   },
 
-  addGold(n) { Game.state.gold += n; },
+  addGold(n) { Game.state.gold += Math.floor(n); },
 
   spendGold(n) {
     if (Game.state.gold < n) return false;
@@ -43,7 +43,7 @@ export const Economy = {
     return true;
   },
 
-  addTickets(n) { Game.state.tickets += n; },
+  addTickets(n) { Game.state.tickets += Math.floor(n); },
 
   spendTickets(n) {
     if (Game.state.tickets < n) return false;

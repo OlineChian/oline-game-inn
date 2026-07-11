@@ -2,6 +2,7 @@
 import { Game } from '../core/game.js';
 import { BUILDINGS } from '../data/buildings.js';
 import { MergingUI } from './merging.js';
+import { ModalManager } from './modal-manager.js';
 
 /** 计算宝库某等级解锁所需波数（level 由 upgradeWaves[level-2] 决定，level=1 起始无需解锁） */
 function waveForLevel(level) {
@@ -11,7 +12,10 @@ function waveForLevel(level) {
 
 export const VaultModal = {
   show() {
-    Game.state.paused = true;
+    if (!ModalManager.open('vault', { onClose: () => this._removeModal() })) {
+      this._toast('请先完成当前选择');
+      return;
+    }
     const info = Game.systems.buildings.getVaultInfo();
     let upgBtn;
     if (info.isMax) {
@@ -41,7 +45,7 @@ export const VaultModal = {
       </div></div>`;
     document.body.insertAdjacentHTML('beforeend', html);
     const modal = document.getElementById('bf-vault-modal');
-    const close = () => { modal.remove(); Game.state.paused = false; };
+    const close = () => { this._removeModal(); ModalManager.close('vault'); };
     document.getElementById('bf-vault-close').addEventListener('click', close);
     modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     const upg = document.getElementById('bf-vault-upg');
@@ -58,6 +62,11 @@ export const VaultModal = {
         MergingUI.show(type);
       });
     });
+  },
+
+  _removeModal() {
+    const m = document.getElementById('bf-vault-modal');
+    if (m) m.remove();
   },
 
   _toast(msg) {

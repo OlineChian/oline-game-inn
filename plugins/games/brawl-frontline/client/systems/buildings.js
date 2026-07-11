@@ -6,6 +6,7 @@
  */
 import { Game } from '../core/game.js';
 import { BUILDINGS, FACILITIES } from '../data/buildings.js';
+import * as SaveSystem from './save-system.js';
 
 export const Buildings = {
   /** 升级主题季宝库（需波数到达 + 金币足够） */
@@ -21,6 +22,7 @@ export const Buildings = {
     vault.level += 1;
     // 通知 UI：宝库升级（批量招募/自动合并解锁态可能变化）
     document.dispatchEvent(new CustomEvent('bf-vault-upgraded'));
+    SaveSystem.save();
     return { ok: true, level: vault.level };
   },
 

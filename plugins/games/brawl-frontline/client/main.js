@@ -26,10 +26,14 @@ import { Leaderboard } from './ui/leaderboard.js';
 import { Settings } from './ui/settings.js';
 import { Audio } from './core/audio.js';
 import { AntiCheat } from './core/anti-cheat.js';
+import { ModalManager } from './ui/modal-manager.js';
+import * as SaveSystem from './systems/save-system.js';
 
 function boot() {
   // 1. 初始化游戏状态
   Game.init();
+  // 注册 ModalManager 暂停写入回调（避免循环依赖：ModalManager 不直接 import Game）
+  ModalManager.setPauseSetter(p => { Game.state.paused = p; });
   // 启动反作弊遥测（覆盖英雄选择 → wave → 结束整个流程）
   AntiCheat.start();
 
@@ -70,8 +74,8 @@ function boot() {
   document.getElementById('bf-settings-btn').addEventListener('click', () => Settings.show());
   // 英雄解锁按钮
   document.getElementById('bf-unlock-btn').addEventListener('click', () => Unlock.show());
-  // 暂停/继续按钮（HUD 正中间，与所有弹窗联动）
-  document.getElementById('bf-pause-btn').addEventListener('click', () => Game.togglePause());
+  // 暂停/继续按钮（Top Layer，由 ModalManager 统一管理暂停态与弹窗关闭）
+  document.getElementById('bf-pause-btn').addEventListener('click', () => ModalManager.togglePauseOrDismiss());
 
   // 6. 反作弊输入追踪：监听全局点击/触屏/按键（捕获玩家真实操作）
   document.addEventListener('mousedown', () => AntiCheat.tap());
@@ -95,14 +99,49 @@ function boot() {
     }
   };
 
-  // 8. 启动主循环并进入英雄选择
+  // 8. 启动主循环，初始化存档系统（检测临时存档 / 事件保存 / 周期保存）
   Game.start();
-  Modals.showHeroSelect();
+  _initSave();
 
   // 9. 首次进入炮台位置提示（localStorage 记录关闭状态，仅显示一次）
   _initFacilityTip();
   // 10. 首次进入 BGM 推荐弹窗（有曲目且未关闭过才显示，localStorage 记忆不再推送）
   _initBgmPrompt();
+}
+
+/** 初始化存档系统：检测临时存档、注册事件保存与周期保存 */
+function _initSave() {
+  // 检测未完成的临时存档，弹出继续/重新开始选择
+  if (SaveSystem.hasSave()) {
+    Modals.showContinuePrompt(
+      () => {
+        const payload = SaveSystem.loadGame();
+        if (payload && SaveSystem.applySnapshot(payload)) {
+          Shop._buildCards();
+        } else {
+          Modals.showHeroSelect();
+        }
+      },
+      () => {
+        SaveSystem.clearSave();
+        Modals.showHeroSelect();
+      }
+    );
+  } else {
+    Modals.showHeroSelect();
+  }
+
+  // 事件驱动保存：波次推进 / 暂停态变化
+  document.addEventListener('bf-wave-next', () => SaveSystem.save());
+  document.addEventListener('bf-pause-change', () => SaveSystem.save());
+
+  // 页面隐藏/关闭时保存（覆盖 F5/关闭/切换标签页/手机后台）
+  document.addEventListener('visibilitychange', () => { if (document.hidden) SaveSystem.save(); });
+  window.addEventListener('pagehide', () => SaveSystem.save());
+  window.addEventListener('beforeunload', () => SaveSystem.save());
+
+  // 周期性保存（每 10 秒兜底）
+  setInterval(() => SaveSystem.save(), 10000);
 }
 
 /** BGM 首次推荐：加载曲目清单后，若未关闭过且有曲目，显示右上角弹窗 */

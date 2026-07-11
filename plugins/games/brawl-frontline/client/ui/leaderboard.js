@@ -4,21 +4,25 @@
  */
 import { Game } from '../core/game.js';
 import { fmtNum } from '../core/utils.js';
+import { ModalManager } from './modal-manager.js';
 
 const GAME_ID = 'brawl-frontline';
 
 export const Leaderboard = {
-  /** 显示排行榜弹窗（wave 阶段自动暂停） */
+  /** 显示排行榜弹窗（通过 ModalManager 管理暂停态；若已有弹窗如 game-over 则仅显示 DOM） */
   show() {
-    if (Game.state.phase === 'wave') Game.state.paused = true;
-    document.getElementById('bf-lb-modal').classList.remove('hidden');
+    ModalManager.open('leaderboard', { onClose: () => this._hideDom() });
+    this._showDom();
     this.load();
   },
 
   close() {
-    if (Game.state.phase === 'wave') Game.state.paused = false;
-    document.getElementById('bf-lb-modal').classList.add('hidden');
+    this._hideDom();
+    ModalManager.close('leaderboard');
   },
+
+  _showDom() { document.getElementById('bf-lb-modal').classList.remove('hidden'); },
+  _hideDom() { document.getElementById('bf-lb-modal').classList.add('hidden'); },
 
   async load() {
     const list = document.getElementById('bf-lb-list');

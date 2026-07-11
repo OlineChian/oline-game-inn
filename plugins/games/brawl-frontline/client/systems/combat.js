@@ -64,9 +64,10 @@ export const Combat = {
           }
         }
       } else if (p.targetTeam === 'hero') {
-        for (const h of Game.entities.heroes) {
-          if (distance(p, h) <= h.radius + (p.radius || 4)) {
-            h.hp -= p.damage;
+        for (const ally of [...Game.entities.heroes, ...Game.entities.summons]) {
+          if (ally.hp <= 0) continue;
+          if (distance(p, ally) <= ally.radius + (p.radius || 4)) {
+            ally.hp -= p.damage;
             hit = true;
             break;
           }

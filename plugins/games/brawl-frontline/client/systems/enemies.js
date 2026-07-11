@@ -1,10 +1,11 @@
 /**
  * 敌人系统：生成、AI 移动、攻击、死亡处理
  *
- * AI 类型（按 data.ai 字段分发）：
- *   - rusher：直冲基地，抵达后攻击基地（grunt-bot / heavy-bot / shield-guard / mega-pig）
- *   - hunter：追击最近英雄，进入射程后远程射击（gunner-bot）
- *   - bomber：冲向最近英雄，接近后自爆范围伤害（bomber-bot）
+ * 攻击优先级两种类型（所有敌人按 ai 字段划分）：
+ *   Type 1（hunter/bomber）：暗影(召唤物) → 英雄 → 基地
+ *     — 有英雄或召唤物在场时不攻击基地
+ *   Type 2（rusher）：炮台(杰西) → 炮塔(玩家设施) → 基地
+ *     — 有炮台或设施在场时不攻击基地，全程主动搜索
  *
  * 特殊机制：shield-guard 减伤 / bomber-bot 自爆 / mega-pig 召唤小怪
  */
@@ -87,7 +88,7 @@ export const Enemies = {
     }
   },
 
-  /** AI 分发器：减速/眩晕/中毒状态机 + 按 ai 字段分发 */
+  /** AI 分发器：减速/眩晕/中毒状态机 + 按 ai 字段分发（hunter/bomber=Type1, rusher=Type2） */
   _ai(en, dt) {
     // 中毒持续伤害（独立于行动，即使被眩晕也扣血）
     if (en.poisonTimer > 0) {
@@ -144,11 +145,10 @@ export const Enemies = {
     }
   },
 
-  /** rusher AI：直冲基地，碰到挡路设施/杰西炮台先打掉，抵达基地前线后按优先级攻击：
-   *   杰西炮台 > 守家英雄（坦克/治疗） > 玩家设施 > 基地（伤害按 BASE_DAMAGE_RATE 折扣）
-   *   搜索范围 120（rusher 原射程仅 50，需扩大以实现"优先攻击炮台/守家英雄"） */
+  /** rusher AI（Type 2）：炮台(杰西) → 炮塔(玩家设施) → 基地
+   *  碰到挡路设施/炮台优先攻击；否则全局搜索炮台/设施主动靠近；
+   *  炮台与设施全灭后才攻击基地（伤害按 BASE_DAMAGE_RATE 折扣） */
   _aiRusher(en, dt) {
-    // 移动中碰到挡路设施或杰西炮台：优先攻击
     for (const f of Game.buildings.facilities) {
       if (f && distance(en, f) <= en.radius + f.radius) {
         if (en.atkCd <= 0) { Game.systems.facilities.takeDamage(f, en.attack); en.atkCd = 1 / en.attackSpeed; }
@@ -161,62 +161,25 @@ export const Enemies = {
         return;
       }
     }
-    if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; }
-    // 全程搜索炮台/守家英雄：发现就主动靠近攻击（不等到抵达基地前线）
-    const prio = this._nearestTurret(en) || this._nearestGuardHero(en);
-    if (prio) {
-      const d = distance(en, prio);
-      if (d <= en.range + prio.radius) {
-        if (en.atkCd <= 0) { prio.hp -= en.attack; en.atkCd = 1 / en.attackSpeed; }
-      } else {
-        // 目标在搜索范围内但不在攻击范围：主动靠近
-        const dx = prio.x - en.x, dy = prio.y - en.y, dd = Math.sqrt(dx * dx + dy * dy) || 1;
-        en.x += (dx / dd) * en.moveSpeed * dt;
-        en.y += (dy / dd) * en.moveSpeed * dt;
-      }
-      return;
-    }
-    if (en.y < LAYOUT.baseLine) return;
+    const turret = this._nearestOf(en, Game.entities.turrets);
+    if (turret) { this._pursue(en, turret, dt, t => { t.hp -= en.attack; }); return; }
+    const facility = this._nearestOf(en, Game.buildings.facilities);
+    if (facility) { this._pursue(en, facility, dt, f => { Game.systems.facilities.takeDamage(f, en.attack); }); return; }
+    if (en.y < LAYOUT.baseLine) { en.y += en.moveSpeed * dt; return; }
     if (en.atkCd > 0) return;
-    let tf = null, minD = Infinity;
-    for (const f of Game.buildings.facilities) {
-      if (!f) continue;
-      const d = distance(en, f);
-      if (d <= (f.range || 0) + f.radius && d < minD) { minD = d; tf = f; }
-    }
-    if (tf) Game.systems.facilities.takeDamage(tf, en.attack);
-    else Game.damageBase(en.attack * BASE_DAMAGE_RATE);
+    Game.damageBase(en.attack * BASE_DAMAGE_RATE);
     en.atkCd = 1 / en.attackSpeed;
   },
 
-  /** 查找 120 范围内最近的杰西炮台，用于 rusher 优先攻击 */
-  _nearestTurret(en) {
-    const AGGRO = 120;
-    let nearest = null, minDist = Infinity;
-    for (const t of Game.entities.turrets) {
-      const d = distance(en, t);
-      if (d <= AGGRO + t.radius && d < minDist) { minDist = d; nearest = t; }
-    }
-    return nearest;
-  },
-
-  /** 查找 120 范围内的守家型英雄（坦克/治疗），用于 rusher 优先攻击 */
-  _nearestGuardHero(en) {
-    const AGGRO = 120;
-    let nearest = null, minDist = Infinity;
-    for (const h of Game.entities.heroes) {
-      if (h.hp <= 0) continue;
-      if (h.role !== '坦克' && h.role !== '治疗') continue;
-      const d = distance(en, h);
-      if (d <= AGGRO + h.radius && d < minDist) { minDist = d; nearest = h; }
-    }
-    return nearest;
-  },
-
-  /** hunter AI：追击最近英雄，进入射程后远程射击 */
+  /** hunter AI（Type 1）：暗影(召唤物) → 英雄 → 基地
+   *  有召唤物/英雄时追击并远程射击；全灭后才攻击基地 */
   _aiHunter(en, dt) {
-    const target = this._nearestHero(en);
-    if (!target) { this._aiRusher(en, dt); return; }
+    const target = this._nearestOf(en, Game.entities.summons) || this._nearestOf(en, Game.entities.heroes);
+    if (!target) {
+      if (en.y < LAYOUT.baseLine) en.y += en.moveSpeed * dt;
+      else if (en.atkCd <= 0) { Game.damageBase(en.attack); en.atkCd = 1 / en.attackSpeed; }
+      return;
+    }
     const dist = distance(en, target);
     if (dist > en.range) {
       const dx = target.x - en.x, dy = target.y - en.y;
@@ -227,21 +190,23 @@ export const Enemies = {
       const dx = target.x - en.x, dy = target.y - en.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       Game.systems.combat.spawnProjectile({
-        x: en.x, y: en.y,
-        vx: (dx / d) * 220, vy: (dy / d) * 220,
-        damage: en.attack, color: en.color,
-        radius: 5, life: 2, targetTeam: 'hero'
+        x: en.x, y: en.y, vx: (dx / d) * 220, vy: (dy / d) * 220,
+        damage: en.attack, color: en.color, radius: 5, life: 2, targetTeam: 'hero'
       });
       en.atkCd = 1 / en.attackSpeed;
     }
   },
 
-  /** bomber AI：冲向最近英雄，接近后自爆 */
+  /** bomber AI（Type 1）：暗影(召唤物) → 英雄 → 基地
+   *  冲向目标自爆；无目标时冲向基地自爆 */
   _aiBomber(en, dt) {
-    const target = this._nearestHero(en);
-    if (!target) { this._aiRusher(en, dt); return; }
-    const dist = distance(en, target);
-    if (dist <= en.range) {
+    const target = this._nearestOf(en, Game.entities.summons) || this._nearestOf(en, Game.entities.heroes);
+    if (!target) {
+      if (en.y < LAYOUT.baseLine) en.y += en.moveSpeed * dt;
+      else en.hp = 0;
+      return;
+    }
+    if (distance(en, target) <= en.range) {
       en.hp = 0;
     } else {
       const dx = target.x - en.x, dy = target.y - en.y;
@@ -251,15 +216,28 @@ export const Enemies = {
     }
   },
 
-  /** 查找最近存活英雄 */
-  _nearestHero(en) {
+  /** 通用：在数组中查找最近的有效目标（跳过 null 和 hp≤0） */
+  _nearestOf(en, arr) {
     let nearest = null, minDist = Infinity;
-    for (const h of Game.entities.heroes) {
-      if (h.hp <= 0) continue;
-      const d = distance(en, h);
-      if (d < minDist) { minDist = d; nearest = h; }
+    for (const it of arr) {
+      if (!it || it.hp <= 0) continue;
+      const d = distance(en, it);
+      if (d < minDist) { minDist = d; nearest = it; }
     }
     return nearest;
+  },
+
+  /** 通用：朝目标移动，进入射程后执行攻击回调 */
+  _pursue(en, target, dt, attackFn) {
+    const d = distance(en, target);
+    if (d <= en.range + target.radius) {
+      if (en.atkCd <= 0) { attackFn(target); en.atkCd = 1 / en.attackSpeed; }
+    } else {
+      const dx = target.x - en.x, dy = target.y - en.y;
+      const dd = Math.sqrt(dx * dx + dy * dy) || 1;
+      en.x += (dx / dd) * en.moveSpeed * dt;
+      en.y += (dy / dd) * en.moveSpeed * dt;
+    }
   },
 
   /** 敌人死亡 */
@@ -279,12 +257,12 @@ export const Enemies = {
     }
   },
 
-  /** 爆破兵自爆：范围伤害英雄 + 基地 + 爆炸特效 */
+  /** 爆破兵自爆：范围伤害英雄+召唤物 + 基地 + 爆炸特效 */
   _explode(en) {
     const r = en.range;
-    for (const h of Game.entities.heroes) {
-      if (h.hp <= 0) continue;
-      if (distance(en, h) <= r) h.hp -= en.attack;
+    for (const ally of [...Game.entities.heroes, ...Game.entities.summons]) {
+      if (ally.hp <= 0) continue;
+      if (distance(en, ally) <= r) ally.hp -= en.attack;
     }
     if (Math.abs(en.y - LAYOUT.base.y) < r + LAYOUT.base.h / 2) {
       Game.damageBase(Math.floor(en.attack * 0.5));

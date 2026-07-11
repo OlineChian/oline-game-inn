@@ -21,6 +21,19 @@ export const Hud = {
       vaultBtn: document.getElementById('bf-vault-btn'),
       pauseBtn: document.getElementById('bf-pause-btn')
     };
+    this._syncPausePosition();
+    window.addEventListener('resize', () => this._syncPausePosition());
+    window.addEventListener('scroll', () => this._syncPausePosition(), true);
+  },
+
+  /** 同步暂停按钮定位到 HUD 正中间（按钮在 #bf-pause-layer 内，left/top 由 JS 设置） */
+  _syncPausePosition() {
+    const hud = document.querySelector('.bf-hud');
+    const btn = this._els.pauseBtn;
+    if (!hud || !btn) return;
+    const rect = hud.getBoundingClientRect();
+    btn.style.left = (rect.left + rect.width / 2) + 'px';
+    btn.style.top = (rect.top + rect.height / 2) + 'px';
   },
 
   /** 每帧更新 HUD 数值 */
@@ -59,11 +72,9 @@ export const Hud = {
         if (r >= 1) e.vaultBtn.classList.add('ready');
       }
     }
-    // 暂停按钮：仅 wave 阶段显示；paused 时显示▶（点击继续），否则显示⏸（点击暂停）
-    // 弹窗打开时（设置/宝库/解锁等设 paused=true）自动联动为▶图标
+    // 暂停按钮：永不隐藏，仅按 paused 状态切换 play/pause 图标
+    // paused 时显示 ▶（点击恢复），运行时显示 ⏸（点击暂停）
     if (e.pauseBtn) {
-      const inWave = st.phase === 'wave';
-      e.pauseBtn.classList.toggle('hidden', !inWave);
       const showPlay = st.paused;
       const playIcon = e.pauseBtn.querySelector('.bf-icon-play');
       const pauseIcon = e.pauseBtn.querySelector('.bf-icon-pause');

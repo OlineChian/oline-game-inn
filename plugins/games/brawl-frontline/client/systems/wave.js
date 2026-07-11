@@ -105,6 +105,7 @@ export const Wave = {
     // 波间短暂奖励：少量金币
     Game.state.gold += 30;
     this.startWave(nextN);
+    document.dispatchEvent(new CustomEvent('bf-wave-next'));
   },
 
   /** 当前波是否为 Boss 波 */

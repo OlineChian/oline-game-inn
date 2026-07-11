@@ -7,6 +7,7 @@
  */
 import { Game } from '../core/game.js';
 import { Merging } from '../systems/merging.js';
+import { ModalManager } from './modal-manager.js';
 
 export const MergingUI = {
   _type: 'star5to6',
@@ -14,7 +15,10 @@ export const MergingUI = {
   _count: 1,
 
   show(type = 'star5to6') {
-    Game.state.paused = true;
+    if (!ModalManager.open('merge', { onClose: () => this._removeOld() })) {
+      this._toast('请先完成当前选择');
+      return;
+    }
     this._type = type;
     this._heroId = null;
     this._count = 1;
@@ -22,9 +26,8 @@ export const MergingUI = {
   },
 
   close() {
-    Game.state.paused = false;
-    const m = document.getElementById('bf-merge-modal');
-    if (m) m.remove();
+    this._removeOld();
+    ModalManager.close('merge');
   },
 
   _render() {

@@ -6,22 +6,24 @@
 import { Game } from '../core/game.js';
 import { Modals } from './modals.js';
 import { Audio } from '../core/audio.js';
+import { ModalManager } from './modal-manager.js';
 
 const SPEEDS = [0.5, 1, 2, 4];
 
 export const Settings = {
-  /** 打开设置面板（暂停游戏） */
+  /** 打开设置面板（通过 ModalManager 接管暂停与显隐） */
   show() {
     if (Game.state.phase !== 'wave') return;
-    Game.state.paused = true;
+    if (!ModalManager.open('settings', { shared: true })) {
+      this._toast('请先完成当前选择');
+      return;
+    }
     this._render();
-    document.getElementById('bf-modal').classList.remove('hidden');
   },
 
   /** 关闭设置面板（恢复游戏） */
   close() {
-    Game.state.paused = false;
-    document.getElementById('bf-modal').classList.add('hidden');
+    ModalManager.close('settings');
   },
 
   _render() {
@@ -99,9 +101,19 @@ export const Settings = {
 
   _onMaskClick(e) {
     if (e.target !== e.currentTarget) return;
-    // 仅设置面板/功成身退确认（wave + 暂停）响应遮罩关闭；
+    // 仅设置面板/功成身退确认（wave + 当前为 settings/retire 弹窗）响应遮罩关闭；
     // 强化选择(buff-select)/英雄选择(hero-select)/游戏结束(game-over)不响应，避免弹窗被误关后卡死
-    if (Game.state.phase !== 'wave' || !Game.state.paused) return;
+    const t = ModalManager.currentType();
+    if (t !== 'settings' && t !== 'retire') return;
     Settings.close();
+  },
+
+  _toast(msg) {
+    const el = document.getElementById('bf-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => el.classList.remove('show'), 1500);
   }
 };

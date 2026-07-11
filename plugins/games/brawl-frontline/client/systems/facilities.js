@@ -10,6 +10,7 @@ import { Game, LAYOUT } from '../core/game.js';
 import { FACILITIES } from '../data/facilities.js';
 import { uid, distance } from '../core/utils.js';
 import { Buffs } from './buffs.js';
+import * as SaveSystem from './save-system.js';
 
 /** 回收价格倍率与属性倍率步进 */
 const RECYCLE_COST_STEP = 0.2;
@@ -46,6 +47,7 @@ export const Facilities = {
       color: data.color, radius: data.radius,
       atkCd: 0
     };
+    SaveSystem.save();
     return { ok: true };
   },
 
@@ -60,6 +62,7 @@ export const Facilities = {
     for (let i = 0; i < 10; i++) {
       Game.spawnParticle({ x: f.x, y: f.y, vx: (Math.random()-0.5)*120, vy: (Math.random()-0.5)*120, life: 0.5, maxLife: 0.5, color: f.color, size: 3 });
     }
+    SaveSystem.save();
     return { ok: true, refund, tier: Game.buildings.facilityTier };
   },
 

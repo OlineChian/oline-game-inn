@@ -9,6 +9,7 @@
  */
 import { Game } from '../core/game.js';
 import { rollBuffs, QUALITY_COLORS } from '../data/buffs.js';
+import * as SaveSystem from './save-system.js';
 
 export const Buffs = {
   _choices: [],
@@ -31,7 +32,7 @@ export const Buffs = {
     // 推进下一强化目标（killCounter 不重置，累计计算 40→80→120…）
     Game.advanceBuffTarget();
     Game.state.phase = 'wave';
-    Game.state.paused = false;  // 确保恢复（防止异常残留 paused=true）
+    SaveSystem.save();
   },
 
   /** 部分强化需要立即生效：

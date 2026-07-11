@@ -10,6 +10,7 @@
 import { Game } from '../core/game.js';
 import { BUILDINGS } from '../data/buildings.js';
 import { Heroes } from './heroes.js';
+import * as SaveSystem from './save-system.js';
 
 const STAR5TO6 = 'star5to6';
 const STAR6TO7 = 'star6to7';
@@ -93,6 +94,7 @@ export const Merging = {
     if (!Game.state.totalMerged[heroId]) Game.state.totalMerged[heroId] = {};
     const key = type === STAR5TO6 ? 's6' : 's7';
     Game.state.totalMerged[heroId][key] = (Game.state.totalMerged[heroId][key] || 0) + produced;
+    SaveSystem.save();
     return { ok: true, produced, cost };
   },
 

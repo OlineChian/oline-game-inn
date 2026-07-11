@@ -9,6 +9,7 @@
 import { Game } from '../core/game.js';
 import { RARITY_LABEL, RARITY_COLOR, UNLOCK_COST } from '../data/heroes.js';
 import { Heroes } from '../systems/heroes.js';
+import { ModalManager } from './modal-manager.js';
 
 /** 定位 → 顶部色条颜色（与 shop.js 一致） */
 const ROLE_COLOR = {
@@ -20,16 +21,18 @@ const ROLE_COLOR = {
 };
 
 export const Unlock = {
-  /** 显示解锁弹窗（暂停游戏） */
+  /** 显示解锁弹窗（通过 ModalManager 接管暂停与显隐） */
   show() {
-    Game.state.paused = true;
+    if (!ModalManager.open('unlock', { shared: true })) {
+      this._toast('请先完成当前选择');
+      return;
+    }
     const choices = Heroes.generateUnlockChoices();
     const body = document.getElementById('bf-modal-body');
     if (choices.length === 0) {
       body.innerHTML = this._wrapShell(
         '<div class="bf-unlock-empty">所有英雄已解锁！</div>'
       );
-      document.getElementById('bf-modal').classList.remove('hidden');
       document.getElementById('bf-unlock-close').addEventListener('click', () => this.close());
       return;
     }
@@ -39,7 +42,6 @@ export const Unlock = {
       `<div class="bf-unlock-grid">${cardsHtml}</div>`
     );
     body.innerHTML = html;
-    document.getElementById('bf-modal').classList.remove('hidden');
     body.querySelectorAll('.bf-unlock-card').forEach(card => {
       const btn = card.querySelector('.bf-unlock-card-btn');
       if (btn) {
@@ -97,8 +99,7 @@ export const Unlock = {
   },
 
   close() {
-    document.getElementById('bf-modal').classList.add('hidden');
-    Game.state.paused = false;
+    ModalManager.close('unlock');
   },
 
   _toast(msg) {

@@ -1,6 +1,9 @@
 /**
- * 弹窗系统：起始英雄3选1、强化三选一、游戏结束
+ * 弹窗系统：起始英雄3选1、强化三选一、游戏结束、功成身退、继续游戏
  * 实现 Game.systems.ui 回调接口（showHeroSelect / showBuffSelect / onGameOver）
+ *
+ * 所有弹窗通过 ModalManager 统一管理显隐与暂停态，不再直接操控 #bf-modal 与 Game.state.paused，
+ * 避免多个界面互相覆盖导致死锁（详见 ui/modal-manager.js）。
  */
 import { Game } from '../core/game.js';
 import { HEROES, RARITY_LABEL, RARITY_COLOR } from '../data/heroes.js';
@@ -10,10 +13,13 @@ import { Heroes } from '../systems/heroes.js';
 import { Wave } from '../systems/wave.js';
 import { Leaderboard } from './leaderboard.js';
 import { AntiCheat } from '../core/anti-cheat.js';
+import { ModalManager } from './modal-manager.js';
+import * as SaveSystem from '../systems/save-system.js';
 
 export const Modals = {
   /** 显示起始英雄3选1（仅从已解锁的初始/稀有英雄中选） */
   showHeroSelect() {
+    if (!ModalManager.open('hero-select', { blocking: true, shared: true })) return;
     const pool = HEROES.filter(h => Game.state.unlockedHeroes.includes(h.id));
     const choices = pickN(pool, Math.min(3, pool.length));
     Game.state.heroChoices = choices;
@@ -31,7 +37,6 @@ export const Modals = {
     });
     html += '</div>';
     body.innerHTML = html;
-    document.getElementById('bf-modal').classList.remove('hidden');
     body.querySelectorAll('.bf-hero-card').forEach(card => {
       card.addEventListener('click', () => this._onHeroChosen(card.dataset.hero));
     });
@@ -39,14 +44,14 @@ export const Modals = {
 
   _onHeroChosen(heroId) {
     Heroes.recruitStarter(heroId);
-    document.getElementById('bf-modal').classList.add('hidden');
-    Game.state.paused = false;  // 确保恢复（防止异常残留 paused=true）
+    ModalManager.close('hero-select');
     Wave.startWave(1);
   },
 
   /** 强化三选一（Game.systems.ui.showBuffSelect 回调）
    *  两步操作：先点选高亮 → 再点确认按钮 */
   showBuffSelect(choices) {
+    if (!ModalManager.open('buff-select', { blocking: true, shared: true })) return;
     const body = document.getElementById('bf-modal-body');
     let html = '<div class="bf-modal-title">选择强化</div>';
     html += '<div class="bf-buff-choices">';
@@ -61,7 +66,6 @@ export const Modals = {
     html += '</div>';
     html += '<div class="bf-buff-confirm-bar"><button class="bf-buff-confirm-btn" id="bf-buff-confirm" disabled>确认选择</button></div>';
     body.innerHTML = html;
-    document.getElementById('bf-modal').classList.remove('hidden');
     let selectedBuff = null;
     const confirmBtn = document.getElementById('bf-buff-confirm');
     body.querySelectorAll('.bf-buff-card').forEach(card => {
@@ -75,17 +79,17 @@ export const Modals = {
     confirmBtn.addEventListener('click', () => {
       if (!selectedBuff) return;
       Buffs.choose(selectedBuff);
-      document.getElementById('bf-modal').classList.add('hidden');
+      ModalManager.close('buff-select');
     });
   },
 
   /** 游戏结束（Game.systems.ui.onGameOver 回调） */
   async onGameOver() {
     const st = Game.state;
-    // 停止输入监测，锁定遥测数据
     AntiCheat.stop();
+    // 游戏结束：清除临时存档（本局已结束，不再可恢复）
+    SaveSystem.clearSave();
     const score = st.finalScore;
-    // 提交排行榜（附带 antiCheat 遥测）
     const result = await Leaderboard.submit(score, {
       wave: st.wave, kills: st.kills, bossKills: st.bossKills,
       antiCheat: AntiCheat.getReport()
@@ -99,7 +103,7 @@ export const Modals = {
    */
   showRetireConfirm() {
     if (Game.state.phase !== 'wave') return;
-    Game.state.paused = true;
+    if (!ModalManager.open('retire', { shared: true })) return;
     const st = Game.state;
     const score = Game.calcScore();
     const bd = Game.scoreBreakdown();
@@ -124,16 +128,15 @@ export const Modals = {
     html += '<button class="bf-btn-primary" id="bf-retire-ok">确认退出</button>';
     html += '</div>';
     body.innerHTML = html;
-    document.getElementById('bf-modal').classList.remove('hidden');
     document.getElementById('bf-retire-cancel').addEventListener('click', () => {
-      document.getElementById('bf-modal').classList.add('hidden');
-      Game.state.paused = false;
+      ModalManager.close('retire');
     });
     document.getElementById('bf-retire-ok').addEventListener('click', async () => {
-      // 复用 _gameOver 流程：设置 finalScore → phase 切换 → 提交 → 显示结束页
+      ModalManager.close('retire');
       Game.state.finalScore = score;
       Game.state.phase = 'game-over';
       AntiCheat.stop();
+      SaveSystem.clearSave();
       const result = await Leaderboard.submit(score, {
         wave: st.wave, kills: st.kills, bossKills: st.bossKills,
         antiCheat: AntiCheat.getReport()
@@ -147,6 +150,7 @@ export const Modals = {
     const st = Game.state;
     const bd = Game.scoreBreakdown();
     const rank = result && result.success ? `排名 #${result.rank}` : '';
+    if (!ModalManager.open('game-over', { blocking: true, shared: true })) return;
     const body = document.getElementById('bf-modal-body');
     let html = '<div class="bf-modal-title">游戏结束</div>';
     html += `<div class="bf-gameover-score">${fmtNum(score)}<span>分</span></div>`;
@@ -167,9 +171,36 @@ export const Modals = {
     html += '<button class="bf-btn-secondary" id="bf-view-lb">排行榜</button>';
     html += '</div>';
     body.innerHTML = html;
-    document.getElementById('bf-modal').classList.remove('hidden');
     document.getElementById('bf-restart').addEventListener('click', () => location.reload());
     document.getElementById('bf-view-lb').addEventListener('click', () => Leaderboard.show());
+  },
+
+  /**
+   * 检测到未完成游戏时显示继续/重新开始确认弹窗
+   * @param {Function} onContinue 继续游戏回调（恢复存档）
+   * @param {Function} onRestart 重新开始回调（清档 + 新游戏）
+   */
+  showContinuePrompt(onContinue, onRestart) {
+    if (!ModalManager.open('continue', { blocking: true, shared: true })) return;
+    const remain = Math.max(0, Math.floor(SaveSystem.getSaveRemainingTime() / 60000));  // 分钟
+    const remainTxt = remain >= 60 ? `${Math.floor(remain / 60)}小时${remain % 60}分` : `${remain}分钟`;
+    const body = document.getElementById('bf-modal-body');
+    body.innerHTML =
+      '<div class="bf-modal-title">检测到未完成的游戏</div>' +
+      '<div class="bf-continue-desc">已为你保留最近一次游戏进度。<br>存档剩余有效时间：' + remainTxt + '。</div>' +
+      '<div class="bf-continue-btns">' +
+        '<button class="bf-btn-secondary" id="bf-continue-restart">重新开始</button>' +
+        '<button class="bf-btn-primary" id="bf-continue-resume">继续游戏</button>' +
+      '</div>';
+    document.getElementById('bf-continue-resume').addEventListener('click', () => {
+      ModalManager.close('continue');
+      if (typeof onContinue === 'function') onContinue();
+    });
+    document.getElementById('bf-continue-restart').addEventListener('click', () => {
+      ModalManager.close('continue');
+      SaveSystem.clearSave();
+      if (typeof onRestart === 'function') onRestart();
+    });
   },
 
   _qualityLabel(q) {

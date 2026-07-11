@@ -7,6 +7,7 @@
  */
 import { Game, LAYOUT, VIEW } from '../core/game.js';
 import { FACILITIES } from '../data/facilities.js';
+import { ModalManager } from './modal-manager.js';
 
 export const Facilities = {
   init() {
@@ -38,7 +39,7 @@ export const Facilities = {
   /** 建造弹窗：展示 4 种炮塔（含 tier/数值预览），金币不足禁用 */
   _showBuildModal(slotIndex) {
     this._closeModal();
-    Game.state.paused = true;
+    if (!ModalManager.open('facility', { onClose: () => this._removeModal() })) return;
     const tier = Game.buildings.facilityTier || 0;
     const tierBadge = tier > 0 ? `<span class="bf-facility-tier">强化 ×${tier}</span>` : '';
     const items = Object.values(FACILITIES).map(f => {
@@ -75,10 +76,10 @@ export const Facilities = {
 
   /** 回收弹窗：展示当前炮塔数值 + 半价退款按钮 */
   _showRecycleModal(slotIndex) {
-    this._closeModal();
-    Game.state.paused = true;
     const f = Game.buildings.facilities[slotIndex];
-    if (!f) { Game.state.paused = false; return; }
+    if (!f) return;
+    this._closeModal();
+    if (!ModalManager.open('facility', { onClose: () => this._removeModal() })) return;
     const refund = Math.floor((f.builtCost || 0) * 0.5);
     const tierBadge = f.tier > 0 ? `<span class="bf-facility-tier">强化 ×${f.tier}</span>` : '';
     const stats = this._renderBuiltStats(f);
@@ -144,8 +145,13 @@ export const Facilities = {
   },
 
   _closeModal() {
+    this._removeModal();
+    ModalManager.close('facility');
+  },
+
+  _removeModal() {
     const m = document.getElementById('bf-facility-modal');
-    if (m) { m.remove(); Game.state.paused = false; }
+    if (m) m.remove();
   },
 
   _toast(msg) {
