@@ -1,0 +1,141 @@
+/* ============================================================
+   切斯特牌 - 糖果图鉴样式
+   独立模块，仅使用 CSS 变量
+   依赖：style.css（.cc-overlay / .cc-modal 基类）
+         shop.css（.cc-rarity-tag / .cc-rarity-badge）
+         panels.css（.cc-settings-close）
+   ============================================================ */
+
+/* ---------- 图鉴弹窗容器 ---------- */
+.cc-collection-modal {
+    max-width: 92vw; width: 680px;
+    max-height: 85vh; overflow-y: auto;
+    padding: 20px 18px;
+    position: relative;
+}
+
+/* ---------- 稀有度分区 ---------- */
+.cc-collection-section { margin-bottom: 18px; }
+.cc-collection-rarity-title {
+    font-family: var(--font-display);
+    font-size: var(--fs-body); font-weight: 700;
+    margin: 0 0 8px; padding: 4px 10px;
+    border-left: 4px solid; letter-spacing: 1px;
+    text-shadow: var(--text-shadow-sm);
+}
+.cc-collection-rarity-title.cc-rarity-common { border-color: var(--color-rarity-common); color: var(--color-rarity-common); }
+.cc-collection-rarity-title.cc-rarity-rare { border-color: var(--color-rarity-rare); color: var(--color-rarity-rare); }
+.cc-collection-rarity-title.cc-rarity-epic { border-color: var(--color-rarity-epic); color: var(--color-rarity-epic); }
+.cc-collection-rarity-title.cc-rarity-mythic { border-color: var(--color-rarity-mythic); color: var(--color-rarity-mythic); }
+.cc-collection-rarity-title.cc-rarity-legendary { border-color: var(--color-rarity-legendary); color: var(--color-rarity-legendary); }
+
+/* ---------- 卡片网格 ---------- */
+.cc-collection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+/* ---------- 单张卡片 ---------- */
+.cc-collection-card {
+    background: var(--bg-card-alt);
+    border: 2px solid var(--bg-input-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    text-align: center;
+    position: relative;
+    min-height: 160px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.cc-collection-card.cc-rarity-common { border-color: var(--color-rarity-common); }
+.cc-collection-card.cc-rarity-rare { border-color: var(--color-rarity-rare); }
+.cc-collection-card.cc-rarity-epic { border-color: var(--color-rarity-epic); }
+.cc-collection-card.cc-rarity-mythic { border-color: var(--color-rarity-mythic); }
+.cc-collection-card.cc-rarity-legendary { border-color: var(--color-rarity-legendary); }
+
+.cc-collection-card-emoji { font-size: 36px; line-height: 1.2; }
+.cc-collection-card-name {
+    font-family: var(--font-display); font-size: var(--fs-tiny); font-weight: 700;
+    color: var(--color-gold-accent); letter-spacing: 0.5px;
+    text-shadow: var(--text-shadow-sm);
+}
+
+/* ---------- 分类标签 ---------- */
+.cc-collection-card-tag {
+    font-family: var(--font-body); font-size: 11px;
+    color: var(--text-on-dark); background: var(--bg-input);
+    padding: 1px 8px; border-radius: var(--radius-round);
+    border: 1px solid var(--bg-input-border);
+    letter-spacing: 0.5px;
+}
+
+.cc-collection-card-desc {
+    font-family: var(--font-body); font-size: var(--fs-tiny);
+    color: var(--text-secondary); line-height: 1.4;
+    flex: 1;
+}
+
+/* ---------- 推荐指数（星级） ---------- */
+.cc-collection-card-rating {
+    font-size: 14px; line-height: 1;
+    color: var(--color-gold-accent);
+    letter-spacing: 1px;
+    text-shadow: var(--text-shadow-sm);
+}
+
+.cc-collection-card-price {
+    font-family: var(--font-mono); font-size: var(--fs-tiny);
+    color: var(--text-muted); margin-top: auto;
+}
+
+/* ---------- 版本调整标记（右上角徽章） ---------- */
+.cc-balance-badge {
+    position: absolute; top: 4px; right: 4px;
+    font-family: var(--font-display); font-size: 10px;
+    font-weight: 700; padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #0a1818;
+    text-shadow: var(--text-shadow-sm);
+    letter-spacing: 0.5px;
+    z-index: 1;
+}
+.cc-badge-buff { background: var(--color-success); color: #0a1818; }
+.cc-badge-nerf { background: var(--color-danger); color: #FFFFFF; }
+.cc-badge-rework { background: var(--color-blue); color: #0a1818; }
+.cc-badge-new { background: var(--color-gold-accent); color: #0a1818; }
+
+/* ---------- 底部反馈区 ---------- */
+.cc-collection-feedback {
+    margin-top: 20px; padding-top: 16px;
+    border-top: 2px solid var(--bg-input-border);
+    text-align: center;
+}
+.cc-feedback-link {
+    display: inline-block;
+    padding: 10px 28px;
+    background: var(--color-blue); color: #FFFFFF;
+    font-family: var(--font-display); font-size: var(--fs-small);
+    font-weight: 700; letter-spacing: 1px;
+    border: 2px solid #0a1818;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-btn);
+    text-decoration: none;
+    text-shadow: var(--text-shadow-sm);
+    transition: filter 0.05s;
+}
+.cc-feedback-link:hover { filter: brightness(1.15); }
+.cc-feedback-link:active { transform: translate(3px, 3px); box-shadow: none; }
+.cc-collection-feedback-desc {
+    margin: 10px 0 0;
+    font-family: var(--font-body); font-size: var(--fs-tiny);
+    color: var(--text-muted); line-height: 1.5;
+}
+
+/* ---------- 移动端响应式 ---------- */
+@media (max-width: 560px) {
+    .cc-collection-modal { padding: 16px 12px; }
+    .cc-collection-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+    .cc-collection-card { min-height: 140px; padding: 8px 6px; }
+    .cc-collection-card-emoji { font-size: 28px; }
+    .cc-balance-badge { font-size: 9px; padding: 1px 4px; }
+}

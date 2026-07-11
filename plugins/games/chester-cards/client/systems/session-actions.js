@@ -11,6 +11,8 @@
  */
 
 import { renderSettings, renderConfirmRetire, renderWaveChoice } from '../ui/panel-render.js';
+import { renderCandyCollection } from '../ui/candy-collection.js';
+import { renderShop } from '../ui/shop-ui.js';
 import { hideEndScreen } from '../ui/render.js';
 import { saveGame, loadGame, clearSave } from './save-system.js';
 import { getCandyById } from '../data/candies.js';
@@ -135,6 +137,31 @@ export function createSessionActions(state, config, renderAll, helpers) {
     await quitGame();
   }
 
+  /** 打开糖果图鉴（从商店或设置进入） */
+  function openCandyCollection() {
+    if (state.phase !== 'roundWin' && state.phase !== 'settings') return;
+    state._collectionReturn = state.phase;
+    state._preCollectionPhase = state.phase;
+    state.phase = 'collection';
+    renderCandyCollection();
+  }
+
+  /** 关闭糖果图鉴（返回来源界面） */
+  function closeCandyCollection() {
+    if (state.phase !== 'collection') return;
+    const returnTo = state._collectionReturn;
+    state._collectionReturn = null;
+    state.phase = state._preCollectionPhase;
+    state._preCollectionPhase = null;
+
+    const overlay = document.getElementById('ccOverlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    if (returnTo === 'roundWin') {
+      renderShop(state, config);
+    }
+  }
+
   return {
     onContinueGame: continueGame,
     onOpenSettings: openSettings,
@@ -145,6 +172,8 @@ export function createSessionActions(state, config, renderAll, helpers) {
     onConfirmRetire: confirmRetire,
     onCancelRetire: cancelRetire,
     onContinueWave: continueWave,
-    onEndWave: endWave
+    onEndWave: endWave,
+    onOpenCandyCollection: openCandyCollection,
+    onCloseCandyCollection: closeCandyCollection
   };
 }

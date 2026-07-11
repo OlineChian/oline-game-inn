@@ -186,6 +186,7 @@ export function renderShop(state, config) {
 
       <section class="cc-shop-actions">
         ${refreshHtml}
+        <button class="cc-btn cc-btn-collection" data-action="open-candy-collection">📖 糖果图鉴</button>
         <button class="cc-btn cc-btn-primary" data-action="close-shop">继续下一关 →</button>
       </section>
     </div>

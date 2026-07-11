@@ -108,6 +108,10 @@ export function setupInteraction(handlers) {
       handlers.onEndWave && handlers.onEndWave();
     } else if (act === 'continue-game') {
       handlers.onContinueGame && handlers.onContinueGame();
+    } else if (act === 'open-candy-collection') {
+      handlers.onOpenCandyCollection && handlers.onOpenCandyCollection();
+    } else if (act === 'close-collection') {
+      handlers.onCloseCandyCollection && handlers.onCloseCandyCollection();
     }
   });
 

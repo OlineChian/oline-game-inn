@@ -73,6 +73,7 @@ export function renderSettings(state, config) {
         </ul>
       </details>
       <div class="cc-settings-actions">
+        <button class="cc-btn cc-btn-collection" data-action="open-candy-collection">📖 糖果图鉴</button>
         <button class="cc-btn cc-btn-save" data-action="temp-save">临时存档</button>
         <button class="cc-btn cc-btn-retire" data-action="retire">功成身退</button>
       </div>
