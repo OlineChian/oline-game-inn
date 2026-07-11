@@ -76,12 +76,14 @@
                         <div class="value" id="prizeLeft">20 / 20</div>
                     </div>
                     <div class="pd-info-item">
-                        <div class="label">上次抽奖成绩</div>
-                        <div class="value" id="lastWeight">—</div>
+                        <div class="label">上次抽奖成绩(A/B)</div>
+                        <div class="value" id="lastScoreA">—</div>
+                        <div class="value" id="lastScoreB">—</div>
                     </div>
                     <div class="pd-info-item">
-                        <div class="label">当前成绩</div>
-                        <div class="value" id="nowWeight">0</div>
+                        <div class="label">当前成绩(A/B)</div>
+                        <div class="value" id="nowScoreA">0</div>
+                        <div class="value" id="nowScoreB">0</div>
                     </div>
                 </div>
                 <div class="pd-eligibility" id="eligibility">查询成绩后可抽奖</div>
@@ -92,9 +94,9 @@
                 <div class="pd-section-title">活动规则</div>
                 <div class="pd-rules">
                     <ul>
-                        <li>完成乱斗前线和切斯特牌两个游戏，系统自动记录最高分和排名</li>
+                        <li>绑定后系统记录参与时间，仅统计参与后的游戏成绩</li>
                         <li>综合权重 = 归一化分数×40% + 归一化分数×40% + 排名加分×20%</li>
-                        <li>每次抽奖需成绩比上次提升，否则无法抽奖</li>
+                        <li>每次抽奖需任一游戏成绩超越上次抽奖成绩（按分数判断，不受排名波动影响）</li>
                         <li>每人最多 5 次抽奖，中奖后立即结束</li>
                         <li>第 5 次抽奖为保底（需成绩提升），100% 中奖</li>
                         <li>奖池共 20 份，动态概率算法确保 150 次有效抽奖内发完</li>

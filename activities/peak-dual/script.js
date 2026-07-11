@@ -5,9 +5,12 @@
 const TAG_PATTERN = /^#[0289PYLQGRJCUV]{2,14}$/;
 let currentPlayerTag = '';
 let currentWeight = 0;
-let lastDrawWeight = 0;
 let drawCount = 0;
 let maxDraws = 5;
+let lastDrawScoreA = 0;
+let lastDrawScoreB = 0;
+let currentScoreA = 0;
+let currentScoreB = 0;
 
 // 时间守卫：未到开始时间则跳转回活动中心
 (async function checkActivityTime() {
@@ -76,28 +79,33 @@ async function doQuery() {
             body: JSON.stringify({ playerTag: currentPlayerTag })
         });
         const data = await res.json();
-        if (data.success) { updateUI(data.player, data.config); }
+        if (data.success) { updateUI(data.player, data.config, data.scoreInfo); }
         else { showToast(data.error || '查询失败'); }
     } catch (e) { showToast('网络错误'); }
 }
 
-function updateUI(player, config) {
+function updateUI(player, config, scoreInfo) {
     currentWeight = player.currentWeight || 0;
-    lastDrawWeight = player.lastDrawWeight || 0;
     drawCount = player.drawCount || 0;
     maxDraws = config ? (config.maxDrawsPerPlayer || 5) : 5;
+    lastDrawScoreA = player.lastDrawScoreA || 0;
+    lastDrawScoreB = player.lastDrawScoreB || 0;
+    currentScoreA = player.gameAScore || 0;
+    currentScoreB = player.gameBScore || 0;
 
-    document.getElementById('scoreA').textContent = player.gameAScore || 0;
+    document.getElementById('scoreA').textContent = currentScoreA;
     document.getElementById('rankA').textContent = player.gameARank ? '第' + player.gameARank + '名' : '未排名';
-    document.getElementById('scoreB').textContent = player.gameBScore || 0;
+    document.getElementById('scoreB').textContent = currentScoreB;
     document.getElementById('rankB').textContent = player.gameBRank ? '第' + player.gameBRank + '名' : '未排名';
     document.getElementById('currentWeight').textContent = currentWeight;
 
     const drawsLeft = maxDraws - drawCount;
     document.getElementById('drawsLeft').textContent = drawsLeft + ' / ' + maxDraws;
     document.getElementById('prizeLeft').textContent = (config ? config.remainPrize : 20) + ' / ' + (config ? config.totalPrize : 20);
-    document.getElementById('lastWeight').textContent = lastDrawWeight || '—';
-    document.getElementById('nowWeight').textContent = currentWeight;
+    document.getElementById('lastScoreA').textContent = lastDrawScoreA || '—';
+    document.getElementById('lastScoreB').textContent = lastDrawScoreB || '—';
+    document.getElementById('nowScoreA').textContent = currentScoreA;
+    document.getElementById('nowScoreB').textContent = currentScoreB;
 
     const drawBtn = document.getElementById('drawBtn');
     const elig = document.getElementById('eligibility');
@@ -114,10 +122,14 @@ function updateUI(player, config) {
         drawBtn.disabled = true;
         elig.className = 'pd-eligibility no';
         elig.textContent = '奖品已发完';
-    } else if (drawCount > 0 && currentWeight <= lastDrawWeight) {
+    } else if (drawCount === 0 && (currentScoreA <= 0 || currentScoreB <= 0)) {
         drawBtn.disabled = true;
         elig.className = 'pd-eligibility no';
-        elig.textContent = '成绩未提升，需超过上次(' + lastDrawWeight + ')';
+        elig.textContent = '请先在两个游戏中游戏并提交成绩';
+    } else if (drawCount > 0 && scoreInfo && !scoreInfo.improved) {
+        drawBtn.disabled = true;
+        elig.className = 'pd-eligibility no';
+        elig.textContent = '成绩未提升，需在任一游戏中超越上次成绩(A:' + lastDrawScoreA + ' B:' + lastDrawScoreB + ')';
     } else {
         drawBtn.disabled = false;
         elig.className = 'pd-eligibility ok';
@@ -136,7 +148,7 @@ async function doDraw() {
         });
         const data = await res.json();
         if (data.success) {
-            updateUI(data.player, data.config);
+            updateUI(data.player, data.config, { improved: true });
             showResult(data.won, data.isPityDraw);
         } else { showToast(data.error || '抽奖失败'); }
     } catch (e) { showToast('网络错误'); }

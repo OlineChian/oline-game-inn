@@ -74,8 +74,24 @@ async function saveConfig() {
             method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
         });
         const data = await res.json();
-        if (data.success) { showToast('配置已保存'); await loadStatus(); }
-        else { showToast(data.error || '保存失败'); }
+        if (data.success) {
+            showToast('配置已保存，系统已重算');
+            await refreshAll();
+        } else { showToast(data.error || '保存失败'); }
+    } catch (e) { showToast('网络错误'); }
+}
+
+async function initializeSystem() {
+    if (!confirm('确认执行活动初始化？\n\n已中奖玩家：保留全部数据，永久不可再参与\n未中奖玩家：保留抽奖次数和保底进度，重置成绩\n配置：抽奖总计数归零，剩余奖品重算')) return;
+    try {
+        const res = await fetch('/api/peak-dual/admin/initialize', {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('初始化完成：保留' + data.winnersCount + '名中奖者，重置' + data.resetCount + '名玩家');
+            await refreshAll();
+        } else { showToast(data.error || '初始化失败'); }
     } catch (e) { showToast('网络错误'); }
 }
 
@@ -102,15 +118,18 @@ async function loadPlayers() {
         if (data.success) {
             const box = document.getElementById('playersList');
             if (data.players.length === 0) { box.innerHTML = '<span style="color:var(--pd-text-dim)">暂无玩家</span>'; return; }
-            box.innerHTML = '<table style="width:100%; border-collapse:collapse;"><thead><tr style="text-align:left; border-bottom:1px solid var(--pd-border);">' +
-                '<th style="padding:4px;">Tag</th><th>昵称</th><th>A分数</th><th>A排名</th><th>B分数</th><th>B排名</th><th>权重</th><th>抽奖</th><th>中奖</th>' +
+            box.innerHTML = '<table style="width:100%; border-collapse:collapse; font-size:12px;"><thead><tr style="text-align:left; border-bottom:1px solid var(--pd-border);">' +
+                '<th style="padding:4px;">Tag</th><th>昵称</th><th>参与时间</th><th>A分</th><th>A排名</th><th>B分</th><th>B排名</th><th>权重</th><th>上次A</th><th>上次B</th><th>抽奖</th><th>中奖</th>' +
                 '</tr></thead><tbody>' +
                 data.players.map(p => `<tr style="border-bottom:1px solid var(--pd-border);">
                     <td style="padding:4px;">${esc(p.playerTag)}</td>
                     <td>${esc(p.gameNickname)}</td>
+                    <td>${formatTime(p.joinTime)}</td>
                     <td>${p.gameAScore||0}</td><td>${p.gameARank||'—'}</td>
                     <td>${p.gameBScore||0}</td><td>${p.gameBRank||'—'}</td>
-                    <td>${p.currentWeight||0}</td><td>${p.drawCount||0}</td>
+                    <td>${p.currentWeight||0}</td>
+                    <td>${p.lastDrawScoreA||0}</td><td>${p.lastDrawScoreB||0}</td>
+                    <td>${p.drawCount||0}</td>
                     <td>${p.hasWon?'是':'否'}</td>
                 </tr>`).join('') +
                 '</tbody></table>';
@@ -128,6 +147,7 @@ async function loadLogs() {
             box.innerHTML = data.logs.slice(0, 100).map(l =>
                 `<div style="padding:3px 0; border-bottom:1px solid var(--pd-border);">
                     [${formatTime(l.timestamp)}] ${esc(l.playerTag)} ${l.type === 'draw' ? '抽奖' : '查询'}
+                    ${l.scoreA != null ? 'A=' + l.scoreA : ''} ${l.scoreB != null ? 'B=' + l.scoreB : ''}
                     ${l.weight ? '权重=' + l.weight : ''} → ${l.result === 'win' ? '中奖' : l.result === 'lose' ? '未中' : l.result}
                 </div>`
             ).join('');
